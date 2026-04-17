@@ -1,0 +1,405 @@
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './contexts/AuthContext'
+import Navbar from './components/layout/Navbar'
+import Footer from './components/layout/Footer'
+
+// Pages
+import LandingPage from './pages/LandingPage'
+import Home from './pages/Home'
+import Courses from './pages/Courses'
+import CourseDetailsDB from './pages/CourseDetailsDB'
+import Dashboard from './pages/Dashboard'
+import PaymentCheckout from './pages/PaymentCheckout'
+import About from './pages/About'
+import Contact from './pages/Contact'
+import Login from './pages/auth/Login'
+import Register from './pages/auth/Register'
+import CreateCourse from './pages/teacher/CreateCourse'
+import EditCourse from './pages/teacher/EditCourse'
+
+// Category Pages
+import ProgrammingPage from './pages/categories/ProgrammingPage'
+import GraphicDesignPage from './pages/categories/GraphicDesignPage'
+import ITPage from './pages/categories/ITPage'
+import DataAnalysisPage from './pages/categories/DataAnalysisPage'
+import FinancialMarketsPage from './pages/categories/FinancialMarketsPage'
+
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth()
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+  
+  return children
+}
+
+// Teacher Route (only for teachers/admins)
+const TeacherRoute = ({ children }) => {
+  const { user, isAuthenticated, isLoading } = useAuth()
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+  
+  // Check if user is teacher/instructor or admin
+  if (user?.role !== 'teacher' && user?.role !== 'instructor' && user?.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />
+  }
+  
+  return children
+}
+
+// Public Route (redirect if authenticated)
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth()
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+  
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
+  
+  return children
+}
+
+// Layout Component
+const Layout = ({ children, showFooter = true }) => {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-1">{children}</main>
+      {showFooter && <Footer />}
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      {/* Landing Page - Has its own navbar and footer */}
+      <Route path="/" element={<LandingPage />} />
+      
+      {/* Public Routes */}
+      <Route
+        path="/home"
+        element={
+          <Layout>
+            <Home />
+          </Layout>
+        }
+      />
+      
+      <Route 
+        path="/courses" 
+        element={
+          <Layout>
+            <Courses />
+          </Layout>
+        } 
+      />
+      
+      <Route 
+        path="/courses/:id" 
+        element={
+          <Layout>
+            <CourseDetailsDB />
+          </Layout>
+        } 
+      />
+      
+      <Route
+        path="/categories"
+        element={
+          <Layout>
+            <Courses />
+          </Layout>
+        }
+      />
+      
+      {/* Category Pages */}
+      <Route path="/programming" element={<Layout showFooter={false}><ProgrammingPage /></Layout>} />
+      <Route path="/graphic-design" element={<Layout showFooter={false}><GraphicDesignPage /></Layout>} />
+      <Route path="/it" element={<Layout showFooter={false}><ITPage /></Layout>} />
+      <Route path="/data-analysis" element={<Layout showFooter={false}><DataAnalysisPage /></Layout>} />
+      <Route path="/financial-markets" element={<Layout showFooter={false}><FinancialMarketsPage /></Layout>} />
+      
+      <Route
+        path="/about"
+        element={
+          <Layout showFooter={false}>
+            <About />
+          </Layout>
+        }
+      />
+      
+      <Route
+        path="/contact"
+        element={
+          <Layout showFooter={false}>
+            <Contact />
+          </Layout>
+        }
+      />
+
+      {/* Auth Routes */}
+      <Route 
+        path="/login" 
+        element={
+          <PublicRoute>
+            <Layout showFooter={false}>
+              <Login />
+            </Layout>
+          </PublicRoute>
+        } 
+      />
+      
+      <Route 
+        path="/register" 
+        element={
+          <PublicRoute>
+            <Layout showFooter={false}>
+              <Register />
+            </Layout>
+          </PublicRoute>
+        } 
+      />
+      
+      <Route 
+        path="/forgot-password" 
+        element={
+          <Layout showFooter={false}>
+            <div className="min-h-screen pt-20 pb-16 flex items-center">
+              <div className="container-custom">
+                <div className="max-w-md mx-auto">
+                  <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold mb-2">Reset Password</h1>
+                    <p className="text-secondary-600 dark:text-secondary-400">
+                      Enter your email to receive a password reset link
+                    </p>
+                  </div>
+                  <div className="card card-body">
+                    <form className="space-y-6">
+                      <div>
+                        <label className="label">Email</label>
+                        <input type="email" className="input" placeholder="your@email.com" />
+                      </div>
+                      <button type="submit" className="btn btn-primary w-full">
+                        Send Reset Link
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Layout>
+        } 
+      />
+
+      {/* Protected Routes */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Dashboard />
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route
+        path="/courses/:id/checkout"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <PaymentCheckout />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route 
+        path="/profile" 
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Dashboard />
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      <Route 
+        path="/courses/:id/learn" 
+        element={
+          <ProtectedRoute>
+            <Layout showFooter={false}>
+              <div className="min-h-screen pt-20 pb-8">
+                <div className="container-custom">
+                  <div className="grid lg:grid-cols-3 gap-8">
+                    {/* Video Player */}
+                    <div className="lg:col-span-2">
+                      <div className="aspect-video bg-black rounded-xl flex items-center justify-center">
+                        <p className="text-white">Video Player Placeholder</p>
+                      </div>
+                      <div className="mt-6">
+                        <h1 className="text-2xl font-bold mb-4">Lesson Title</h1>
+                        <p className="text-secondary-600 dark:text-secondary-400">
+                          Lesson description and notes will appear here.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Curriculum Sidebar */}
+                    <div className="lg:col-span-1">
+                      <div className="card card-body">
+                        <h2 className="font-bold mb-4">Course Content</h2>
+                        <div className="space-y-2">
+                          {[1, 2, 3, 4, 5].map((i) => (
+                            <div key={i} className="p-3 rounded-lg hover:bg-secondary-50 dark:hover:bg-dark-border cursor-pointer">
+                              <p className="font-medium">Lesson {i}</p>
+                              <p className="text-sm text-secondary-500">10 min</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Teacher Routes */}
+      <Route
+        path="/teacher/create-course"
+        element={
+          <TeacherRoute>
+            <CreateCourse />
+          </TeacherRoute>
+        }
+      />
+
+      <Route
+        path="/teacher/edit-course/:id"
+        element={
+          <TeacherRoute>
+            <EditCourse />
+          </TeacherRoute>
+        }
+      />
+      
+      <Route
+        path="/teacher/courses"
+        element={
+          <TeacherRoute>
+            <Layout>
+              <div className="min-h-screen pt-24 pb-16">
+                <div className="container-custom">
+                  <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-3xl font-bold">كورساتي</h1>
+                    <a href="/teacher/create-course" className="btn btn-primary">
+                      + إنشاء كورس جديد
+                    </a>
+                  </div>
+                  <div className="card card-body">
+                    <p className="text-center text-secondary-500 py-8">
+                      لم تقم بإنشاء أي كورسات بعد. ابدأ بإنشاء كورسك الأول!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Layout>
+          </TeacherRoute>
+        }
+      />
+
+      {/* Admin Routes (Placeholder) */}
+      <Route 
+        path="/admin/*" 
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <div className="min-h-screen pt-24 pb-16">
+                <div className="container-custom">
+                  <h1 className="text-4xl font-bold mb-8">Admin Panel</h1>
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="card card-body text-center">
+                      <h3 className="text-3xl font-bold text-primary-500 mb-2">150</h3>
+                      <p className="text-secondary-500">Total Users</p>
+                    </div>
+                    <div className="card card-body text-center">
+                      <h3 className="text-3xl font-bold text-primary-500 mb-2">70</h3>
+                      <p className="text-secondary-500">Total Courses</p>
+                    </div>
+                    <div className="card card-body text-center">
+                      <h3 className="text-3xl font-bold text-primary-500 mb-2">$12,500</h3>
+                      <p className="text-secondary-500">Total Revenue</p>
+                    </div>
+                  </div>
+                  <div className="mt-8 card card-body">
+                    <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
+                    <div className="flex flex-wrap gap-4">
+                      <button className="btn btn-primary">Add New Course</button>
+                      <button className="btn btn-secondary">Manage Users</button>
+                      <button className="btn btn-secondary">View Reports</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* 404 Route */}
+      <Route 
+        path="*" 
+        element={
+          <Layout>
+            <div className="min-h-screen pt-24 pb-16 flex items-center justify-center">
+              <div className="text-center">
+                <h1 className="text-6xl font-bold text-primary-500 mb-4">404</h1>
+                <h2 className="text-2xl font-bold mb-4">Page Not Found</h2>
+                <p className="text-secondary-600 dark:text-secondary-400 mb-8">
+                  The page you're looking for doesn't exist.
+                </p>
+                <a href="/" className="btn btn-primary">
+                  Go Home
+                </a>
+              </div>
+            </div>
+          </Layout>
+        } 
+      />
+    </Routes>
+  )
+}
+
+export default App

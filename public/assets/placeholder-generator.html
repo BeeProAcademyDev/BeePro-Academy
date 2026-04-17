@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Placeholder Images</title>
+    <style>
+        canvas { display: block; margin: 10px 0; }
+        button { margin: 10px; padding: 10px 20px; }
+    </style>
+</head>
+<body>
+    <h1>Placeholder Image Generator</h1>
+    <p>Right-click each canvas and save as the corresponding filename:</p>
+    
+    <h3>hero-background.jpg (1920x1080)</h3>
+    <canvas id="hero" width="1920" height="1080"></canvas>
+    
+    <h3>video-placeholder.jpg (1920x1080)</h3>
+    <canvas id="video" width="1920" height="1080"></canvas>
+    
+    <h3>avatar-1.jpg (200x200)</h3>
+    <canvas id="avatar1" width="200" height="200"></canvas>
+    
+    <h3>avatar-2.jpg (200x200)</h3>
+    <canvas id="avatar2" width="200" height="200"></canvas>
+    
+    <h3>avatar-3.jpg (200x200)</h3>
+    <canvas id="avatar3" width="200" height="200"></canvas>
+    
+    <h3>icon.png (512x512)</h3>
+    <canvas id="icon" width="512" height="512"></canvas>
+    
+    <h3>splash.png (1242x2436)</h3>
+    <canvas id="splash" width="1242" height="2436"></canvas>
+    
+    <h3>favicon.png (48x48)</h3>
+    <canvas id="favicon" width="48" height="48"></canvas>
+
+    <script>
+        // Hero Background
+        const hero = document.getElementById('hero').getContext('2d');
+        const heroGradient = hero.createLinearGradient(0, 0, 1920, 1080);
+        heroGradient.addColorStop(0, '#1e3c72');
+        heroGradient.addColorStop(1, '#2a5298');
+        hero.fillStyle = heroGradient;
+        hero.fillRect(0, 0, 1920, 1080);
+        hero.fillStyle = 'white';
+        hero.font = '72px Arial';
+        hero.textAlign = 'center';
+        hero.fillText('DATA ANALYSIS', 960, 540);
+        
+        // Video Background
+        const video = document.getElementById('video').getContext('2d');
+        const videoGradient = video.createLinearGradient(0, 0, 0, 1080);
+        videoGradient.addColorStop(0, '#0f2027');
+        videoGradient.addColorStop(0.5, '#203a43');
+        videoGradient.addColorStop(1, '#2c5364');
+        video.fillStyle = videoGradient;
+        video.fillRect(0, 0, 1920, 1080);
+        video.fillStyle = 'white';
+        video.font = '60px Arial';
+        video.textAlign = 'center';
+        video.fillText('VIDEO BACKGROUND', 960, 540);
+        
+        // Avatars
+        const colors = ['#007AFF', '#34C759', '#FF9500'];
+        ['avatar1', 'avatar2', 'avatar3'].forEach((id, index) => {
+            const ctx = document.getElementById(id).getContext('2d');
+            ctx.fillStyle = colors[index];
+            ctx.fillRect(0, 0, 200, 200);
+            ctx.fillStyle = 'white';
+            ctx.font = '120px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText((index + 1).toString(), 100, 140);
+        });
+        
+        // Icon
+        const icon = document.getElementById('icon').getContext('2d');
+        const iconGradient = icon.createLinearGradient(0, 0, 512, 512);
+        iconGradient.addColorStop(0, '#007AFF');
+        iconGradient.addColorStop(1, '#0051D5');
+        icon.fillStyle = iconGradient;
+        icon.fillRect(0, 0, 512, 512);
+        icon.fillStyle = 'white';
+        icon.font = 'bold 200px Arial';
+        icon.textAlign = 'center';
+        icon.fillText('D', 256, 320);
+        
+        // Splash
+        const splash = document.getElementById('splash').getContext('2d');
+        splash.fillStyle = '#007AFF';
+        splash.fillRect(0, 0, 1242, 2436);
+        splash.fillStyle = 'white';
+        splash.font = 'bold 120px Arial';
+        splash.textAlign = 'center';
+        splash.fillText('DataFinance', 621, 1218);
+        splash.font = '60px Arial';
+        splash.fillText('Academy', 621, 1318);
+        
+        // Favicon
+        const favicon = document.getElementById('favicon').getContext('2d');
+        favicon.fillStyle = '#007AFF';
+        favicon.fillRect(0, 0, 48, 48);
+        favicon.fillStyle = 'white';
+        favicon.font = 'bold 32px Arial';
+        favicon.textAlign = 'center';
+        favicon.fillText('D', 24, 36);
+    </script>
+</body>
+</html>
