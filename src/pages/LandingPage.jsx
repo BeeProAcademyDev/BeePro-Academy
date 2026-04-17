@@ -529,21 +529,6 @@ const ContactSection = () => {
 const TeamIcons = () => {
   const [activePopup, setActivePopup] = useState(null);
 
-  const openWhatsApp = (phoneNumber) => {
-    const cleanNumber = phoneNumber.replace(/[^\d+]/g, '');
-    let message = "Hello, I'm interested in learning more about BePro-Academy.";
-    
-    if (cleanNumber.includes('201035801035')) {
-      message = "Hello Ahmed Saeid, I'm interested in your financial analysis courses at BePro-Academy.";
-    } else if (cleanNumber.includes('966538751281')) {
-      message = "Hello Abdullah Kofiyh, I'm interested in enrolling at BePro-Academy.";
-    } else if (cleanNumber.includes('966558007339')) {
-      message = "Hello Abdullah Babrouk, I'm interested in partnership opportunities with BePro-Academy.";
-    }
-    
-    window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`, '_blank');
-  };
-
   const teamMembers = {
     ahmedsaeid: {
       name: 'Ahmed Saeid',
@@ -566,25 +551,23 @@ const TeamIcons = () => {
         'Conducted specialized workshops for Fortune 500 companies',
         'Mentored 1000+ professionals in advanced financial data analysis',
         'Recipient of the Global Excellence Award in Financial Education (2023)'
-      ],
-      phone: '+201035801035'
+      ]
     },
     abdullahkofiyh: {
       name: 'Abdullah Kofiyh',
       title: 'CEO & Platform Administrator',
-      badge: 'Young Leader - 30 years',
+      badge: 'Young Leader',
       avatar: '/assets/abdullah1.jpg',
       isImage: true,
       isCeo: true,
       about: 'Abdullah Kofiyh is the visionary CEO and Platform Administrator of BePro-Academy. With a passion for democratizing financial education, he has built a world-class platform that connects top educators with ambitious learners globally.',
       vision: 'Under Abdullah Kofiyh\'s leadership, BePro-Academy has become a premier destination for financial education, offering cutting-edge courses, expert mentorship, and industry-recognized certifications. His commitment to excellence ensures every student receives the highest quality educational experience.',
-      phone: '+966538751281',
       email: 'info@bepro-academy.com'
     },
     abdullahbabrouk: {
       name: 'Abdullah Babrouk',
       title: 'Chief Marketing & Public Relations Officer (CMO & PRO)',
-      badge: 'Young Marketing Leader - 30 years',
+      badge: 'Young Marketing Leader',
       avatar: '/assets/abdullah2.jpg',
       isImage: true,
       hasWhatsapp: true,
@@ -596,8 +579,7 @@ const TeamIcons = () => {
         { icon: '📈', text: 'Growth Marketing' },
         { icon: '🤝', text: 'Partnership Development' },
         { icon: '💬', text: 'Social Media Strategy' }
-      ],
-      phone: '+966558007339'
+      ]
     }
   };
 
@@ -605,17 +587,17 @@ const TeamIcons = () => {
     <>
       <div className="team-icons">
         <div className="team-button mohammed" onClick={() => setActivePopup('ahmedsaeid')}>
-          <span>🧔‍♂️</span>
+          <img src="/assets/photo_5987888613921852797_y.jpg" alt="Ahmed Saeid - Expert Instructor" />
           <span className="team-tooltip">Expert Instructor</span>
         </div>
         <div className="team-button abdullah" onClick={() => setActivePopup('abdullahkofiyh')}>
           <img src="/assets/abdullah1.jpg" alt="Abdullah Kofiyh - CEO" />
-          <span className="team-tooltip">CEO - 30 years</span>
+          <span className="team-tooltip">CEO</span>
         </div>
         <div className="team-button babrouk" onClick={() => setActivePopup('abdullahbabrouk')}>
           <img src="/assets/abdullah2.jpg" alt="Abdullah Babrouk - CMO" />
           <span className="whatsapp-badge">💬</span>
-          <span className="team-tooltip">CMO & PRO - 30 years</span>
+          <span className="team-tooltip">CMO & PRO</span>
         </div>
       </div>
 
@@ -688,16 +670,9 @@ const TeamIcons = () => {
               <h3>📞 {member.isCeo ? 'Contact Information' : 'Direct Contact'}</h3>
               <div className="whatsapp-contact-box">
                 <p className="whatsapp-title">
-                  <span>💬</span> WhatsApp Direct Contact
+                  <span>💬</span> Contact
                 </p>
-                <p className="whatsapp-number">📱 {member.phone}</p>
                 {member.email && <p className="whatsapp-email">📧 Email: {member.email}</p>}
-                <button 
-                  className="whatsapp-button"
-                  onClick={() => openWhatsApp(member.phone)}
-                >
-                  <span>💬</span> Open WhatsApp Chat
-                </button>
               </div>
             </div>
           </div>
