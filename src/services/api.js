@@ -122,8 +122,7 @@ export const authService = {
   // Sign in with Google OAuth
   async signInWithGoogle() {
     if (!isSupabaseAvailable()) {
-      console.log('Mock mode: Google sign-in would redirect to Google OAuth')
-      return { provider: 'google', url: null }
+      throw new Error('Supabase is not configured. Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in deployment environment variables.')
     }
 
     const { data, error } = await supabase.auth.signInWithOAuth({
