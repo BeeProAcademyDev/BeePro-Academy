@@ -451,6 +451,8 @@ export const paymentService = {
 
     if (!error) return true
 
+    const rpcMessage = `${error.message || ''} ${error.details || ''}`.toLowerCase()
+
     const { data: submissionRow, error: submissionLookupError } = await supabase
       .from('payment_submissions')
       .select('id, student_id, course_id')
@@ -459,7 +461,7 @@ export const paymentService = {
 
     if (submissionLookupError) throw submissionLookupError
 
-    const { error: fallbackError } = await supabase
+    let { error: fallbackError } = await supabase
       .from('payment_submissions')
       .update({
         status: 'approved',
@@ -468,6 +470,23 @@ export const paymentService = {
         review_notes: reviewNotes
       })
       .eq('id', submissionId)
+
+    // Legacy schemas may not have review metadata columns yet.
+    if (fallbackError) {
+      const fallbackMsg = `${fallbackError.message || ''} ${fallbackError.details || ''}`.toLowerCase()
+      const hasMissingReviewCols =
+        fallbackMsg.includes('reviewed_by') ||
+        fallbackMsg.includes('reviewed_at') ||
+        fallbackMsg.includes('review_notes')
+
+      if (hasMissingReviewCols) {
+        const retry = await supabase
+          .from('payment_submissions')
+          .update({ status: 'approved' })
+          .eq('id', submissionId)
+        fallbackError = retry.error
+      }
+    }
 
     if (fallbackError) throw fallbackError
 
@@ -489,6 +508,11 @@ export const paymentService = {
       }
     }
 
+    if (rpcMessage.includes('permission') || rpcMessage.includes('policy') || rpcMessage.includes('rls')) {
+      // Fallback succeeded but RPC failed due policy mismatch; keep operation successful.
+      return true
+    }
+
     return true
   },
 
@@ -505,7 +529,9 @@ export const paymentService = {
 
     if (!error) return true
 
-    const { error: fallbackError } = await supabase
+    const rpcMessage = `${error.message || ''} ${error.details || ''}`.toLowerCase()
+
+    let { error: fallbackError } = await supabase
       .from('payment_submissions')
       .update({
         status: 'rejected',
@@ -515,7 +541,28 @@ export const paymentService = {
       })
       .eq('id', submissionId)
 
+    if (fallbackError) {
+      const fallbackMsg = `${fallbackError.message || ''} ${fallbackError.details || ''}`.toLowerCase()
+      const hasMissingReviewCols =
+        fallbackMsg.includes('reviewed_by') ||
+        fallbackMsg.includes('reviewed_at') ||
+        fallbackMsg.includes('review_notes')
+
+      if (hasMissingReviewCols) {
+        const retry = await supabase
+          .from('payment_submissions')
+          .update({ status: 'rejected' })
+          .eq('id', submissionId)
+        fallbackError = retry.error
+      }
+    }
+
     if (fallbackError) throw fallbackError
+
+    if (rpcMessage.includes('permission') || rpcMessage.includes('policy') || rpcMessage.includes('rls')) {
+      return true
+    }
+
     return true
   }
 }

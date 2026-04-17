@@ -45,6 +45,8 @@ const Dashboard = () => {
   const [paymentSubmissions, setPaymentSubmissions] = useState([])
   const [isLoadingPayments, setIsLoadingPayments] = useState(false)
   const [paymentError, setPaymentError] = useState('')
+  const [paymentSuccess, setPaymentSuccess] = useState('')
+  const [paymentActionLoadingId, setPaymentActionLoadingId] = useState(null)
   const [studentEnrollments, setStudentEnrollments] = useState([])
   const [studentPayments, setStudentPayments] = useState([])
   const [isLoadingStudentHistory, setIsLoadingStudentHistory] = useState(false)
@@ -252,6 +254,10 @@ const Dashboard = () => {
     if (!user?.id) return
 
     try {
+      setPaymentError('')
+      setPaymentSuccess('')
+      setPaymentActionLoadingId(submissionId)
+
       if (action === 'approve') {
         await paymentService.approvePaymentSubmission({ submissionId, reviewerId: user.id })
       } else {
@@ -260,8 +266,15 @@ const Dashboard = () => {
 
       const submissions = await paymentService.getAllPaymentSubmissions()
       setPaymentSubmissions(submissions)
+      setPaymentSuccess(
+        language === 'ar'
+          ? (action === 'approve' ? 'تم قبول الدفع بنجاح' : 'تم رفض الدفع بنجاح')
+          : (action === 'approve' ? 'Payment approved successfully' : 'Payment rejected successfully')
+      )
     } catch (error) {
       setPaymentError(error.message || 'Failed to update payment status')
+    } finally {
+      setPaymentActionLoadingId(null)
     }
   }
 
@@ -732,6 +745,12 @@ const Dashboard = () => {
                       </div>
                     )}
 
+                    {paymentSuccess && (
+                      <div className="mb-6 rounded-lg border border-green-300 bg-green-50 text-green-700 px-4 py-3 text-sm">
+                        {paymentSuccess}
+                      </div>
+                    )}
+
                     {/* Create Payment Method */}
                     <div className="card card-body mb-8">
                       <h3 className="text-lg font-bold mb-4">
@@ -887,15 +906,21 @@ const Dashboard = () => {
                                     <div className="flex gap-2">
                                       <button
                                         onClick={() => handlePaymentReview(submission.id, 'approve')}
+                                        disabled={paymentActionLoadingId === submission.id}
                                         className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200"
                                       >
-                                        {language === 'ar' ? 'قبول' : 'Approve'}
+                                        {paymentActionLoadingId === submission.id
+                                          ? (language === 'ar' ? 'جارٍ التنفيذ...' : 'Processing...')
+                                          : (language === 'ar' ? 'قبول' : 'Approve')}
                                       </button>
                                       <button
                                         onClick={() => handlePaymentReview(submission.id, 'reject')}
+                                        disabled={paymentActionLoadingId === submission.id}
                                         className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200"
                                       >
-                                        {language === 'ar' ? 'رفض' : 'Reject'}
+                                        {paymentActionLoadingId === submission.id
+                                          ? (language === 'ar' ? 'جارٍ التنفيذ...' : 'Processing...')
+                                          : (language === 'ar' ? 'رفض' : 'Reject')}
                                       </button>
                                     </div>
                                   ) : (
