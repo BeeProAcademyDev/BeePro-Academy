@@ -103,6 +103,15 @@ const Dashboard = () => {
   // Check if user is an admin
   const isAdmin = user?.role === 'admin'
 
+  const displayName = user?.full_name || user?.name || user?.email?.split('@')[0] || (language === 'ar' ? 'مستخدم' : 'User')
+  const displayEmail = user?.email || ''
+  const normalizedRole = user?.role === 'instructor' ? 'teacher' : (user?.role || 'student')
+  const roleLabel = {
+    student: language === 'ar' ? 'طالب' : 'Student',
+    teacher: language === 'ar' ? 'مدرس' : 'Teacher',
+    admin: language === 'ar' ? 'مدير' : 'Admin'
+  }[normalizedRole] || normalizedRole
+
   const parsePaymentDetailsInput = (paymentType, input) => {
     const raw = (input || '').trim()
     if (!raw) return {}
@@ -283,10 +292,10 @@ const Dashboard = () => {
         <div className="bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl p-6 md:p-8 mb-8 text-white">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
             {/* Avatar */}
-            {user?.avatar ? (
+            {user?.avatar_url ? (
               <img
-                src={user.avatar}
-                alt={user.name}
+                src={user.avatar_url}
+                alt={displayName}
                 className="w-20 h-20 rounded-full object-cover border-4 border-white/20"
               />
             ) : (
@@ -298,8 +307,16 @@ const Dashboard = () => {
             {/* Info */}
             <div className="flex-1">
               <h1 className="text-2xl md:text-3xl font-bold mb-1">
-                {t('dashboard.welcome')}، {user?.name?.split(' ')[0]}
+                {t('dashboard.welcome')}، {displayName.split(' ')[0]}
               </h1>
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                {displayEmail && (
+                  <span className="text-sm text-white/90">{displayEmail}</span>
+                )}
+                <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-white/20 border border-white/30">
+                  {roleLabel}
+                </span>
+              </div>
               <p className="text-white/80">
                 {language === 'ar' 
                   ? 'استمر في التعلم وحقق أهدافك'

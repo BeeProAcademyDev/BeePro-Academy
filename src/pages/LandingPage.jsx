@@ -222,9 +222,9 @@ const StatsSection = () => {
             {stats.map((stat, index) => (
               <div key={index} className="stat-card" style={{ 
                 animationDelay: `${0.2 * (index + 1)}s`,
-                backgroundColor: 'rgba(255,255,255,0.95)',
+                backgroundColor: 'rgba(148, 163, 184, 0.32)',
                 backdropFilter: 'blur(10px)',
-                boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+                boxShadow: '0 8px 25px rgba(0,0,0,0.18)'
               }}>
                 <span className="stat-number">{stat.number}</span>
                 <span className="stat-label">{stat.label}</span>
@@ -235,11 +235,11 @@ const StatsSection = () => {
           <div className="education-features">
             {features.map((feature, index) => (
               <div key={index} className="education-feature" style={{
-                backgroundColor: 'rgba(255,255,255,0.9)',
+                backgroundColor: 'rgba(148, 163, 184, 0.28)',
                 padding: '0.5rem',
                 borderRadius: '6px',
                 backdropFilter: 'blur(5px)',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                boxShadow: '0 4px 15px rgba(0,0,0,0.16)'
               }}>
                 <span className="feature-check">✓</span>
                 {feature}

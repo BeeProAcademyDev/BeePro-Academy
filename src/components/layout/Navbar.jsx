@@ -41,6 +41,15 @@ const Navbar = () => {
     setIsProfileOpen(false)
   }
 
+  const displayName = user?.full_name || user?.name || user?.email?.split('@')[0] || 'User'
+  const displayEmail = user?.email || ''
+  const normalizedRole = user?.role === 'instructor' ? 'teacher' : (user?.role || 'student')
+  const roleLabel = {
+    student: language === 'ar' ? 'طالب' : 'Student',
+    teacher: language === 'ar' ? 'مدرس' : 'Teacher',
+    admin: language === 'ar' ? 'مدير' : 'Admin'
+  }[normalizedRole] || normalizedRole
+
   const navLinks = [
     { to: '/', label: t('nav.home') },
     { to: '/courses', label: t('nav.courses') },
@@ -53,8 +62,8 @@ const Navbar = () => {
     <nav 
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled 
-          ? 'bg-white/95 dark:bg-dark-bg/95 backdrop-blur-md shadow-md' 
-          : 'bg-transparent'
+          ? 'bg-white backdrop-blur-md shadow-lg border-b border-white/90' 
+          : 'bg-white/95 backdrop-blur-sm shadow-sm border-b border-white/70'
       }`}
     >
       <div className="container-custom">
@@ -70,7 +79,7 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="nav-links hidden lg:flex items-center gap-8">
             {navLinks.map((link) => (
               <NavLink
                 key={link.to}
@@ -115,10 +124,10 @@ const Navbar = () => {
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center gap-2 btn-ghost px-3 py-2 rounded-lg"
                 >
-                  {user?.avatar ? (
+                  {user?.avatar_url ? (
                     <img
-                      src={user.avatar}
-                      alt={user.name}
+                      src={user.avatar_url}
+                      alt={displayName}
                       className="w-8 h-8 rounded-full object-cover"
                     />
                   ) : (
@@ -126,9 +135,12 @@ const Navbar = () => {
                       <FiUser className="w-4 h-4 text-white" />
                     </div>
                   )}
-                  <span className="hidden md:block text-sm font-medium">
-                    {user?.name?.split(' ')[0]}
-                  </span>
+                  <div className="hidden md:flex flex-col items-start leading-tight">
+                    <span className="text-sm font-medium max-w-[180px] truncate">{displayName}</span>
+                    {displayEmail && (
+                      <span className="text-xs text-secondary-500 max-w-[180px] truncate">{displayEmail}</span>
+                    )}
+                  </div>
                   <FiChevronDown className={`w-4 h-4 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
                 </button>
 
@@ -137,6 +149,13 @@ const Navbar = () => {
                   <div className="absolute top-full mt-2 w-48 bg-white dark:bg-dark-card rounded-xl shadow-lg border border-secondary-100 dark:border-dark-border overflow-hidden animate-slide-down"
                     style={{ [isRTL ? 'left' : 'right']: 0 }}
                   >
+                    <div className="px-4 py-3 border-b border-secondary-100 dark:border-dark-border">
+                      <p className="text-sm font-semibold truncate">{displayName}</p>
+                      {displayEmail && <p className="text-xs text-secondary-500 truncate mt-0.5">{displayEmail}</p>}
+                      <span className="inline-flex mt-2 px-2 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
+                        {roleLabel}
+                      </span>
+                    </div>
                     <Link
                       to="/dashboard"
                       className="flex items-center gap-3 px-4 py-3 hover:bg-secondary-50 dark:hover:bg-dark-border transition-colors"

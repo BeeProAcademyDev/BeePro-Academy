@@ -131,6 +131,10 @@
     @apply text-primary-500 dark:text-primary-400;
   }
 
+  .nav-links > :nth-child(6) {
+    display: none;
+  }
+
   /* Gradient Text */
   .gradient-text {
     @apply bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent;
