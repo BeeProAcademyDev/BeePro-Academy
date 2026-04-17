@@ -100,6 +100,30 @@ export const PAYMENT_TYPES = [
 ]
 
 export const paymentService = {
+  async hasApprovedPaymentForCourse(studentId, courseId) {
+    if (!isSupabaseAvailable()) {
+      return true
+    }
+
+    if (!studentId || !courseId) {
+      return false
+    }
+
+    const { data, error } = await supabase
+      .from('payment_submissions')
+      .select('id')
+      .eq('student_id', studentId)
+      .eq('course_id', courseId)
+      .eq('status', 'approved')
+      .maybeSingle()
+
+    if (error && error.code !== 'PGRST116') {
+      throw error
+    }
+
+    return !!data
+  },
+
   async getPaymentProofViewUrl(urlOrPath, expiresInSeconds = 3600) {
     if (!isSupabaseAvailable()) {
       return urlOrPath

@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard'
 import PaymentCheckout from './pages/PaymentCheckout'
 import About from './pages/About'
 import Contact from './pages/Contact'
+import CourseLearn from './pages/CourseLearn'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import CreateCourse from './pages/teacher/CreateCourse'
@@ -258,39 +259,7 @@ function App() {
         element={
           <ProtectedRoute>
             <Layout showFooter={false}>
-              <div className="min-h-screen pt-20 pb-8">
-                <div className="container-custom">
-                  <div className="grid lg:grid-cols-3 gap-8">
-                    {/* Video Player */}
-                    <div className="lg:col-span-2">
-                      <div className="aspect-video bg-black rounded-xl flex items-center justify-center">
-                        <p className="text-white">Video Player Placeholder</p>
-                      </div>
-                      <div className="mt-6">
-                        <h1 className="text-2xl font-bold mb-4">Lesson Title</h1>
-                        <p className="text-secondary-600 dark:text-secondary-400">
-                          Lesson description and notes will appear here.
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Curriculum Sidebar */}
-                    <div className="lg:col-span-1">
-                      <div className="card card-body">
-                        <h2 className="font-bold mb-4">Course Content</h2>
-                        <div className="space-y-2">
-                          {[1, 2, 3, 4, 5].map((i) => (
-                            <div key={i} className="p-3 rounded-lg hover:bg-secondary-50 dark:hover:bg-dark-border cursor-pointer">
-                              <p className="font-medium">Lesson {i}</p>
-                              <p className="text-sm text-secondary-500">10 min</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <CourseLearn />
             </Layout>
           </ProtectedRoute>
         } 
