@@ -47,6 +47,7 @@ const ProtectedRoute = ({ children }) => {
 // Teacher Route (only for teachers/admins)
 const TeacherRoute = ({ children }) => {
   const { user, isAuthenticated, isLoading } = useAuth()
+  const normalizedRole = (user?.role || '').toString().trim().toLowerCase()
   
   if (isLoading) {
     return (
@@ -61,7 +62,7 @@ const TeacherRoute = ({ children }) => {
   }
   
   // Check if user is teacher/instructor or admin
-  if (user?.role !== 'teacher' && user?.role !== 'instructor' && user?.role !== 'admin') {
+  if (normalizedRole !== 'teacher' && normalizedRole !== 'instructor' && normalizedRole !== 'admin') {
     return <Navigate to="/dashboard" replace />
   }
   

@@ -16,6 +16,24 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const applyRoleFallback = (userData) => {
+    if (!userData) return userData
+
+    const email = (userData.email || '').toString().trim().toLowerCase()
+    const configuredAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS || 'admin@bepro.academy')
+      .split(',')
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean)
+
+    const role = (userData.role || '').toString().trim().toLowerCase()
+    const isAdminEmail = configuredAdminEmails.includes(email)
+
+    return {
+      ...userData,
+      role: isAdminEmail ? 'admin' : (role || userData.role)
+    }
+  }
+
   // Check for existing session on mount
   useEffect(() => {
     checkUser()
@@ -40,7 +58,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true)
       const currentUser = await authService.getCurrentUser()
-      setUser(currentUser)
+      setUser(applyRoleFallback(currentUser))
     } catch (err) {
       console.error('Error checking user:', err)
       setUser(null)
@@ -57,11 +75,11 @@ export const AuthProvider = ({ children }) => {
         full_name: authUser.user_metadata?.full_name,
         avatar_url: authUser.user_metadata?.avatar_url
       })
-      setUser({ ...authUser, ...profile })
+      setUser(applyRoleFallback({ ...authUser, ...profile }))
     } catch (err) {
       console.error('Error fetching/creating profile:', err)
       // Still allow login even if profile fetch fails
-      setUser(authUser)
+      setUser(applyRoleFallback(authUser))
     }
   }
 
@@ -78,7 +96,7 @@ export const AuthProvider = ({ children }) => {
           full_name: authUser.user_metadata?.full_name,
           avatar_url: authUser.user_metadata?.avatar_url
         })
-        setUser({ ...authUser, ...profile })
+        setUser(applyRoleFallback({ ...authUser, ...profile }))
       }
       
       return { success: true, user: authUser }
@@ -102,7 +120,7 @@ export const AuthProvider = ({ children }) => {
       })
       
       if (authUser) {
-        setUser({ ...authUser, full_name: fullName, role })
+        setUser(applyRoleFallback({ ...authUser, full_name: fullName, role }))
       }
       
       return { success: true, user: authUser }

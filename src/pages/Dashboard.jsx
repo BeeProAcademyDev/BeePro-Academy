@@ -36,6 +36,7 @@ const Dashboard = () => {
   const { t } = useTranslation()
   const { language, isRTL } = useLanguage()
   const { user } = useAuth()
+  const normalizedUserRole = (user?.role || '').toString().trim().toLowerCase()
   
   const [activeTab, setActiveTab] = useState('courses')
   const [myCourses, setMyCourses] = useState([])
@@ -100,14 +101,14 @@ const Dashboard = () => {
   ]
 
   // Check if user is a teacher/instructor
-  const isTeacher = user?.role === 'teacher' || user?.role === 'instructor' || user?.role === 'admin'
+  const isTeacher = normalizedUserRole === 'teacher' || normalizedUserRole === 'instructor' || normalizedUserRole === 'admin'
   
   // Check if user is an admin
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = normalizedUserRole === 'admin'
 
   const displayName = user?.full_name || user?.name || user?.email?.split('@')[0] || (language === 'ar' ? 'مستخدم' : 'User')
   const displayEmail = user?.email || ''
-  const normalizedRole = user?.role === 'instructor' ? 'teacher' : (user?.role || 'student')
+  const normalizedRole = normalizedUserRole === 'instructor' ? 'teacher' : (normalizedUserRole || 'student')
   const roleLabel = {
     student: language === 'ar' ? 'طالب' : 'Student',
     teacher: language === 'ar' ? 'مدرس' : 'Teacher',

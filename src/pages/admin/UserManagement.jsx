@@ -20,6 +20,7 @@ import {
 const UserManagement = () => {
   const { user } = useAuth()
   const { language } = useLanguage()
+  const normalizedUserRole = (user?.role || '').toString().trim().toLowerCase()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -30,7 +31,7 @@ const UserManagement = () => {
 
   // Fetch all users (admin only)
   const fetchUsers = async () => {
-    if (!user?.id || user?.role !== 'admin') return
+    if (!user?.id || normalizedUserRole !== 'admin') return
     
     setLoading(true)
     try {
@@ -50,7 +51,7 @@ const UserManagement = () => {
 
   // Update user role
   const updateUserRole = async (targetUserId, newRole) => {
-    if (!user?.id || user?.role !== 'admin') return
+    if (!user?.id || normalizedUserRole !== 'admin') return
 
     setActionLoading(targetUserId)
     try {
@@ -81,7 +82,7 @@ const UserManagement = () => {
 
   // Get user details
   const getUserDetails = async (targetUserId) => {
-    if (!user?.id || user?.role !== 'admin') return
+    if (!user?.id || normalizedUserRole !== 'admin') return
 
     try {
       const { data, error } = await supabase.rpc('admin_get_user_details', {
@@ -130,7 +131,7 @@ const UserManagement = () => {
     fetchUsers()
   }, [user])
 
-  if (user?.role !== 'admin') {
+  if (normalizedUserRole !== 'admin') {
     return (
       <div className="text-center py-12">
         <FiUsers className="w-16 h-16 mx-auto mb-4 text-red-400" />
