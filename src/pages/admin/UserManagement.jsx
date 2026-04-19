@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { supabase } from '../../lib/supabase'
+import { adminService, userService } from '../../services/api'
 import { 
   FiUsers, 
   FiSearch, 
@@ -29,21 +30,98 @@ const UserManagement = () => {
   const [showUserDetails, setShowUserDetails] = useState(false)
   const [actionLoading, setActionLoading] = useState(null)
 
+  const configuredAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS || 'admin@bepro.academy')
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean)
+
+  const isConfiguredAdminEmail = configuredAdminEmails.includes(
+    (user?.email || '').toString().trim().toLowerCase()
+  )
+
+  const ensureAdminRoleInDatabase = async () => {
+    if (!user?.id || !isConfiguredAdminEmail) return
+
+    try {
+      await userService.ensureUserRole(user.id, user.email, 'admin')
+    } catch (syncError) {
+      console.warn('Admin role sync before user fetch failed:', syncError)
+    }
+  }
+
+  const getAccessDeniedHint = () => {
+    if (isConfiguredAdminEmail) {
+      return language === 'ar'
+        ? 'حدث تعارض بين صلاحيات قاعدة البيانات وواجهة التطبيق. نفّذ SQL لترقية role في جدول users إلى admin ثم أعد تسجيل الدخول.'
+        : 'Database role is out of sync. Run SQL to set your users.role to admin, then sign out/in.'
+    }
+
+    return language === 'ar'
+      ? 'أضف بريدك إلى VITE_ADMIN_EMAILS في ملف .env ثم أعد تشغيل التطبيق وسجل الدخول مرة أخرى.'
+      : 'Add your email to VITE_ADMIN_EMAILS in .env, restart the app, then sign in again.'
+  }
+
+  const isAccessDeniedError = (error) => {
+    const text = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase()
+    return error?.code === 'P0001' || text.includes('access denied') || text.includes('admin role required')
+  }
+
   // Fetch all users (admin only)
   const fetchUsers = async () => {
     if (!user?.id || normalizedUserRole !== 'admin') return
     
     setLoading(true)
     try {
+      await ensureAdminRoleInDatabase()
+
       const { data, error } = await supabase.rpc('admin_get_all_users', {
         admin_user_id: user.id
       })
-      
-      if (error) throw error
+
+      if (error) {
+        const { data: fallbackUsers } = await adminService.getAllUsers({ limit: 500, offset: 0 })
+        const safeUsers = (fallbackUsers || []).map((item) => ({
+          ...item,
+          total_courses: item.total_courses || 0,
+          total_enrollments: item.total_enrollments || 0
+        }))
+        setUsers(safeUsers)
+        return
+      }
+
       setUsers(data || [])
     } catch (error) {
       console.error('Error fetching users:', error)
-      alert(language === 'ar' ? 'خطأ في تحميل المستخدمين' : 'Error loading users')
+
+      if (isAccessDeniedError(error)) {
+        try {
+          const { data: fallbackUsers } = await adminService.getAllUsers({ limit: 500, offset: 0 })
+          const safeUsers = (fallbackUsers || []).map((item) => ({
+            ...item,
+            total_courses: item.total_courses || 0,
+            total_enrollments: item.total_enrollments || 0
+          }))
+
+          if (safeUsers.length > 0) {
+            setUsers(safeUsers)
+            alert(language === 'ar' ? 'تم تحميل المستخدمين عبر الوضع الاحتياطي. راجع صلاحيات admin في قاعدة البيانات.' : 'Users loaded via fallback mode. Please fix admin role in database.')
+            return
+          }
+        } catch (fallbackError) {
+          console.error('Fallback users fetch after P0001 failed:', fallbackError)
+        }
+
+        const adminHint = getAccessDeniedHint()
+        alert(language === 'ar' ? `تم رفض الوصول: ${adminHint}` : `Access denied: ${adminHint}`)
+        return
+      }
+
+      const details = error?.message || error?.details || error?.hint || ''
+      alert(
+        language === 'ar'
+          ? `خطأ في تحميل المستخدمين${details ? `: ${details}` : ''}`
+          : `Error loading users${details ? `: ${details}` : ''}`
+      )
     } finally {
       setLoading(false)
     }
@@ -74,6 +152,50 @@ const UserManagement = () => {
       }
     } catch (error) {
       console.error('Error updating user role:', error)
+
+      if (isAccessDeniedError(error)) {
+        try {
+          await ensureAdminRoleInDatabase()
+
+          const { data: retriedData, error: retriedError } = await supabase.rpc('admin_update_user_role', {
+            target_user_id: targetUserId,
+            new_role: newRole,
+            admin_user_id: user.id
+          })
+
+          if (retriedError) throw retriedError
+
+          if (retriedData?.success) {
+            alert(language === 'ar'
+              ? `تم تحديث دور المستخدم إلى ${getRoleLabel(newRole)}`
+              : `User role updated to ${getRoleLabel(newRole)}`)
+            fetchUsers()
+            return
+          }
+
+          if (retriedData && retriedData.success === false) {
+            throw new Error(retriedData.error || 'Access denied. Admin role required.')
+          }
+        } catch (retryError) {
+          console.error('Role update retry after admin sync failed:', retryError)
+        }
+
+        try {
+          await adminService.updateUserRole(targetUserId, newRole)
+          alert(language === 'ar'
+            ? `تم تحديث دور المستخدم إلى ${getRoleLabel(newRole)}`
+            : `User role updated to ${getRoleLabel(newRole)}`)
+          fetchUsers()
+          return
+        } catch (fallbackError) {
+          console.error('Fallback role update after P0001 failed:', fallbackError)
+        }
+
+        const adminHint = getAccessDeniedHint()
+        alert(language === 'ar' ? `تم رفض الوصول: ${adminHint}` : `Access denied: ${adminHint}`)
+        return
+      }
+
       alert(language === 'ar' ? 'خطأ في تحديث دور المستخدم' : 'Error updating user role')
     } finally {
       setActionLoading(null)
@@ -83,6 +205,8 @@ const UserManagement = () => {
   // Get user details
   const getUserDetails = async (targetUserId) => {
     if (!user?.id || normalizedUserRole !== 'admin') return
+
+    const selectedFromList = users.find((listUser) => listUser.id === targetUserId)
 
     try {
       const { data, error } = await supabase.rpc('admin_get_user_details', {
@@ -98,6 +222,70 @@ const UserManagement = () => {
       }
     } catch (error) {
       console.error('Error getting user details:', error)
+
+      // Fallback to direct queries so admins can still inspect user details.
+      try {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', targetUserId)
+          .maybeSingle()
+
+        let courses = []
+        let enrollments = []
+
+        if ((profile?.role || '').toLowerCase() === 'instructor') {
+          const { data: instructorCourses } = await supabase
+            .from('courses')
+            .select('id, title, status')
+            .eq('instructor_id', targetUserId)
+            .order('created_at', { ascending: false })
+          courses = (instructorCourses || []).map((course) => ({
+            ...course,
+            enrollments: 0
+          }))
+        }
+
+        if ((profile?.role || '').toLowerCase() === 'student') {
+          const { data: studentEnrollments } = await supabase
+            .from('enrollments')
+            .select('id, progress, course:courses(title, instructor:users!instructor_id(full_name))')
+            .eq('user_id', targetUserId)
+            .order('enrolled_at', { ascending: false })
+
+          enrollments = (studentEnrollments || []).map((enrollment) => ({
+            id: enrollment.id,
+            progress: enrollment.progress || 0,
+            course_title: enrollment.course?.title || 'N/A',
+            instructor_name: enrollment.course?.instructor?.full_name || 'N/A'
+          }))
+        }
+
+        const fallbackUser = profile || selectedFromList
+        if (!fallbackUser) throw new Error('User details are not available')
+
+        setSelectedUser({
+          success: true,
+          user: fallbackUser,
+          courses,
+          enrollments
+        })
+        setShowUserDetails(true)
+      } catch (fallbackError) {
+        console.error('Fallback user details failed:', fallbackError)
+        if (selectedFromList) {
+          setSelectedUser({
+            success: true,
+            user: selectedFromList,
+            courses: [],
+            enrollments: []
+          })
+          setShowUserDetails(true)
+          return
+        }
+
+        alert(language === 'ar' ? 'تعذر تحميل التفاصيل' : 'Unable to load user details')
+      }
     }
   }
 

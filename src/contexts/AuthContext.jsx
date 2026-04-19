@@ -34,6 +34,28 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const syncAdminRoleIfNeeded = async (userData) => {
+    if (!userData?.id) return userData
+
+    const email = (userData.email || '').toString().trim().toLowerCase()
+    const configuredAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS || 'admin@bepro.academy')
+      .split(',')
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean)
+
+    if (!configuredAdminEmails.includes(email)) {
+      return userData
+    }
+
+    try {
+      const syncedProfile = await userService.ensureUserRole(userData.id, email, 'admin')
+      return { ...userData, ...syncedProfile, role: 'admin' }
+    } catch (err) {
+      console.warn('Unable to sync admin role in users table:', err)
+      return { ...userData, role: 'admin' }
+    }
+  }
+
   // Check for existing session on mount
   useEffect(() => {
     checkUser()
@@ -58,7 +80,9 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true)
       const currentUser = await authService.getCurrentUser()
-      setUser(applyRoleFallback(currentUser))
+      const withRoleFallback = applyRoleFallback(currentUser)
+      const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
+      setUser(syncedUser)
     } catch (err) {
       console.error('Error checking user:', err)
       setUser(null)
@@ -75,11 +99,15 @@ export const AuthProvider = ({ children }) => {
         full_name: authUser.user_metadata?.full_name,
         avatar_url: authUser.user_metadata?.avatar_url
       })
-      setUser(applyRoleFallback({ ...authUser, ...profile }))
+      const withRoleFallback = applyRoleFallback({ ...authUser, ...profile })
+      const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
+      setUser(syncedUser)
     } catch (err) {
       console.error('Error fetching/creating profile:', err)
       // Still allow login even if profile fetch fails
-      setUser(applyRoleFallback(authUser))
+      const withRoleFallback = applyRoleFallback(authUser)
+      const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
+      setUser(syncedUser)
     }
   }
 
@@ -96,7 +124,9 @@ export const AuthProvider = ({ children }) => {
           full_name: authUser.user_metadata?.full_name,
           avatar_url: authUser.user_metadata?.avatar_url
         })
-        setUser(applyRoleFallback({ ...authUser, ...profile }))
+        const withRoleFallback = applyRoleFallback({ ...authUser, ...profile })
+        const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
+        setUser(syncedUser)
       }
       
       return { success: true, user: authUser }
@@ -120,7 +150,9 @@ export const AuthProvider = ({ children }) => {
       })
       
       if (authUser) {
-        setUser(applyRoleFallback({ ...authUser, full_name: fullName, role }))
+        const withRoleFallback = applyRoleFallback({ ...authUser, full_name: fullName, role })
+        const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
+        setUser(syncedUser)
       }
       
       return { success: true, user: authUser }

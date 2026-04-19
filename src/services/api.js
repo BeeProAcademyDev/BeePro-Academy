@@ -691,6 +691,32 @@ export const userService = {
     return data
   },
 
+  // Ensure profile role is synchronized (used for configured admin emails)
+  async ensureUserRole(userId, email, role) {
+    if (!isSupabaseAvailable()) {
+      return { id: userId, email, role }
+    }
+
+    if (!userId || !role) {
+      throw new Error('Missing required user role synchronization data')
+    }
+
+    const safeEmail = (email || '').toString().trim().toLowerCase()
+
+    const { data, error } = await supabase
+      .from('users')
+      .upsert({
+        id: userId,
+        email: safeEmail,
+        role
+      }, { onConflict: 'id' })
+      .select('*')
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
   // Upload avatar
   async uploadAvatar(userId, file) {
     if (!isSupabaseAvailable()) {

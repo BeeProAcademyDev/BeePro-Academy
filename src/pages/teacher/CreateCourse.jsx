@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { courseService, lessonService, meetingService, notificationService } from '../../services/api'
+import { googleCalendarService } from '../../lib/googleCalendar'
 import './CreateCourse.css'
 
 const CreateCourse = () => {
@@ -262,13 +263,17 @@ const CreateCourse = () => {
 
     setIsLoading(true)
     try {
-      // Generate a Google Meet-style link (in production, integrate with Google Calendar API)
-      const meetCode = Math.random().toString(36).substring(2, 12)
-      const meetLink = `https://meet.google.com/${meetCode.substring(0, 3)}-${meetCode.substring(3, 7)}-${meetCode.substring(7, 10)}`
+      const { meetLink, eventId } = await googleCalendarService.createGoogleMeetEvent({
+        title: meetingData.title,
+        description: meetingData.description,
+        scheduledAt: meetingData.scheduled_at,
+        durationMinutes: meetingData.duration_minutes
+      })
       
       const meeting = {
         ...meetingData,
         meet_link: meetLink,
+        calendar_event_id: eventId,
         created_by: user?.id,
         created_at: new Date().toISOString()
       }
@@ -281,9 +286,9 @@ const CreateCourse = () => {
         scheduled_at: '',
         duration_minutes: 60
       })
-      setSuccess('تم إنشاء رابط Google Meet بنجاح!')
+      setSuccess('تم إنشاء جلسة Google Meet من Google Calendar بنجاح!')
     } catch (err) {
-      setError('فشل إنشاء الاجتماع')
+      setError(err.message || 'فشل إنشاء جلسة Google Meet')
     } finally {
       setIsLoading(false)
     }
