@@ -20,7 +20,6 @@ const normalizeCategoryId = (category) => {
   if (!category) return 'programming'
 
   const map = {
-    graphic_design: 'design',
     financial_markets: 'finance'
   }
 
@@ -165,8 +164,8 @@ const Courses = () => {
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">{t('courses.title')}</h1>
             <p className="text-xl text-white font-semibold">
               {language === 'ar'
-                ? 'اكتشف دوراتنا المتميزة في الأسواق المالية والبرمجة والتصميم وتقنية المعلومات'
-                : 'Discover our premium courses in Financial Markets, Programming, Design, and IT'
+                ? 'اكتشف دوراتنا المتميزة في الأسواق المالية والبرمجة وتقنية المعلومات'
+                : 'Discover our premium courses in Financial Markets, Programming, and IT'
               }
             </p>
           </div>

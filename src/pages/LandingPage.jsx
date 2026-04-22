@@ -131,12 +131,6 @@ const PlatformSection = () => {
       title: 'Programming',
       description: 'From beginner to advanced, master programming languages, software development, mobile apps, and modern frameworks for full-stack development.',
       link: '/programming'
-    },
-    {
-      icon: '🎨',
-      title: 'Graphic Design',
-      description: 'Unleash your creativity with courses in UI/UX design, branding, digital illustration, motion graphics, and professional design tools.',
-      link: '/graphic-design'
     }
   ];
 
@@ -264,17 +258,6 @@ const CategorySections = () => {
       icon: '💻',
       features: ['Web Development', 'Mobile Apps', 'Software Engineering', 'Full-Stack Development'],
       color: '#00D9FF',
-      useVideo: false
-    },
-    {
-      id: 'design',
-      title: 'Graphic Design',
-      subtitle: 'Unleash Your Creativity',
-      description: 'Transform ideas into stunning visuals. Master creative design, UI/UX principles, and visual arts to create impactful digital experiences.',
-      backgroundImage: '/assets/grapich1.jpg',
-      icon: '🎨',
-      features: ['UI/UX Design', 'Brand Identity', 'Digital Illustration', 'Motion Graphics'],
-      color: '#FF6B6B',
       useVideo: false
     },
     {
@@ -534,7 +517,8 @@ const TeamIcons = () => {
       name: 'Ahmed Saeid',
       title: 'Senior Academic Lecturer & Financial Data Analysis Expert',
       badge: 'Global Expert',
-      avatar: '🧔‍♂️',
+      avatar: '/assets/photo_5987888613921852797_y.jpg',
+      isImage: true,
       about: 'Ahmed Saeid is a world-renowned academic lecturer with exceptional expertise in company, financial, and stock data analysis. With decades of experience in both academic and professional spheres, he has established himself as a leading authority in financial markets analysis and economic data interpretation.',
       expertise: [
         { icon: '📊', text: 'Financial Data Analysis' },
@@ -1170,7 +1154,6 @@ const LandingNavbar = ({ onAuthClick }) => {
     { label: 'Data Analysis', href: '/data-analysis' },
     { label: 'Programming', href: '/programming' },
     { label: 'IT', href: '/it' },
-    { label: 'Design', href: '/graphic-design' },
     { label: 'Create Course', href: '/create-course' },
     { label: 'Contact', href: '#contact' }
   ];

@@ -32,37 +32,6 @@ export const courses = [
     updatedAt: '2025-12-01'
   },
   {
-    id: '2',
-    title: 'إتقان تصميم الجرافيك مع Adobe',
-    titleEn: 'Master Graphic Design with Adobe',
-    description: 'تعلم تصميم الجرافيك الاحترافي باستخدام Photoshop و Illustrator',
-    descriptionEn: 'Learn professional graphic design using Photoshop and Illustrator',
-    instructor: {
-      id: '2',
-      name: 'سارة أحمد',
-      nameEn: 'Sara Ahmed',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-      title: 'مصممة جرافيك محترفة',
-      titleEn: 'Professional Graphic Designer'
-    },
-    thumbnail: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=400&h=225&fit=crop',
-    category: 'design',
-    level: 'intermediate',
-    duration: 35,
-    lessons: 85,
-    students: 890,
-    rating: 4.9,
-    reviews: 256,
-    price: 349,
-    originalPrice: 699,
-    isFree: false,
-    isPopular: true,
-    isBestseller: false,
-    tags: ['Photoshop', 'Illustrator', 'Design'],
-    createdAt: '2025-02-10',
-    updatedAt: '2025-11-20'
-  },
-  {
     id: '3',
     title: 'أساسيات الشبكات وأمن المعلومات',
     titleEn: 'Networking Fundamentals and Cybersecurity',
@@ -156,37 +125,6 @@ export const courses = [
     updatedAt: '2025-11-30'
   },
   {
-    id: '6',
-    title: 'تصميم واجهات المستخدم UI/UX',
-    titleEn: 'UI/UX Design',
-    description: 'تعلم تصميم واجهات المستخدم وتجربة المستخدم باحترافية',
-    descriptionEn: 'Learn professional UI/UX design',
-    instructor: {
-      id: '2',
-      name: 'سارة أحمد',
-      nameEn: 'Sara Ahmed',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-      title: 'مصممة جرافيك محترفة',
-      titleEn: 'Professional Graphic Designer'
-    },
-    thumbnail: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400&h=225&fit=crop',
-    category: 'design',
-    level: 'intermediate',
-    duration: 25,
-    lessons: 60,
-    students: 720,
-    rating: 4.7,
-    reviews: 198,
-    price: 299,
-    originalPrice: 599,
-    isFree: false,
-    isPopular: false,
-    isBestseller: false,
-    tags: ['UI', 'UX', 'Figma', 'Design'],
-    createdAt: '2025-05-15',
-    updatedAt: '2025-12-05'
-  },
-  {
     id: '7',
     title: 'إدارة الخوادم وLinux',
     titleEn: 'Server Administration and Linux',
@@ -262,17 +200,6 @@ export const categories = [
     color: 'from-blue-500 to-indigo-600',
     coursesCount: 25,
     image: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=300&fit=crop'
-  },
-  {
-    id: 'design',
-    name: 'التصميم الجرافيكي',
-    nameEn: 'Graphic Design',
-    description: 'تعلم فنون التصميم والإبداع البصري',
-    descriptionEn: 'Learn design arts and visual creativity',
-    icon: 'palette',
-    color: 'from-pink-500 to-purple-600',
-    coursesCount: 18,
-    image: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=400&h=300&fit=crop'
   },
   {
     id: 'it',

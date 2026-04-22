@@ -59,7 +59,6 @@ const EditCourse = () => {
 
   const categories = [
     { value: 'programming', label: 'البرمجة', labelEn: 'Programming' },
-    { value: 'graphic_design', label: 'التصميم الجرافيكي', labelEn: 'Graphic Design' },
     { value: 'it', label: 'تكنولوجيا المعلومات', labelEn: 'IT' },
     { value: 'financial_markets', label: 'الأسواق المالية', labelEn: 'Financial Markets' }
   ]

@@ -20,7 +20,6 @@ import EditCourse from './pages/teacher/EditCourse'
 
 // Category Pages
 import ProgrammingPage from './pages/categories/ProgrammingPage'
-import GraphicDesignPage from './pages/categories/GraphicDesignPage'
 import ITPage from './pages/categories/ITPage'
 import DataAnalysisPage from './pages/categories/DataAnalysisPage'
 import FinancialMarketsPage from './pages/categories/FinancialMarketsPage'
@@ -144,7 +143,6 @@ function App() {
       
       {/* Category Pages */}
       <Route path="/programming" element={<Layout showFooter={false}><ProgrammingPage /></Layout>} />
-      <Route path="/graphic-design" element={<Layout showFooter={false}><GraphicDesignPage /></Layout>} />
       <Route path="/it" element={<Layout showFooter={false}><ITPage /></Layout>} />
       <Route path="/data-analysis" element={<Layout showFooter={false}><DataAnalysisPage /></Layout>} />
       <Route path="/financial-markets" element={<Layout showFooter={false}><FinancialMarketsPage /></Layout>} />
