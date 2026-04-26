@@ -1593,14 +1593,19 @@ html {
   border-radius: 8px;
   font-size: 0.9rem;
   transition: all 0.3s;
-  background: #f9f9f9;
+  background: #0b5ed7;
+  color: #fff;
+}
+
+.auth-form .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .auth-form .form-control:focus {
   outline: none;
   border-color: #009FFD;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(0,159,253,0.1);
+  background: #0a58ca;
+  box-shadow: 0 0 0 3px rgba(0,159,253,0.25);
 }
 
 .account-type {
