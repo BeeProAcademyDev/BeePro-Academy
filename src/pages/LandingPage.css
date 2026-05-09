@@ -63,6 +63,10 @@
   transition: all 0.3s ease;
 }
 
+#root > div > nav > div.nav-links > a:nth-child(3) {
+  display: none;
+}
+
 .nav-link:hover {
   background: rgba(0, 159, 253, 0.2);
   color: #00D9FF;
