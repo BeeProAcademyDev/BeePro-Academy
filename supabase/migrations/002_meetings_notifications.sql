@@ -35,7 +35,23 @@ CREATE TABLE IF NOT EXISTS public.notifications (
     course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
-    type VARCHAR(50) DEFAULT 'general' CHECK (type IN ('general', 'meeting', 'enrollment', 'course_update', 'reminder', 'announcement')),
+    -- NOTE: This list MUST include any values inserted by application code / SQL functions.
+    -- The app currently inserts: 'payment' and the payment workflows insert
+    -- 'payment_approval', 'payment_rejection', 'payment_expired'.
+    type VARCHAR(50) DEFAULT 'general' CHECK (
+        type IN (
+            'general',
+            'meeting',
+            'enrollment',
+            'course_update',
+            'reminder',
+            'announcement',
+            'payment',
+            'payment_approval',
+            'payment_rejection',
+            'payment_expired'
+        )
+    ),
     is_read BOOLEAN DEFAULT FALSE,
     action_url VARCHAR(500),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -132,7 +148,7 @@ CREATE POLICY "Teachers and admins can create notifications"
         EXISTS (
             SELECT 1 FROM public.users
             WHERE users.id = auth.uid()
-            AND users.role IN ('teacher', 'admin')
+            AND users.role IN ('instructor', 'admin')
         )
     );
 
@@ -210,11 +226,11 @@ CREATE TRIGGER update_meetings_updated_at
 INSERT INTO public.meetings (course_id, created_by, title, description, meet_link, scheduled_at, duration_minutes)
 SELECT 
     (SELECT id FROM public.courses LIMIT 1),
-    (SELECT id FROM public.users WHERE role = 'teacher' LIMIT 1),
+    (SELECT id FROM public.users WHERE role = 'instructor' LIMIT 1),
     'جلسة مراجعة - الأسبوع الأول',
     'مراجعة لمحتوى الأسبوع الأول والإجابة على الأسئلة',
     'https://meet.google.com/abc-defg-hij',
     NOW() + INTERVAL '1 day',
     60
-WHERE EXISTS (SELECT 1 FROM public.courses) AND EXISTS (SELECT 1 FROM public.users WHERE role = 'teacher');
+WHERE EXISTS (SELECT 1 FROM public.courses) AND EXISTS (SELECT 1 FROM public.users WHERE role = 'instructor');
 */

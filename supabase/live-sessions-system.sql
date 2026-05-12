@@ -68,7 +68,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS public.live_sessions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE NOT NULL,
-    teacher_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+    instructor_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     
     -- Session Details
     title VARCHAR(255) NOT NULL,
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS public.live_sessions (
     is_recording_enabled BOOLEAN DEFAULT FALSE,
     
     -- Session URLs and Access
-    moderator_join_url TEXT, -- Direct URL for teacher with moderator access
+    moderator_join_url TEXT, -- Direct URL for instructor with moderator access
     participant_join_url TEXT, -- Base URL for approved students
     
     -- Timing and Metadata
@@ -117,9 +117,9 @@ CREATE TABLE IF NOT EXISTS public.session_join_requests (
     request_message TEXT, -- Optional message from student
     
     -- Approval/Rejection
-    reviewed_by UUID REFERENCES public.users(id), -- Teacher who approved/rejected
+    reviewed_by UUID REFERENCES public.users(id), -- Instructor who approved/rejected
     reviewed_at TIMESTAMP WITH TIME ZONE,
-    review_message TEXT, -- Optional message from teacher
+    review_message TEXT, -- Optional message from instructor
     
     -- Access Control
     access_granted_at TIMESTAMP WITH TIME ZONE,
@@ -213,7 +213,7 @@ CREATE TABLE IF NOT EXISTS public.session_attendance_logs (
 
 -- Live Sessions Indexes
 CREATE INDEX IF NOT EXISTS idx_live_sessions_course_id ON public.live_sessions(course_id);
-CREATE INDEX IF NOT EXISTS idx_live_sessions_teacher_id ON public.live_sessions(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_live_sessions_instructor_id ON public.live_sessions(instructor_id);
 CREATE INDEX IF NOT EXISTS idx_live_sessions_status ON public.live_sessions(status);
 CREATE INDEX IF NOT EXISTS idx_live_sessions_scheduled_time ON public.live_sessions(scheduled_start_time);
 CREATE INDEX IF NOT EXISTS idx_live_sessions_jitsi_room ON public.live_sessions(jitsi_room_name);
@@ -248,9 +248,9 @@ ALTER TABLE public.session_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.session_attendance_logs ENABLE ROW LEVEL SECURITY;
 
 -- Live Sessions Policies
-CREATE POLICY "Teachers can manage their course sessions" ON public.live_sessions
+CREATE POLICY "Instructors can manage their course sessions" ON public.live_sessions
     FOR ALL USING (
-        teacher_id = auth.uid() OR
+        instructor_id = auth.uid() OR
         EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -261,7 +261,7 @@ CREATE POLICY "Students can view sessions for enrolled courses" ON public.live_s
             WHERE enrollments.course_id = live_sessions.course_id
             AND enrollments.user_id = auth.uid()
         ) OR
-        teacher_id = auth.uid() OR
+        instructor_id = auth.uid() OR
         EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
     );
 
@@ -269,23 +269,23 @@ CREATE POLICY "Students can view sessions for enrolled courses" ON public.live_s
 CREATE POLICY "Students can manage their own join requests" ON public.session_join_requests
     FOR ALL USING (student_id = auth.uid());
 
-CREATE POLICY "Teachers can view requests for their sessions" ON public.session_join_requests
+CREATE POLICY "Instructors can view requests for their sessions" ON public.session_join_requests
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM public.live_sessions
             WHERE live_sessions.id = session_join_requests.session_id
-            AND live_sessions.teacher_id = auth.uid()
+            AND live_sessions.instructor_id = auth.uid()
         ) OR
         student_id = auth.uid() OR
         EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
     );
 
-CREATE POLICY "Teachers can approve/reject requests for their sessions" ON public.session_join_requests
+CREATE POLICY "Instructors can approve/reject requests for their sessions" ON public.session_join_requests
     FOR UPDATE USING (
         EXISTS (
             SELECT 1 FROM public.live_sessions
             WHERE live_sessions.id = session_join_requests.session_id
-            AND live_sessions.teacher_id = auth.uid()
+            AND live_sessions.instructor_id = auth.uid()
         ) OR
         EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
     );
@@ -294,27 +294,27 @@ CREATE POLICY "Teachers can approve/reject requests for their sessions" ON publi
 CREATE POLICY "Users can view their own participation" ON public.session_participants
     FOR SELECT USING (user_id = auth.uid());
 
-CREATE POLICY "Teachers can manage participants in their sessions" ON public.session_participants
+CREATE POLICY "Instructors can manage participants in their sessions" ON public.session_participants
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM public.live_sessions
             WHERE live_sessions.id = session_participants.session_id
-            AND live_sessions.teacher_id = auth.uid()
+            AND live_sessions.instructor_id = auth.uid()
         ) OR
         user_id = auth.uid() OR
         EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
     );
 
--- Attendance Logs Policies (Read-only for users, full access for teachers/admins)
+-- Attendance Logs Policies (Read-only for users, full access for instructors/admins)
 CREATE POLICY "Users can view their own attendance logs" ON public.session_attendance_logs
     FOR SELECT USING (user_id = auth.uid());
 
-CREATE POLICY "Teachers can view attendance for their sessions" ON public.session_attendance_logs
+CREATE POLICY "Instructors can view attendance for their sessions" ON public.session_attendance_logs
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM public.live_sessions
             WHERE live_sessions.id = session_attendance_logs.session_id
-            AND live_sessions.teacher_id = auth.uid()
+            AND live_sessions.instructor_id = auth.uid()
         ) OR
         user_id = auth.uid() OR
         EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
@@ -364,11 +364,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to automatically approve teacher as moderator
-CREATE OR REPLACE FUNCTION auto_add_teacher_as_moderator()
+-- Function to automatically add instructor as moderator
+CREATE OR REPLACE FUNCTION auto_add_instructor_as_moderator()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Add teacher as moderator participant when session is created
+    -- Add instructor as moderator participant when session is created
     INSERT INTO public.session_participants (
         session_id,
         user_id,
@@ -379,7 +379,7 @@ BEGIN
         can_use_chat
     ) VALUES (
         NEW.id,
-        NEW.teacher_id,
+        NEW.instructor_id,
         'moderator',
         generate_join_token(),
         TRUE,
@@ -438,8 +438,8 @@ BEGIN
     FROM public.live_sessions
     WHERE id = request_record.session_id;
     
-    -- Verify approver is the teacher or admin
-    IF session_record.teacher_id != approver_id AND 
+    -- Verify approver is the instructor or admin
+    IF session_record.instructor_id != approver_id AND 
        NOT EXISTS (SELECT 1 FROM public.users WHERE id = approver_id AND role = 'admin') THEN
         RETURN jsonb_build_object('success', false, 'error', 'Unauthorized');
     END IF;
@@ -479,12 +479,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- TRIGGERS
 -- =====================================================
 
--- Trigger to auto-add teacher as moderator
-DROP TRIGGER IF EXISTS trigger_auto_add_teacher_moderator ON public.live_sessions;
-CREATE TRIGGER trigger_auto_add_teacher_moderator
+-- Trigger to auto-add instructor as moderator
+DROP TRIGGER IF EXISTS trigger_auto_add_instructor_moderator ON public.live_sessions;
+CREATE TRIGGER trigger_auto_add_instructor_moderator
     AFTER INSERT ON public.live_sessions
     FOR EACH ROW
-    EXECUTE FUNCTION auto_add_teacher_as_moderator();
+    EXECUTE FUNCTION auto_add_instructor_as_moderator();
 
 -- Trigger to update timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -545,12 +545,12 @@ SELECT
     ls.status,
     ls.jitsi_room_name,
     c.title as course_title,
-    u.full_name as teacher_name,
+    u.full_name as instructor_name,
     COUNT(DISTINCT sp.id) as participant_count,
     COUNT(DISTINCT CASE WHEN sjr.status = 'pending' THEN sjr.id END) as pending_requests
 FROM public.live_sessions ls
 JOIN public.courses c ON c.id = ls.course_id
-JOIN public.users u ON u.id = ls.teacher_id
+JOIN public.users u ON u.id = ls.instructor_id
 LEFT JOIN public.session_participants sp ON sp.session_id = ls.id
 LEFT JOIN public.session_join_requests sjr ON sjr.session_id = ls.id
 GROUP BY ls.id, c.title, u.full_name;
@@ -593,7 +593,7 @@ GRANT SELECT ON pending_join_requests TO authenticated;
 SELECT 
     '✅ Live Sessions System Created Successfully!' as status,
     'Teachers can now create live sessions with Jitsi integration' as message,
-    'Students must request to join and get teacher approval' as feature,
+    'Students must request to join and get instructor approval' as feature,
     '4 tables, enums, indexes, RLS, functions, triggers, and views created' as details;
 
 -- =====================================================
@@ -604,7 +604,7 @@ SELECT
 -- Example 1: Create a live session
 INSERT INTO public.live_sessions (
     course_id,
-    teacher_id,
+    instructor_id,
     title,
     description,
     scheduled_start_time,
@@ -612,7 +612,7 @@ INSERT INTO public.live_sessions (
     jitsi_room_name
 ) VALUES (
     'your-course-id',
-    'your-teacher-id',
+    'your-instructor-id',
     'Introduction to React Hooks',
     'Live coding session covering useState and useEffect',
     NOW() + INTERVAL '2 hours',
@@ -632,7 +632,7 @@ INSERT INTO public.session_join_requests (
 );
 
 -- Example 3: Teacher approves request
-SELECT approve_join_request('request-id', 'teacher-id', 'Welcome to the session!');
+SELECT approve_join_request('request-id', 'instructor-id', 'Welcome to the session!');
 
 -- Example 4: View pending requests
 SELECT * FROM pending_join_requests WHERE session_id = 'session-id';

@@ -2,6 +2,10 @@
 -- BePro Academy - Migration-Safe Complete Schema
 -- This file can be safely run on existing databases
 -- Uses IF NOT EXISTS and safe migration patterns
+--
+-- IMPORTANT:
+-- The source of truth for this repository is `supabase/migrations/*`.
+-- Prefer `supabase db reset` over running this file manually.
 -- =====================================================
 
 -- Enable required extensions (safe to run multiple times)
@@ -209,7 +213,20 @@ CREATE TABLE IF NOT EXISTS public.notifications (
     course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
-    type VARCHAR(50) DEFAULT 'general' CHECK (type IN ('general', 'meeting', 'enrollment', 'course_update', 'reminder', 'announcement')),
+    type VARCHAR(50) DEFAULT 'general' CHECK (
+        type IN (
+            'general',
+            'meeting',
+            'enrollment',
+            'course_update',
+            'reminder',
+            'announcement',
+            'payment',
+            'payment_approval',
+            'payment_rejection',
+            'payment_expired'
+        )
+    ),
     is_read BOOLEAN DEFAULT FALSE,
     action_url VARCHAR(500),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

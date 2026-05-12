@@ -1,4 +1,21 @@
 -- =====================================================
+-- LEGACY / REFERENCE ONLY (NOT A MIGRATION)
+--
+-- This file used to live under `supabase/migrations/` as
+-- `payment_system_simple.sql`, which caused two serious issues:
+-- 1) it executed last (lexicographic order) and could override newer,
+--    more secure payment functions and policies
+-- 2) it duplicated schema definitions already covered by:
+--    - `supabase/migrations/004_custom_payment_system.sql`
+--    - subsequent fix migrations (005-014)
+--
+-- Keep this file only as historical reference. Do NOT re-add it to
+-- `supabase/migrations/` for production.
+-- =====================================================
+
+-- Original content preserved below.
+
+-- =====================================================
 -- Simple Payment System Migration
 -- Compatible with existing BePro Academy schema
 -- Run this AFTER the base schema is already deployed
@@ -240,3 +257,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Success message
 SELECT 'Simple Payment System - Migration Completed Successfully!' as message;
+
