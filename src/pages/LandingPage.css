@@ -67,6 +67,10 @@
   display: none;
 }
 
+#root > div > nav > div.nav-links > a:nth-child(5) {
+  display: none;
+}
+
 .nav-link:hover {
   background: rgba(0, 159, 253, 0.2);
   color: #00D9FF;
