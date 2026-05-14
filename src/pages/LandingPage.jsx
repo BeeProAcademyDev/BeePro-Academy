@@ -223,17 +223,6 @@ const StatsSection = () => {
 const CategorySections = () => {
   const categories = [
     {
-      id: 'programming',
-      title: 'Programming',
-      subtitle: 'Master the Art of Code',
-      description: 'Dive into software development, web programming, and coding languages. From Python to JavaScript, build the skills that power the digital world.',
-      backgroundImage: '/assets/code4.jpg',
-      icon: '💻',
-      features: ['Web Development', 'Mobile Apps', 'Software Engineering', 'Full-Stack Development'],
-      color: '#00D9FF',
-      useVideo: false
-    },
-    {
       id: 'it',
       title: 'Information Technology',
       subtitle: 'Build the Future Infrastructure',
@@ -1125,7 +1114,6 @@ const LandingNavbar = ({ onAuthClick }) => {
   const navLinks = [
     { label: 'Financial Markets', href: '/financial-markets' },
     { label: 'Data Analysis', href: '/data-analysis' },
-    { label: 'Programming', href: '/programming' },
     { label: 'IT', href: '/it' },
     { label: 'Create Course', href: '/create-course' },
     { label: 'Contact', href: '#contact' }
