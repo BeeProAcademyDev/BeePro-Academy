@@ -125,12 +125,6 @@ const PlatformSection = () => {
       title: 'IT',
       description: 'Build your IT expertise with courses in cloud computing, network administration, cybersecurity, and enterprise system management.',
       link: '/it'
-    },
-    {
-      icon: '💻',
-      title: 'Programming',
-      description: 'From beginner to advanced, master programming languages, software development, mobile apps, and modern frameworks for full-stack development.',
-      link: '/programming'
     }
   ];
 
@@ -164,13 +158,6 @@ const PlatformSection = () => {
 
 // Stats Section with Video Shadow Effect
 const StatsSection = () => {
-  const stats = [
-    { number: '250+', label: 'Active Students' },
-    { number: '95%', label: 'Success Rate' },
-    { number: '500+', label: 'Video Lessons' },
-    { number: '24/7', label: 'Support Access' }
-  ];
-
   const features = [
     'Live Trading Sessions',
     'Real Market Analysis',
@@ -211,20 +198,6 @@ const StatsSection = () => {
       <div style={{ position: 'relative', zIndex: 3 }}>
         <div className="new-section-content">
           <h2>Your Journey to Financial Excellence Starts Here with BePro-Academy</h2>
-          
-          <div className="education-stats">
-            {stats.map((stat, index) => (
-              <div key={index} className="stat-card" style={{ 
-                animationDelay: `${0.2 * (index + 1)}s`,
-                backgroundColor: 'rgba(148, 163, 184, 0.32)',
-                backdropFilter: 'blur(10px)',
-                boxShadow: '0 8px 25px rgba(0,0,0,0.18)'
-              }}>
-                <span className="stat-number">{stat.number}</span>
-                <span className="stat-label">{stat.label}</span>
-              </div>
-            ))}
-          </div>
           
           <div className="education-features">
             {features.map((feature, index) => (

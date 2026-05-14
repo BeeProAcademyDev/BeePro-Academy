@@ -1,4 +1,5 @@
 import supabase from '../lib/supabase'
+import { clarifySupabaseConnectionError } from '../lib/supabaseErrors'
 import { courses as mockCourses, categories as mockCategories } from '../data/courses'
 
 // Check if Supabase is available
@@ -16,30 +17,34 @@ export const authService = {
       }
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            role
+          }
+        }
+      })
+
+      if (error) throw clarifySupabaseConnectionError(error)
+
+      if (data.user) {
+        const { error: insertError } = await supabase.from('users').insert({
+          id: data.user.id,
+          email: data.user.email,
           full_name: fullName,
           role
-        }
+        })
+        if (insertError) throw clarifySupabaseConnectionError(insertError)
       }
-    })
 
-    if (error) throw error
-
-    // Create user profile in users table
-    if (data.user) {
-      await supabase.from('users').insert({
-        id: data.user.id,
-        email: data.user.email,
-        full_name: fullName,
-        role
-      })
+      return data
+    } catch (e) {
+      throw clarifySupabaseConnectionError(e)
     }
-
-    return data
   },
 
   // Sign in with email and password
@@ -52,13 +57,17 @@ export const authService = {
       }
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
 
-    if (error) throw error
-    return data
+      if (error) throw clarifySupabaseConnectionError(error)
+      return data
+    } catch (e) {
+      throw clarifySupabaseConnectionError(e)
+    }
   },
 
   // Sign out
@@ -67,9 +76,13 @@ export const authService = {
       return { success: true }
     }
 
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
-    return { success: true }
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw clarifySupabaseConnectionError(error)
+      return { success: true }
+    } catch (e) {
+      throw clarifySupabaseConnectionError(e)
+    }
   },
 
   // Get current user
@@ -78,17 +91,24 @@ export const authService = {
       return null
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw clarifySupabaseConnectionError(authError)
+      if (!user) return null
 
-    // Get user profile from users table
-    const { data: profile } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+      // Get user profile from users table
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
 
-    return { ...user, ...profile }
+      if (profileError) throw clarifySupabaseConnectionError(profileError)
+
+      return { ...user, ...(profile || {}) }
+    } catch (e) {
+      throw clarifySupabaseConnectionError(e)
+    }
   },
 
   // Reset password
@@ -97,12 +117,16 @@ export const authService = {
       return { success: true }
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`
-    })
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      })
 
-    if (error) throw error
-    return { success: true }
+      if (error) throw clarifySupabaseConnectionError(error)
+      return { success: true }
+    } catch (e) {
+      throw clarifySupabaseConnectionError(e)
+    }
   },
 
   // Update password
@@ -111,12 +135,16 @@ export const authService = {
       return { success: true }
     }
 
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    })
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
 
-    if (error) throw error
-    return { success: true }
+      if (error) throw clarifySupabaseConnectionError(error)
+      return { success: true }
+    } catch (e) {
+      throw clarifySupabaseConnectionError(e)
+    }
   },
 
   // Sign in with Google OAuth
@@ -125,15 +153,19 @@ export const authService = {
       throw new Error('Supabase is not configured. Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in deployment environment variables.')
     }
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`
-      }
-    })
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      })
 
-    if (error) throw error
-    return data
+      if (error) throw clarifySupabaseConnectionError(error)
+      return data
+    } catch (e) {
+      throw clarifySupabaseConnectionError(e)
+    }
   },
 
   // Listen to auth state changes
