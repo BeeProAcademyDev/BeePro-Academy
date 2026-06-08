@@ -191,6 +191,12 @@ const Login = () => {
                 {t('auth.login.register')}
               </Link>
             </p>
+            <p className="text-center mt-3 text-sm text-secondary-600 dark:text-secondary-400">
+              {language === 'ar' ? 'تريد التدريس؟' : 'Want to teach?'}{' '}
+              <Link to="/register?role=teacher" className="text-primary-500 hover:text-primary-600 font-medium">
+                {language === 'ar' ? 'سجّل كمدرس' : 'Register as a teacher'}
+              </Link>
+            </p>
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { supabase } from '../../lib/supabase'
 import { adminService, userService } from '../../services/api'
+import { getRoleLabel as getSharedRoleLabel } from '../../lib/roles'
 import { 
   FiUsers, 
   FiSearch, 
@@ -30,7 +31,7 @@ const UserManagement = () => {
   const [showUserDetails, setShowUserDetails] = useState(false)
   const [actionLoading, setActionLoading] = useState(null)
 
-  const configuredAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS || 'admin@bepro.academy')
+  const configuredAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS || 'admin@beepro.academy')
     .split(',')
     .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean)
@@ -74,9 +75,7 @@ const UserManagement = () => {
     try {
       await ensureAdminRoleInDatabase()
 
-      const { data, error } = await supabase.rpc('admin_get_all_users', {
-        admin_user_id: user.id
-      })
+      const { data, error } = await supabase.rpc('admin_get_all_users')
 
       if (error) {
         const { data: fallbackUsers } = await adminService.getAllUsers({ limit: 500, offset: 0 })
@@ -127,6 +126,63 @@ const UserManagement = () => {
     }
   }
 
+  const approveInstructor = async (targetUserId) => {
+    if (!user?.id) {
+      alert(language === 'ar' ? 'يجب تسجيل الدخول' : 'You must be signed in')
+      return
+    }
+
+    if (normalizedUserRole !== 'admin') {
+      alert(language === 'ar' ? 'صلاحيات المدير مطلوبة' : 'Admin access is required')
+      return
+    }
+
+    setActionLoading(targetUserId)
+    try {
+      await ensureAdminRoleInDatabase()
+      const data = await adminService.approveInstructor(targetUserId)
+      if (data?.success === false) throw new Error(data.error)
+
+      alert(language === 'ar' ? 'تم قبول المدرس بنجاح' : 'Instructor approved successfully')
+      fetchUsers()
+    } catch (error) {
+      console.error('Error approving instructor:', error)
+      try {
+        await adminService.updateUserRole(targetUserId, 'instructor')
+        alert(language === 'ar' ? 'تم قبول المدرس بنجاح' : 'Instructor approved successfully')
+        fetchUsers()
+      } catch (fallbackError) {
+        alert(language === 'ar' ? 'فشل قبول المدرس' : 'Failed to approve instructor')
+      }
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const rejectInstructor = async (targetUserId) => {
+    if (!user?.id || normalizedUserRole !== 'admin') return
+
+    setActionLoading(targetUserId)
+    try {
+      const data = await adminService.rejectInstructor(targetUserId)
+      if (data?.success === false) throw new Error(data.error)
+
+      alert(language === 'ar' ? 'تم رفض طلب المدرس' : 'Instructor application rejected')
+      fetchUsers()
+    } catch (error) {
+      console.error('Error rejecting instructor:', error)
+      try {
+        await adminService.updateUserRole(targetUserId, 'student')
+        alert(language === 'ar' ? 'تم رفض طلب المدرس' : 'Instructor application rejected')
+        fetchUsers()
+      } catch (fallbackError) {
+        alert(language === 'ar' ? 'فشل رفض الطلب' : 'Failed to reject application')
+      }
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   // Update user role
   const updateUserRole = async (targetUserId, newRole) => {
     if (!user?.id || normalizedUserRole !== 'admin') return
@@ -135,8 +191,7 @@ const UserManagement = () => {
     try {
       const { data, error } = await supabase.rpc('admin_update_user_role', {
         target_user_id: targetUserId,
-        new_role: newRole,
-        admin_user_id: user.id
+        new_role: newRole
       })
 
       if (error) throw error
@@ -159,8 +214,7 @@ const UserManagement = () => {
 
           const { data: retriedData, error: retriedError } = await supabase.rpc('admin_update_user_role', {
             target_user_id: targetUserId,
-            new_role: newRole,
-            admin_user_id: user.id
+            new_role: newRole
           })
 
           if (retriedError) throw retriedError
@@ -210,8 +264,7 @@ const UserManagement = () => {
 
     try {
       const { data, error } = await supabase.rpc('admin_get_user_details', {
-        target_user_id: targetUserId,
-        admin_user_id: user.id
+        target_user_id: targetUserId
       })
 
       if (error) throw error
@@ -289,23 +342,19 @@ const UserManagement = () => {
     }
   }
 
-  const getRoleLabel = (role) => {
-    const labels = {
-      'student': language === 'ar' ? 'طالب' : 'Student',
-      'instructor': language === 'ar' ? 'مدرس' : 'Instructor', 
-      'admin': language === 'ar' ? 'إداري' : 'Admin'
-    }
-    return labels[role] || role
-  }
+  const getRoleLabel = (role) => getSharedRoleLabel(role, language)
 
   const getRoleColor = (role) => {
     const colors = {
       'student': 'bg-blue-100 text-blue-800',
+      'pending_instructor': 'bg-amber-100 text-amber-800',
       'instructor': 'bg-green-100 text-green-800',
       'admin': 'bg-red-100 text-red-800'
     }
     return colors[role] || 'bg-gray-100 text-gray-800'
   }
+
+  const pendingInstructors = users.filter((u) => u.role === 'pending_instructor')
 
   // Filter users based on search term and role
   const filteredUsers = users.filter(user => {
@@ -362,11 +411,54 @@ const UserManagement = () => {
         </button>
       </div>
 
+      {/* Pending Instructor Approvals */}
+      {pendingInstructors.length > 0 && (
+        <div className="card card-body border border-amber-200 bg-amber-50 dark:bg-amber-900/20">
+          <h3 className="font-bold mb-4">
+            {language === 'ar'
+              ? `طلبات مدرسين بانتظار الموافقة (${pendingInstructors.length})`
+              : `Pending Instructor Applications (${pendingInstructors.length})`}
+          </h3>
+          <div className="space-y-3">
+            {pendingInstructors.map((pendingUser) => (
+              <div key={pendingUser.id} className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                <div>
+                  <div className="font-medium">{pendingUser.full_name || pendingUser.email}</div>
+                  <div className="text-sm text-gray-500">{pendingUser.email}</div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => approveInstructor(pendingUser.id)}
+                    disabled={actionLoading === pendingUser.id}
+                    className="btn btn-primary text-sm"
+                  >
+                    {actionLoading === pendingUser.id
+                      ? (language === 'ar' ? 'جاري...' : 'Processing...')
+                      : (language === 'ar' ? 'قبول' : 'Approve')}
+                  </button>
+                  <button
+                    onClick={() => rejectInstructor(pendingUser.id)}
+                    disabled={actionLoading === pendingUser.id}
+                    className="btn btn-secondary text-sm"
+                  >
+                    {language === 'ar' ? 'رفض' : 'Reject'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-blue-600">{users.filter(u => u.role === 'student').length}</div>
           <div className="text-sm text-gray-500">{language === 'ar' ? 'طلاب' : 'Students'}</div>
+        </div>
+        <div className="card card-body text-center">
+          <div className="text-2xl font-bold text-amber-600">{pendingInstructors.length}</div>
+          <div className="text-sm text-gray-500">{language === 'ar' ? 'بانتظار الموافقة' : 'Pending'}</div>
         </div>
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-green-600">{users.filter(u => u.role === 'instructor').length}</div>
@@ -405,6 +497,7 @@ const UserManagement = () => {
             >
               <option value="all">{language === 'ar' ? 'جميع الأدوار' : 'All Roles'}</option>
               <option value="student">{language === 'ar' ? 'طالب' : 'Student'}</option>
+              <option value="pending_instructor">{language === 'ar' ? 'مدرس (بانتظار الموافقة)' : 'Pending Instructor'}</option>
               <option value="instructor">{language === 'ar' ? 'مدرس' : 'Instructor'}</option>
               <option value="admin">{language === 'ar' ? 'إداري' : 'Admin'}</option>
             </select>
@@ -498,12 +591,37 @@ const UserManagement = () => {
                         </button>
                         
                         {/* Role Conversion Buttons */}
-                        {userData.role !== 'instructor' && (
+                        {userData.role === 'pending_instructor' && (
+                          <>
+                            <button
+                              onClick={() => approveInstructor(userData.id)}
+                              disabled={actionLoading === userData.id}
+                              className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                              title={language === 'ar' ? 'قبول المدرس' : 'Approve Instructor'}
+                            >
+                              {actionLoading === userData.id ? (
+                                <FiLoader className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <FiUserCheck className="w-4 h-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => rejectInstructor(userData.id)}
+                              disabled={actionLoading === userData.id}
+                              className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                              title={language === 'ar' ? 'رفض الطلب' : 'Reject Application'}
+                            >
+                              <FiUserX className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+
+                        {userData.role === 'student' && (
                           <button
                             onClick={() => updateUserRole(userData.id, 'instructor')}
                             disabled={actionLoading === userData.id}
                             className="text-green-600 hover:text-green-900 disabled:opacity-50"
-                            title={language === 'ar' ? 'تحويل إلى مدرس' : 'Convert to Instructor'}
+                            title={language === 'ar' ? 'ترقية إلى مدرس' : 'Promote to Instructor'}
                           >
                             {actionLoading === userData.id ? (
                               <FiLoader className="w-4 h-4 animate-spin" />

@@ -20,7 +20,7 @@ const resources = {
       // Home Page
       home: {
         hero: {
-          title: 'طور مهاراتك مع BePro Academy',
+          title: 'طور مهاراتك مع BeePro Academy',
           subtitle: 'منصة تعليمية متكاملة تقدم دورات احترافية في البرمجة والتصميم وتكنولوجيا المعلومات والأسواق المالية',
           cta: 'ابدأ التعلم الآن',
           exploreCourses: 'استكشف الدورات',
@@ -32,7 +32,7 @@ const resources = {
           hours: 'ساعة تدريبية',
         },
         features: {
-          title: 'لماذا BePro Academy؟',
+          title: 'لماذا BeePro Academy؟',
           subtitle: 'نقدم لك أفضل تجربة تعليمية مع مميزات فريدة',
           quality: {
             title: 'محتوى عالي الجودة',
@@ -132,6 +132,19 @@ const resources = {
           email: 'البريد الإلكتروني',
           submit: 'إرسال الرابط',
           back: 'العودة لتسجيل الدخول',
+          successTitle: 'تم إرسال الرابط',
+          successMessage: 'إذا كان البريد مسجّلاً لدينا، ستصلك رسالة تحتوي على رابط لإعادة تعيين كلمة المرور. تحقق من صندوق الوارد والبريد المزعج.',
+        },
+        reset: {
+          title: 'كلمة مرور جديدة',
+          description: 'اختر كلمة مرور قوية لحسابك',
+          password: 'كلمة المرور الجديدة',
+          confirmPassword: 'تأكيد كلمة المرور',
+          submit: 'حفظ كلمة المرور',
+          successTitle: 'تم تحديث كلمة المرور',
+          successMessage: 'جاري تحويلك إلى صفحة تسجيل الدخول...',
+          invalidTitle: 'رابط غير صالح أو منتهٍ',
+          invalidMessage: 'رابط إعادة التعيين غير صالح أو انتهت صلاحيته. اطلب رابطاً جديداً.',
         },
       },
       // Dashboard
@@ -149,7 +162,7 @@ const resources = {
       // Footer
       footer: {
         about: 'من نحن',
-        aboutText: 'BePro Academy منصة تعليمية رائدة تهدف إلى تطوير مهارات الأفراد في مجالات البرمجة والتصميم وتكنولوجيا المعلومات والأسواق المالية.',
+        aboutText: 'BeePro Academy منصة تعليمية رائدة تهدف إلى تطوير مهارات الأفراد في مجالات البرمجة والتصميم وتكنولوجيا المعلومات والأسواق المالية.',
         quickLinks: 'روابط سريعة',
         categories: 'الأقسام',
         contact: 'تواصل معنا',
@@ -203,7 +216,7 @@ const resources = {
       // Home Page
       home: {
         hero: {
-          title: 'Develop Your Skills with BePro Academy',
+          title: 'Develop Your Skills with BeePro Academy',
           subtitle: 'A comprehensive educational platform offering professional courses in Programming, Design, IT, and Financial Markets',
           cta: 'Start Learning Now',
           exploreCourses: 'Explore Courses',
@@ -215,7 +228,7 @@ const resources = {
           hours: 'Training Hours',
         },
         features: {
-          title: 'Why BePro Academy?',
+          title: 'Why BeePro Academy?',
           subtitle: 'We provide you with the best learning experience with unique features',
           quality: {
             title: 'High Quality Content',
@@ -315,6 +328,19 @@ const resources = {
           email: 'Email',
           submit: 'Send Link',
           back: 'Back to login',
+          successTitle: 'Link sent',
+          successMessage: 'If this email is registered, you will receive a message with a reset link. Check your inbox and spam folder.',
+        },
+        reset: {
+          title: 'New password',
+          description: 'Choose a strong password for your account',
+          password: 'New password',
+          confirmPassword: 'Confirm password',
+          submit: 'Save password',
+          successTitle: 'Password updated',
+          successMessage: 'Redirecting you to login...',
+          invalidTitle: 'Invalid or expired link',
+          invalidMessage: 'This reset link is invalid or has expired. Please request a new one.',
         },
       },
       // Dashboard
@@ -332,7 +358,7 @@ const resources = {
       // Footer
       footer: {
         about: 'About Us',
-        aboutText: 'BePro Academy is a leading educational platform aimed at developing individuals skills in Programming, Design, IT, and Financial Markets.',
+        aboutText: 'BeePro Academy is a leading educational platform aimed at developing individuals skills in Programming, Design, IT, and Financial Markets.',
         quickLinks: 'Quick Links',
         categories: 'Categories',
         contact: 'Contact Us',

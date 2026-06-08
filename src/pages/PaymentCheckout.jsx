@@ -4,6 +4,7 @@ import { FiUploadCloud, FiCheckCircle, FiLoader } from 'react-icons/fi'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { isStudentUser } from '../lib/roles'
 import { paymentService } from '../services/paymentAPI'
 
 const formatDetails = (details) => {
@@ -38,7 +39,7 @@ const PaymentCheckout = () => {
     notes: ''
   })
 
-  const isStudent = user?.role === 'student'
+  const isStudent = isStudentUser(user)
 
   useEffect(() => {
     const loadData = async () => {

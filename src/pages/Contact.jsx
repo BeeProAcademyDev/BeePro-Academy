@@ -42,7 +42,7 @@ const Contact = () => {
     {
       icon: FiMail,
       title: language === 'ar' ? 'البريد الإلكتروني' : 'Email',
-      value: 'info@bepro-academy.com',
+      value: 'info@beepro-academy.com',
       description: language === 'ar' ? 'راسلنا في أي وقت' : 'Email us anytime'
     },
     {
@@ -234,7 +234,7 @@ const Contact = () => {
           </h2>
           <div className="flex flex-wrap justify-center gap-4 mt-8">
             <a
-              href="https://facebook.com/beproacademy"
+              href="https://facebook.com/beeproacademy"
               target="_blank"
               rel="noopener noreferrer"
               className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center text-2xl hover:bg-[#1877F2] hover:border-transparent hover:-translate-y-2 transition-all duration-300"
@@ -243,7 +243,7 @@ const Contact = () => {
               📘
             </a>
             <a
-              href="https://youtube.com/@beproacademy"
+              href="https://youtube.com/@beeproacademy"
               target="_blank"
               rel="noopener noreferrer"
               className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center text-2xl hover:bg-[#FF0000] hover:border-transparent hover:-translate-y-2 transition-all duration-300"
@@ -252,7 +252,7 @@ const Contact = () => {
               📺
             </a>
             <a
-              href="https://instagram.com/beproacademy"
+              href="https://instagram.com/beeproacademy"
               target="_blank"
               rel="noopener noreferrer"
               className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center text-2xl hover:bg-gradient-to-br hover:from-[#833AB4] hover:via-[#FD1D1D] hover:to-[#F77737] hover:border-transparent hover:-translate-y-2 transition-all duration-300"
@@ -261,7 +261,7 @@ const Contact = () => {
               📷
             </a>
             <a
-              href="https://snapchat.com/add/beproacademy"
+              href="https://snapchat.com/add/beeproacademy"
               target="_blank"
               rel="noopener noreferrer"
               className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center text-2xl hover:bg-[#FFFC00] hover:border-transparent hover:-translate-y-2 transition-all duration-300"
@@ -270,7 +270,7 @@ const Contact = () => {
               👻
             </a>
             <a
-              href="https://twitter.com/beproacademy"
+              href="https://twitter.com/beeproacademy"
               target="_blank"
               rel="noopener noreferrer"
               className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center text-2xl hover:bg-[#1DA1F2] hover:border-transparent hover:-translate-y-2 transition-all duration-300"
@@ -279,7 +279,7 @@ const Contact = () => {
               🐦
             </a>
             <a
-              href="https://linkedin.com/company/beproacademy"
+              href="https://linkedin.com/company/beeproacademy"
               target="_blank"
               rel="noopener noreferrer"
               className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center text-2xl hover:bg-[#0A66C2] hover:border-transparent hover:-translate-y-2 transition-all duration-300"
@@ -288,7 +288,7 @@ const Contact = () => {
               💼
             </a>
             <a
-              href="https://tiktok.com/@beproacademy"
+              href="https://tiktok.com/@beeproacademy"
               target="_blank"
               rel="noopener noreferrer"
               className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center text-2xl hover:bg-[#000000] hover:border-transparent hover:-translate-y-2 transition-all duration-300"

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { courseService, lessonService, meetingService, notificationService } from '../../services/api'
 import { googleCalendarService } from '../../lib/googleCalendar'
+import { generateJitsiRoomName } from '../../lib/jitsi'
 import './CreateCourse.css'
 
 const EditCourse = () => {
@@ -44,6 +45,7 @@ const EditCourse = () => {
   
   // Meeting data
   const [showMeetingModal, setShowMeetingModal] = useState(false)
+  const [meetingPlatform, setMeetingPlatform] = useState('google_meet')
   const [meetingData, setMeetingData] = useState({
     title: '',
     description: '',
@@ -339,8 +341,12 @@ const EditCourse = () => {
     setLessons(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Create Google Meet
-  const createGoogleMeet = async () => {
+  const openMeetingModal = (platform) => {
+    setMeetingPlatform(platform)
+    setShowMeetingModal(true)
+  }
+
+  const createMeetingSession = async () => {
     if (!meetingData.title || !meetingData.scheduled_at) {
       setError('يرجى إدخال عنوان الاجتماع والوقت')
       return
@@ -348,22 +354,38 @@ const EditCourse = () => {
 
     setIsLoading(true)
     try {
-      const { meetLink, eventId } = await googleCalendarService.createGoogleMeetEvent({
-        title: meetingData.title,
-        description: meetingData.description,
-        scheduledAt: meetingData.scheduled_at,
-        durationMinutes: meetingData.duration_minutes
-      })
-      
-      const meeting = {
-        ...meetingData,
-        meet_link: meetLink,
-        calendar_event_id: eventId,
-        created_by: user?.id,
-        created_at: new Date().toISOString(),
-        isNew: true
+      let meeting
+
+      if (meetingPlatform === 'jitsi') {
+        const jitsiRoomName = generateJitsiRoomName(courseData.title || 'course', meetingData.title)
+        meeting = {
+          ...meetingData,
+          platform: 'jitsi',
+          jitsi_room_name: jitsiRoomName,
+          meet_link: null,
+          created_by: user?.id,
+          created_at: new Date().toISOString(),
+          isNew: true
+        }
+      } else {
+        const { meetLink, eventId } = await googleCalendarService.createGoogleMeetEvent({
+          title: meetingData.title,
+          description: meetingData.description,
+          scheduledAt: meetingData.scheduled_at,
+          durationMinutes: meetingData.duration_minutes
+        })
+
+        meeting = {
+          ...meetingData,
+          platform: 'google_meet',
+          meet_link: meetLink,
+          calendar_event_id: eventId,
+          created_by: user?.id,
+          created_at: new Date().toISOString(),
+          isNew: true
+        }
       }
-      
+
       setScheduledMeetings(prev => [...prev, meeting])
       setShowMeetingModal(false)
       setMeetingData({
@@ -372,9 +394,13 @@ const EditCourse = () => {
         scheduled_at: '',
         duration_minutes: 60
       })
-      setSuccess('تم إنشاء جلسة Google Meet من Google Calendar بنجاح!')
+      setSuccess(
+        meetingPlatform === 'jitsi'
+          ? 'تم إنشاء جلسة Jitsi داخل المنصة بنجاح!'
+          : 'تم إنشاء جلسة Google Meet من Google Calendar بنجاح!'
+      )
     } catch (err) {
-      setError(err.message || 'فشل إنشاء جلسة Google Meet')
+      setError(err.message || (meetingPlatform === 'jitsi' ? 'فشل إنشاء جلسة Jitsi' : 'فشل إنشاء جلسة Google Meet'))
     } finally {
       setIsLoading(false)
     }
@@ -466,6 +492,8 @@ const EditCourse = () => {
           scheduled_at: meeting.scheduled_at,
           duration_minutes: meeting.duration_minutes,
           meet_link: meeting.meet_link,
+          platform: meeting.platform || 'google_meet',
+          jitsi_room_name: meeting.jitsi_room_name || null,
           course_id: id,
           created_by: meeting.created_by
         })
@@ -717,13 +745,22 @@ const EditCourse = () => {
             <div className="form-section">
               <div className="section-header">
                 <h2>📚 تعديل الدروس</h2>
-                <button 
-                  className="btn btn-meet"
-                  onClick={() => setShowMeetingModal(true)}
-                >
-                  <span>🎥</span>
-                  إنشاء Google Meet
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="btn btn-meet"
+                    onClick={() => openMeetingModal('jitsi')}
+                  >
+                    <span>🎥</span>
+                    إنشاء Jitsi
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => openMeetingModal('google_meet')}
+                  >
+                    <span>📅</span>
+                    Google Meet
+                  </button>
+                </div>
               </div>
 
               {/* Scheduled Meetings */}
@@ -736,23 +773,32 @@ const EditCourse = () => {
                         <h4>{meeting.title}</h4>
                         <p>{new Date(meeting.scheduled_at).toLocaleString('ar-EG')}</p>
                         <span className="meeting-duration">{meeting.duration_minutes} دقيقة</span>
+                        <span className="meeting-platform">
+                          {meeting.platform === 'jitsi' ? '🎥 Jitsi' : '📅 Google Meet'}
+                        </span>
                       </div>
                       <div className="meeting-actions">
-                        <a 
-                          href={meeting.meet_link} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="btn btn-link"
-                        >
-                          🔗 فتح الرابط
-                        </a>
-                        <button 
-                          className="btn btn-copy"
-                          onClick={() => copyMeetLink(meeting.meet_link)}
-                        >
-                          📋 نسخ
-                        </button>
-                        <button 
+                        {meeting.platform === 'jitsi' ? (
+                          <span className="btn btn-link">غرفة: {meeting.jitsi_room_name}</span>
+                        ) : (
+                          <>
+                            <a
+                              href={meeting.meet_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-link"
+                            >
+                              🔗 فتح الرابط
+                            </a>
+                            <button
+                              className="btn btn-copy"
+                              onClick={() => copyMeetLink(meeting.meet_link)}
+                            >
+                              📋 نسخ
+                            </button>
+                          </>
+                        )}
+                        <button
                           className="btn-remove"
                           onClick={() => removeMeeting(index)}
                         >
@@ -1091,7 +1137,7 @@ const EditCourse = () => {
         <div className="modal-overlay" onClick={() => setShowMeetingModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>🎥 إنشاء جلسة Google Meet</h3>
+              <h3>{meetingPlatform === 'jitsi' ? '🎥 إنشاء جلسة Jitsi داخل المنصة' : '📅 إنشاء جلسة Google Meet'}</h3>
               <button 
                 className="modal-close"
                 onClick={() => setShowMeetingModal(false)}
@@ -1155,10 +1201,10 @@ const EditCourse = () => {
               </button>
               <button 
                 className="btn btn-meet"
-                onClick={createGoogleMeet}
+                onClick={createMeetingSession}
                 disabled={isLoading || !meetingData.title || !meetingData.scheduled_at}
               >
-                {isLoading ? 'جاري الإنشاء...' : '🎥 إنشاء الرابط'}
+                {isLoading ? 'جاري الإنشاء...' : (meetingPlatform === 'jitsi' ? '🎥 إنشاء جلسة Jitsi' : '📅 إنشاء الرابط')}
               </button>
             </div>
           </div>

@@ -13,15 +13,26 @@ import {
   FiUser, 
   FiLogOut,
   FiGrid,
-  FiChevronDown
+  FiChevronDown,
+  FiMessageCircle
 } from 'react-icons/fi'
+import StudentNotificationsBell from '../notifications/StudentNotificationsBell'
+import StudentChatBell from '../chat/StudentChatBell'
+import { resolveUserRole, shouldShowStudentChatBell } from '../../lib/roles'
 
 const Navbar = () => {
   const { t } = useTranslation()
   const { isDarkMode, toggleDarkMode } = useTheme()
   const { language, toggleLanguage, isRTL } = useLanguage()
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated, isLoading, logout } = useAuth()
   const navigate = useNavigate()
+  const showChatBell = shouldShowStudentChatBell(user)
+  
+  useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7427/ingest/558f5932-6500-4722-9bbf-9e5e1306baf3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'45e2a3'},body:JSON.stringify({sessionId:'45e2a3',location:'Navbar.jsx:auth',message:'navbar auth state',data:{isLoading,isAuthenticated,hasUserId:!!user?.id,role:user?.role,resolvedRole:resolveUserRole(user),showChatBell,viewportW:typeof window!=='undefined'?window.innerWidth:null},hypothesisId:'G',timestamp:Date.now(),runId:'pre-fix'})}).catch(()=>{});
+    // #endregion
+  }, [isLoading, isAuthenticated, user?.id, user?.role, showChatBell])
   
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
@@ -43,7 +54,7 @@ const Navbar = () => {
 
   const displayName = user?.full_name || user?.name || user?.email?.split('@')[0] || 'User'
   const displayEmail = user?.email || ''
-  const normalizedRole = user?.role === 'instructor' ? 'teacher' : (user?.role || 'student')
+  const normalizedRole = resolveUserRole(user)
   const roleLabel = {
     student: language === 'ar' ? 'طالب' : 'Student',
     teacher: language === 'ar' ? 'مدرس' : 'Teacher',
@@ -74,7 +85,7 @@ const Navbar = () => {
               <span className="text-white font-bold text-xl">B</span>
             </div>
             <span className="text-xl font-bold gradient-text hidden sm:block">
-              BePro Academy
+              BeePro Academy
             </span>
           </Link>
 
@@ -98,7 +109,7 @@ const Navbar = () => {
             {/* Language Toggle */}
             <button
               onClick={toggleLanguage}
-              className="btn-ghost p-2 rounded-lg"
+              className="btn-ghost p-2 rounded-lg hidden sm:inline-flex"
               title={language === 'ar' ? 'English' : 'العربية'}
             >
               <FiGlobe className="w-5 h-5" />
@@ -107,7 +118,7 @@ const Navbar = () => {
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
-              className="btn-ghost p-2 rounded-lg"
+              className="btn-ghost p-2 rounded-lg hidden sm:inline-flex"
               title={isDarkMode ? 'Light Mode' : 'Dark Mode'}
             >
               {isDarkMode ? (
@@ -119,7 +130,12 @@ const Navbar = () => {
 
             {/* Auth Buttons or Profile */}
             {isAuthenticated ? (
-              <div className="relative">
+              <>
+                <div className="hidden md:flex items-center gap-1 shrink-0">
+                  <StudentNotificationsBell />
+                  {showChatBell && <StudentChatBell />}
+                </div>
+              <div className="relative shrink-0 min-w-0">
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center gap-2 btn-ghost px-3 py-2 rounded-lg"
@@ -164,6 +180,16 @@ const Navbar = () => {
                       <FiGrid className="w-5 h-5" />
                       <span>{t('nav.dashboard')}</span>
                     </Link>
+                    {showChatBell && (
+                      <Link
+                        to="/courses"
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-secondary-50 dark:hover:bg-dark-border transition-colors"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <FiMessageCircle className="w-5 h-5" />
+                        <span>{language === 'ar' ? 'دردشة المدرس' : 'Instructor chat'}</span>
+                      </Link>
+                    )}
                     <Link
                       to="/profile"
                       className="flex items-center gap-3 px-4 py-3 hover:bg-secondary-50 dark:hover:bg-dark-border transition-colors"
@@ -182,10 +208,14 @@ const Navbar = () => {
                   </div>
                 )}
               </div>
+              </>
             ) : (
               <div className="hidden md:flex items-center gap-3">
                 <Link to="/login" className="btn-ghost px-4 py-2 rounded-lg">
                   {t('nav.login')}
+                </Link>
+                <Link to="/register?role=teacher" className="btn-ghost px-4 py-2 rounded-lg">
+                  {language === 'ar' ? 'سجّل كمدرس' : 'Teach'}
                 </Link>
                 <Link to="/register" className="btn btn-primary">
                   {t('nav.register')}
@@ -211,6 +241,16 @@ const Navbar = () => {
         {isMenuOpen && (
           <div className="lg:hidden absolute top-full left-0 right-0 bg-white dark:bg-dark-card border-t border-secondary-100 dark:border-dark-border shadow-lg animate-slide-down">
             <div className="container-custom py-4">
+              {isAuthenticated && (
+                <div className="md:hidden flex items-center gap-4 px-4 py-3 mb-3 border-b border-secondary-100 dark:border-dark-border">
+                  <StudentNotificationsBell />
+                  {showChatBell && <StudentChatBell />}
+                  <span className="text-sm text-secondary-500">
+                    {language === 'ar' ? 'الإشعارات والدردشة' : 'Alerts & chat'}
+                  </span>
+                </div>
+              )}
+
               {navLinks.map((link) => (
                 <NavLink
                   key={link.to}
@@ -228,6 +268,19 @@ const Navbar = () => {
                 </NavLink>
               ))}
               
+              {isAuthenticated && showChatBell && (
+                <div className="mt-4 pt-4 border-t border-secondary-100 dark:border-dark-border md:hidden">
+                  <Link
+                    to="/courses"
+                    className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-secondary-50 dark:hover:bg-dark-border"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <FiMessageCircle className="w-5 h-5 text-primary-500" />
+                    <span>{language === 'ar' ? 'دردشة المدرس' : 'Instructor chat'}</span>
+                  </Link>
+                </div>
+              )}
+
               {!isAuthenticated && (
                 <div className="mt-4 pt-4 border-t border-secondary-100 dark:border-dark-border flex flex-col gap-3">
                   <Link 

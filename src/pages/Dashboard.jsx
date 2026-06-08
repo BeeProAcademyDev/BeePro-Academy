@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
 import CourseCard from '../components/ui/CourseCard'
+import CourseChat from '../components/chat/CourseChat'
 import { courses } from '../data/courses'
-import { courseService, enrollmentService } from '../services/api'
+import { courseService, enrollmentService, notificationService, userService, chatService } from '../services/api'
 import { paymentService, PAYMENT_TYPES } from '../services/paymentAPI'
 import UserManagement from './admin/UserManagement'
+import { getRoleLabel, isPendingInstructor, shouldShowStudentChatBell, resolveUserRole } from '../lib/roles'
 import {
   FiBook,
   FiAward,
@@ -29,14 +31,19 @@ import {
   FiUsers,
   FiShield,
   FiDollarSign,
-  FiCreditCard
+  FiCreditCard,
+  FiBell,
+  FiMessageCircle
 } from 'react-icons/fi'
 
 const Dashboard = () => {
   const { t } = useTranslation()
   const { language, isRTL } = useLanguage()
   const { user } = useAuth()
-  const normalizedUserRole = (user?.role || '').toString().trim().toLowerCase()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const normalizedUserRole = resolveUserRole(user)
+  const isPendingTeacher = isPendingInstructor(normalizedUserRole)
   
   const [activeTab, setActiveTab] = useState('courses')
   const [myCourses, setMyCourses] = useState([])
@@ -48,8 +55,13 @@ const Dashboard = () => {
   const [paymentError, setPaymentError] = useState('')
   const [paymentSuccess, setPaymentSuccess] = useState('')
   const [paymentActionLoadingId, setPaymentActionLoadingId] = useState(null)
+  const [teacherPaymentSubmissions, setTeacherPaymentSubmissions] = useState([])
+  const [isLoadingTeacherPayments, setIsLoadingTeacherPayments] = useState(false)
+  const [teacherSubTab, setTeacherSubTab] = useState('courses')
+  const [teacherChatCourseId, setTeacherChatCourseId] = useState('')
   const [studentEnrollments, setStudentEnrollments] = useState([])
   const [studentPayments, setStudentPayments] = useState([])
+  const [studentNotifications, setStudentNotifications] = useState([])
   const [isLoadingStudentHistory, setIsLoadingStudentHistory] = useState(false)
   const [paymentForm, setPaymentForm] = useState({
     payment_type: 'vodafone_cash',
@@ -57,6 +69,7 @@ const Dashboard = () => {
     payment_details: '',
     instructions: ''
   })
+  const paymentFeedbackRef = useRef(null)
   
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight
 
@@ -106,14 +119,81 @@ const Dashboard = () => {
   // Check if user is an admin
   const isAdmin = normalizedUserRole === 'admin'
 
+  const [studentChatInbox, setStudentChatInbox] = useState([])
+
+  useEffect(() => {
+    const loadInbox = async () => {
+      if (!user?.id || isTeacher || isAdmin) return
+      try {
+        const inbox = await chatService.getStudentChatInbox()
+        setStudentChatInbox(inbox || [])
+      } catch (err) {
+        console.error('Failed to load student chat inbox:', err)
+      }
+    }
+    loadInbox()
+  }, [user?.id, isTeacher, isAdmin])
+
+  const studentChatCoursesList = useMemo(() => {
+    const courseMap = new Map()
+
+    ;(studentChatInbox || []).forEach((row) => {
+      if (row.course_id) {
+        courseMap.set(row.course_id, {
+          id: row.course_id,
+          title: row.title,
+          thumbnail_url: row.thumbnail_url,
+          message_count: row.message_count || 0,
+          unread_count: row.unread_count || 0
+        })
+      }
+    })
+
+    ;(studentEnrollments || []).forEach((enrollment) => {
+      if (enrollment.course?.id) {
+        const existing = courseMap.get(enrollment.course.id)
+        courseMap.set(enrollment.course.id, {
+          id: enrollment.course.id,
+          title: enrollment.course?.title,
+          thumbnail_url: enrollment.course?.thumbnail_url,
+          message_count: existing?.message_count || 0,
+          unread_count: existing?.unread_count || 0
+        })
+      }
+    })
+
+    ;(studentPayments || []).forEach((payment) => {
+      const courseId = payment.course_id || payment.courses?.id
+      if (courseId && payment.status === 'approved') {
+        const existing = courseMap.get(courseId)
+        courseMap.set(courseId, {
+          id: courseId,
+          title: payment.courses?.title || payment.course_id,
+          thumbnail_url: payment.courses?.thumbnail_url,
+          message_count: existing?.message_count || 0,
+          unread_count: existing?.unread_count || 0
+        })
+      }
+    })
+
+    return Array.from(courseMap.values()).sort((a, b) => {
+      if ((b.message_count || 0) !== (a.message_count || 0)) {
+        return (b.message_count || 0) - (a.message_count || 0)
+      }
+      return 0
+    })
+  }, [studentChatInbox, studentEnrollments, studentPayments])
+
   const displayName = user?.full_name || user?.name || user?.email?.split('@')[0] || (language === 'ar' ? 'مستخدم' : 'User')
   const displayEmail = user?.email || ''
   const normalizedRole = normalizedUserRole === 'instructor' ? 'teacher' : (normalizedUserRole || 'student')
-  const roleLabel = {
-    student: language === 'ar' ? 'طالب' : 'Student',
-    teacher: language === 'ar' ? 'مدرس' : 'Teacher',
-    admin: language === 'ar' ? 'مدير' : 'Admin'
-  }[normalizedRole] || normalizedRole
+  const roleLabel = isPendingTeacher
+    ? getRoleLabel('pending_instructor', language)
+    : ({
+      student: language === 'ar' ? 'طالب' : 'Student',
+      teacher: language === 'ar' ? 'مدرس' : 'Teacher',
+      admin: language === 'ar' ? 'مدير' : 'Admin'
+    }[normalizedRole] || getRoleLabel(normalizedUserRole, language))
 
   const parsePaymentDetailsInput = (paymentType, input) => {
     const raw = (input || '').trim()
@@ -167,6 +247,12 @@ const Dashboard = () => {
   }, [isTeacher, user?.id])
 
   useEffect(() => {
+    if (myCourses.length > 0 && !teacherChatCourseId) {
+      setTeacherChatCourseId(myCourses[0].id)
+    }
+  }, [myCourses, teacherChatCourseId])
+
+  useEffect(() => {
     const fetchPaymentsData = async () => {
       if (!isAdmin || !user?.id || adminSubTab !== 'payments') return
 
@@ -192,18 +278,40 @@ const Dashboard = () => {
   }, [isAdmin, user?.id, adminSubTab])
 
   useEffect(() => {
+    const fetchTeacherPayments = async () => {
+      if (!isTeacher || !user?.id || activeTab !== 'teacher' || teacherSubTab !== 'payments') return
+
+      setIsLoadingTeacherPayments(true)
+      setPaymentError('')
+
+      try {
+        const submissions = await paymentService.getInstructorPaymentSubmissions(user.id)
+        setTeacherPaymentSubmissions(submissions)
+      } catch (error) {
+        setPaymentError(error.message || 'Failed to load course payments')
+      } finally {
+        setIsLoadingTeacherPayments(false)
+      }
+    }
+
+    fetchTeacherPayments()
+  }, [isTeacher, user?.id, activeTab, teacherSubTab])
+
+  useEffect(() => {
     const fetchStudentHistory = async () => {
       if (!user?.id || isAdmin || isTeacher) return
 
       setIsLoadingStudentHistory(true)
       try {
-        const [enrollments, payments] = await Promise.all([
+        const [enrollments, payments, notifications] = await Promise.all([
           enrollmentService.getUserEnrollments(),
-          paymentService.getStudentPaymentSubmissions(user.id)
+          paymentService.getStudentPaymentSubmissions(user.id),
+          notificationService.getSessionInvites(user.id, { limit: 10 })
         ])
 
         setStudentEnrollments(enrollments || [])
         setStudentPayments(payments || [])
+        setStudentNotifications(notifications || [])
       } catch (error) {
         console.error('Error fetching student history:', error)
       } finally {
@@ -213,6 +321,25 @@ const Dashboard = () => {
 
     fetchStudentHistory()
   }, [user?.id, isAdmin, isTeacher])
+
+  const handleStudentNotificationJoin = async (notification) => {
+    const joinPath = notification.action_url
+      ? (notification.action_url.startsWith('/') ? notification.action_url : `/${notification.action_url}`)
+      : (notification.course_id ? `/courses/${notification.course_id}/learn?session=live` : null)
+
+    if (!joinPath) return
+
+    try {
+      await notificationService.markAsRead(notification.id)
+      setStudentNotifications((prev) =>
+        prev.map((item) => (item.id === notification.id ? { ...item, is_read: true } : item))
+      )
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err)
+    }
+
+    navigate(joinPath)
+  }
 
   const handlePaymentMethodCreate = async (e) => {
     e.preventDefault()
@@ -252,12 +379,25 @@ const Dashboard = () => {
   }
 
   const handlePaymentReview = async (submissionId, action) => {
-    if (!user?.id) return
+    if (!user?.id) {
+      setPaymentError(
+        language === 'ar'
+          ? 'يجب تسجيل الدخول لتنفيذ هذا الإجراء'
+          : 'You must be signed in to review payments'
+      )
+      return
+    }
 
     try {
       setPaymentError('')
       setPaymentSuccess('')
       setPaymentActionLoadingId(submissionId)
+
+      if (isAdmin) {
+        await userService.ensureUserRole(user.id, user.email, 'admin').catch((syncError) => {
+          console.warn('Admin role sync before payment review failed:', syncError)
+        })
+      }
 
       if (action === 'approve') {
         await paymentService.approvePaymentSubmission({ submissionId, reviewerId: user.id })
@@ -265,15 +405,25 @@ const Dashboard = () => {
         await paymentService.rejectPaymentSubmission({ submissionId, reviewerId: user.id })
       }
 
-      const submissions = await paymentService.getAllPaymentSubmissions()
-      setPaymentSubmissions(submissions)
+      if (isAdmin && activeTab === 'admin' && adminSubTab === 'payments') {
+        const submissions = await paymentService.getAllPaymentSubmissions()
+        setPaymentSubmissions(submissions)
+      } else if (isTeacher && activeTab === 'teacher') {
+        const submissions = await paymentService.getInstructorPaymentSubmissions(user.id)
+        setTeacherPaymentSubmissions(submissions)
+      }
+
       setPaymentSuccess(
         language === 'ar'
           ? (action === 'approve' ? 'تم قبول الدفع بنجاح' : 'تم رفض الدفع بنجاح')
           : (action === 'approve' ? 'Payment approved successfully' : 'Payment rejected successfully')
       )
+      paymentFeedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     } catch (error) {
-      setPaymentError(error.message || 'Failed to update payment status')
+      setPaymentError(
+        error.message || (language === 'ar' ? 'فشل تحديث حالة الدفع' : 'Failed to update payment status')
+      )
+      paymentFeedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     } finally {
       setPaymentActionLoadingId(null)
     }
@@ -302,6 +452,18 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen pt-20 pb-16 bg-secondary-50 dark:bg-dark-bg">
       <div className="container-custom">
+        {(isPendingTeacher || location.state?.registrationNotice) && (
+          <div className="mb-6 card card-body border border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-200">
+            <p>
+              {location.state?.registrationNotice || (
+                language === 'ar'
+                  ? 'حسابك مسجّل كمدرس بانتظار موافقة الإدارة. لا يمكنك إنشاء كورسات حتى يتم قبولك.'
+                  : 'Your instructor account is pending admin approval. You cannot create courses until approved.'
+              )}
+            </p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl p-6 md:p-8 mb-8 text-white">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
@@ -412,6 +574,109 @@ const Dashboard = () => {
                   </div>
                 ) : !isTeacher ? (
                   <div className="space-y-8">
+                    {shouldShowStudentChatBell(user) && (
+                      <div className="card card-body">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                          <FiMessageCircle className="w-5 h-5 text-primary-500" />
+                          {language === 'ar' ? 'دردشة المدرس' : 'Instructor chat'}
+                        </h3>
+                        {studentChatCoursesList.length > 0 ? (
+                          <div className="space-y-3">
+                            {studentChatCoursesList.map((course) => (
+                              <div
+                                key={course.id}
+                                className="flex items-center gap-4 p-3 bg-secondary-50 dark:bg-dark-border rounded-lg"
+                              >
+                                <img
+                                  src={course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=100'}
+                                  alt={course.title || 'Course'}
+                                  className="w-16 h-12 rounded object-cover"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold truncate">{course.title || 'Course'}</p>
+                                  <p className="text-sm text-secondary-500">
+                                    {(course.message_count || 0) > 0
+                                      ? (language === 'ar'
+                                        ? `${course.message_count} رسالة`
+                                        : `${course.message_count} message(s)`)
+                                      : (language === 'ar' ? 'تواصل مع المدرس مباشرة' : 'Message your instructor')}
+                                  </p>
+                                </div>
+                                <Link
+                                  to={`/courses/${course.id}/learn?tab=chat`}
+                                  className="btn btn-primary btn-sm inline-flex items-center gap-1 shrink-0"
+                                >
+                                  <FiMessageCircle className="w-4 h-4" />
+                                  {language === 'ar' ? 'فتح الدردشة' : 'Open chat'}
+                                </Link>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4">
+                            <p className="text-sm text-secondary-500 mb-3">
+                              {language === 'ar'
+                                ? 'افتح صفحة أي كورس واضغط «الدردشة مع المدرس»، أو استخدم أيقونة الدردشة في الشريط العلوي.'
+                                : 'Open any course page and tap "Chat with instructor", or use the chat icon in the top bar.'}
+                            </p>
+                            <Link to="/courses" className="btn btn-primary btn-sm">
+                              {language === 'ar' ? 'تصفح الكورسات' : 'Browse courses'}
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {studentNotifications.length > 0 && (
+                      <div className="card card-body">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                          <FiBell className="w-5 h-5 text-primary-500" />
+                          {language === 'ar' ? 'إشعارات الجلسات المباشرة' : 'Live session notifications'}
+                        </h3>
+                        <div className="space-y-3">
+                          {studentNotifications.map((notification) => {
+                            const jitsiMatch = notification.message?.match(/https:\/\/[^\s]+/i)
+                            const jitsiUrl = jitsiMatch?.[0] || null
+
+                            return (
+                              <div
+                                key={notification.id}
+                                className={`p-4 rounded-lg border ${notification.is_read ? 'border-secondary-200 dark:border-dark-border' : 'border-primary-300 bg-primary-50/50 dark:bg-primary-900/10'}`}
+                              >
+                                <p className="font-semibold">{notification.title}</p>
+                                <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-1 whitespace-pre-wrap">
+                                  {notification.message}
+                                </p>
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                  {(notification.action_url || notification.course_id) && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-primary btn-sm inline-flex items-center gap-1"
+                                      onClick={() => handleStudentNotificationJoin(notification)}
+                                    >
+                                      <FiVideo className="w-4 h-4" />
+                                      {language === 'ar' ? 'دخول الجلسة' : 'Join session'}
+                                    </button>
+                                  )}
+                                  {jitsiUrl && (
+                                    <a
+                                      href={jitsiUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="btn btn-outline btn-sm inline-flex items-center gap-1"
+                                    >
+                                      <FiVideo className="w-4 h-4" />
+                                      {language === 'ar' ? 'رابط Jitsi' : 'Jitsi link'}
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="card card-body">
                       <h3 className="text-lg font-bold mb-4">
                         {language === 'ar' ? 'الدورات التي تم شراؤها' : 'Purchased Courses'}
@@ -432,9 +697,27 @@ const Dashboard = () => {
                                   {language === 'ar' ? 'تاريخ الشراء:' : 'Purchased on:'} {new Date(enrollment.enrolled_at).toLocaleDateString()}
                                 </p>
                               </div>
-                              <Link to={`/courses/${enrollment.course?.id}/learn`} className="btn btn-primary btn-sm">
-                                {language === 'ar' ? 'دخول الدورة' : 'Open Course'}
-                              </Link>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Link
+                                  to={`/courses/${enrollment.course?.id}/learn?tab=chat`}
+                                  className="btn btn-sm inline-flex items-center gap-1 btn-secondary"
+                                  title={language === 'ar' ? 'الدردشة مع المدرس' : 'Chat with instructor'}
+                                >
+                                  <FiMessageCircle className="w-4 h-4" />
+                                  {language === 'ar' ? 'دردشة' : 'Chat'}
+                                </Link>
+                                <Link
+                                  to={`/courses/${enrollment.course?.id}/learn?session=live`}
+                                  className="btn btn-sm inline-flex items-center gap-1 bg-green-500 text-white hover:bg-green-600 border-0"
+                                  title={language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join live session'}
+                                >
+                                  <FiVideo className="w-4 h-4" />
+                                  {language === 'ar' ? 'جلسة مباشرة' : 'Live'}
+                                </Link>
+                                <Link to={`/courses/${enrollment.course?.id}/learn`} className="btn btn-primary btn-sm">
+                                  {language === 'ar' ? 'دخول الدورة' : 'Open Course'}
+                                </Link>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -560,8 +843,206 @@ const Dashboard = () => {
                   </Link>
                 </div>
 
+                <div className="flex gap-2 mb-6">
+                  <button
+                    type="button"
+                    onClick={() => setTeacherSubTab('courses')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      teacherSubTab === 'courses'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {language === 'ar' ? 'الكورسات' : 'Courses'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTeacherSubTab('payments')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      teacherSubTab === 'payments'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <FiDollarSign className="w-4 h-4 inline mr-2" />
+                    {language === 'ar' ? 'مدفوعات الكورسات' : 'Course Payments'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTeacherSubTab('chat')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      teacherSubTab === 'chat'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <FiMessageCircle className="w-4 h-4 inline mr-2" />
+                    {language === 'ar' ? 'دردشة الطلاب' : 'Student Chat'}
+                  </button>
+                </div>
+
+                {teacherSubTab === 'payments' && (
+                  <div className="space-y-6">
+                    {paymentError && (
+                      <div className="rounded-lg border border-red-300 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                        {paymentError}
+                      </div>
+                    )}
+                    {paymentSuccess && (
+                      <div className="rounded-lg border border-green-300 bg-green-50 text-green-700 px-4 py-3 text-sm">
+                        {paymentSuccess}
+                      </div>
+                    )}
+
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="card card-body text-center">
+                        <div className="text-2xl font-bold text-yellow-600">
+                          {teacherPaymentSubmissions.filter((s) => s.status === 'pending').length}
+                        </div>
+                        <div className="text-sm text-gray-500">{language === 'ar' ? 'معلقة' : 'Pending'}</div>
+                      </div>
+                      <div className="card card-body text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {teacherPaymentSubmissions.filter((s) => s.status === 'approved').length}
+                        </div>
+                        <div className="text-sm text-gray-500">{language === 'ar' ? 'مقبولة' : 'Approved'}</div>
+                      </div>
+                      <div className="card card-body text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          ${teacherPaymentSubmissions
+                            .filter((s) => s.status === 'approved')
+                            .reduce((sum, s) => sum + Number(s.amount || 0), 0)
+                            .toFixed(2)}
+                        </div>
+                        <div className="text-sm text-gray-500">{language === 'ar' ? 'إجمالي المقبول' : 'Approved total'}</div>
+                      </div>
+                    </div>
+
+                    <div className="card card-body">
+                      <h3 className="text-lg font-bold mb-4">
+                        {language === 'ar' ? 'طلبات الدفع لكورساتي' : 'Payment requests for my courses'}
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-700">
+                              <th className="text-left py-3 px-4 font-medium">{language === 'ar' ? 'الكورس' : 'Course'}</th>
+                              <th className="text-left py-3 px-4 font-medium">{language === 'ar' ? 'الطالب' : 'Student'}</th>
+                              <th className="text-left py-3 px-4 font-medium">{language === 'ar' ? 'المبلغ' : 'Amount'}</th>
+                              <th className="text-left py-3 px-4 font-medium">{language === 'ar' ? 'الحالة' : 'Status'}</th>
+                              <th className="text-left py-3 px-4 font-medium">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {isLoadingTeacherPayments && (
+                              <tr>
+                                <td colSpan={5} className="py-6 text-center text-gray-500">
+                                  {language === 'ar' ? 'جارٍ التحميل...' : 'Loading...'}
+                                </td>
+                              </tr>
+                            )}
+                            {!isLoadingTeacherPayments && teacherPaymentSubmissions.map((submission) => (
+                              <tr key={submission.id} className="border-b border-gray-100 dark:border-gray-800">
+                                <td className="py-3 px-4">{submission.courses?.title || submission.course_id}</td>
+                                <td className="py-3 px-4">
+                                  {submission.students?.full_name || submission.students?.email || 'Student'}
+                                </td>
+                                <td className="py-3 px-4">${submission.amount}</td>
+                                <td className="py-3 px-4">
+                                  <span className={`px-2 py-1 text-xs rounded-full ${
+                                    submission.status === 'approved'
+                                      ? 'bg-green-100 text-green-800'
+                                      : submission.status === 'rejected'
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {submission.status}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  {submission.status === 'pending' ? (
+                                    <div className="flex gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePaymentReview(submission.id, 'approve')}
+                                        disabled={paymentActionLoadingId === submission.id}
+                                        className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200 disabled:opacity-60"
+                                      >
+                                        {paymentActionLoadingId === submission.id
+                                          ? (language === 'ar' ? 'جارٍ...' : 'Processing...')
+                                          : (language === 'ar' ? 'قبول' : 'Approve')}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePaymentReview(submission.id, 'reject')}
+                                        disabled={paymentActionLoadingId === submission.id}
+                                        className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 disabled:opacity-60"
+                                      >
+                                        {language === 'ar' ? 'رفض' : 'Reject'}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenPaymentProof(submission.payment_screenshot_url)}
+                                      className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200"
+                                    >
+                                      {language === 'ar' ? 'عرض الإيصال' : 'View Proof'}
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                            {!isLoadingTeacherPayments && teacherPaymentSubmissions.length === 0 && (
+                              <tr>
+                                <td colSpan={5} className="py-6 text-center text-gray-500">
+                                  {language === 'ar' ? 'لا توجد طلبات دفع بعد' : 'No payment requests yet'}
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {teacherSubTab === 'chat' && (
+                  <div className="card card-body">
+                    <h3 className="text-lg font-bold mb-4">
+                      {language === 'ar' ? 'الدردشة مع جميع الطلاب المسجّلين' : 'Chat with all registered students'}
+                    </h3>
+                    {myCourses.length === 0 ? (
+                      <p className="text-secondary-500 text-sm">
+                        {language === 'ar' ? 'أنشئ كورساً أولاً لبدء الدردشة.' : 'Create a course first to start chatting.'}
+                      </p>
+                    ) : (
+                      <>
+                        <label className="label">{language === 'ar' ? 'اختر الكورس' : 'Select course'}</label>
+                        <select
+                          className="input mb-4 max-w-md"
+                          value={teacherChatCourseId || myCourses[0]?.id || ''}
+                          onChange={(e) => setTeacherChatCourseId(e.target.value)}
+                        >
+                          {myCourses.map((course) => (
+                            <option key={course.id} value={course.id}>{course.title}</option>
+                          ))}
+                        </select>
+                        <CourseChat
+                          courseId={teacherChatCourseId || myCourses[0]?.id}
+                          instructorId={user?.id}
+                          user={user}
+                          language={language}
+                          hasAccess
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {teacherSubTab === 'courses' && (
+              <>
                 <div className="grid md:grid-cols-2 gap-6 mb-8">
-                  {/* Quick Stats for Teachers */}
                   <div className="card card-body bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                     <FiBook className="w-10 h-10 mb-3" />
                     <div className="text-3xl font-bold">{myCourses.length}</div>
@@ -655,7 +1136,7 @@ const Dashboard = () => {
                       <div className="font-medium">{language === 'ar' ? 'إنشاء كورس' : 'Create Course'}</div>
                     </Link>
                     <Link
-                      to="/teacher/create-course"
+                      to="/teacher/live-session?instant=1"
                       className="p-4 border-2 border-dashed border-green-300 rounded-xl text-center hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
                     >
                       <FiVideo className="w-8 h-8 mx-auto mb-2 text-green-500" />
@@ -670,6 +1151,8 @@ const Dashboard = () => {
                     </Link>
                   </div>
                 </div>
+              </>
+                )}
               </div>
             )}
 
@@ -740,17 +1223,19 @@ const Dashboard = () => {
                       </div>
                     </div>
 
-                    {paymentError && (
-                      <div className="mb-6 rounded-lg border border-red-300 bg-red-50 text-red-700 px-4 py-3 text-sm">
-                        {paymentError}
-                      </div>
-                    )}
+                    <div ref={paymentFeedbackRef} className="mb-6">
+                      {paymentError && (
+                        <div className="rounded-lg border border-red-300 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                          {paymentError}
+                        </div>
+                      )}
 
-                    {paymentSuccess && (
-                      <div className="mb-6 rounded-lg border border-green-300 bg-green-50 text-green-700 px-4 py-3 text-sm">
-                        {paymentSuccess}
-                      </div>
-                    )}
+                      {paymentSuccess && (
+                        <div className="mt-3 rounded-lg border border-green-300 bg-green-50 text-green-700 px-4 py-3 text-sm">
+                          {paymentSuccess}
+                        </div>
+                      )}
+                    </div>
 
                     {/* Create Payment Method */}
                     <div className="card card-body mb-8">
@@ -906,18 +1391,20 @@ const Dashboard = () => {
                                   {submission.status === 'pending' ? (
                                     <div className="flex gap-2">
                                       <button
+                                        type="button"
                                         onClick={() => handlePaymentReview(submission.id, 'approve')}
                                         disabled={paymentActionLoadingId === submission.id}
-                                        className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200"
+                                        className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200 disabled:opacity-60"
                                       >
                                         {paymentActionLoadingId === submission.id
                                           ? (language === 'ar' ? 'جارٍ التنفيذ...' : 'Processing...')
                                           : (language === 'ar' ? 'قبول' : 'Approve')}
                                       </button>
                                       <button
+                                        type="button"
                                         onClick={() => handlePaymentReview(submission.id, 'reject')}
                                         disabled={paymentActionLoadingId === submission.id}
-                                        className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200"
+                                        className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 disabled:opacity-60"
                                       >
                                         {paymentActionLoadingId === submission.id
                                           ? (language === 'ar' ? 'جارٍ التنفيذ...' : 'Processing...')

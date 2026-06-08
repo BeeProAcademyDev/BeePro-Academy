@@ -3,7 +3,25 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { trackEvent } from '../lib/analytics';
+import { normalizeSignupAccountType } from '../lib/roles';
+import { formatErrorMessage } from '../lib/supabaseErrors';
 import './LandingPage.css';
+
+const VISION_MISSION_CONTENT = {
+  vision: {
+    titleEn: 'Our Vision',
+    titleAr: 'رؤيتنا',
+    textEn: 'Achieving a position among the leading academic institutions in the Middle East is our vision.',
+    textAr: 'إن تحقيق مكانة بين المؤسسات الأكاديمية الرائدة في الشرق الأوسط هو رؤيتنا.'
+  },
+  mission: {
+    titleEn: 'Our Mission',
+    titleAr: 'مهمتنا',
+    textEn: 'Our mission is to equip individuals dedicated to their personal and professional development with essential knowledge and skills.',
+    textAr: 'مهمتنا هي تزويد الأفراد الذين يسعون لتطوير أنفسهم شخصياً ومهنياً بالمعرفة والمهارات الأساسية اللازمة لتحقيق أهدافهم.'
+  }
+};
 
 // Hero Section Component
 const HeroSection = () => {
@@ -36,7 +54,7 @@ const HeroSection = () => {
         <div className="video-overlay">
           <div className="hero-content">
             <div className="hero-title-wrapper">
-              <h1>BePro Academy</h1>
+              <h1>BeePro Academy</h1>
               <div className="hero-title-particles">
                 {[...Array(10)].map((_, i) => <span key={i}></span>)}
               </div>
@@ -52,11 +70,11 @@ const HeroSection = () => {
 const StatementsSection = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const statements = [
-    { text: "Unlock your financial future with", highlight: "BePro-Academy", suffix: "'s expert-led courses." },
-    { text: "", highlight: "BePro-Academy", suffix: " empowers you to master real-world market analysis skills." },
-    { text: "Achieve your certification in finance and analysis—only at", highlight: "BePro-Academy", suffix: "." },
-    { text: "Join", highlight: "BePro-Academy", suffix: "'s vibrant learning community and learn from top industry mentors." },
-    { text: "Start your journey at", highlight: "BePro-Academy", suffix: " to become a financial analysis professional." },
+    { text: "Unlock your financial future with", highlight: "BeePro-Academy", suffix: "'s expert-led courses." },
+    { text: "", highlight: "BeePro-Academy", suffix: " empowers you to master real-world market analysis skills." },
+    { text: "Achieve your certification in finance and analysis—only at", highlight: "BeePro-Academy", suffix: "." },
+    { text: "Join", highlight: "BeePro-Academy", suffix: "'s vibrant learning community and learn from top industry mentors." },
+    { text: "Start your journey at", highlight: "BeePro-Academy", suffix: " to become a financial analysis professional." },
   ];
 
   useEffect(() => {
@@ -105,6 +123,74 @@ const StatementsSection = () => {
   );
 };
 
+// Vision & Mission Section
+const VisionMissionSection = () => {
+  return (
+    <section className="vision-mission-section" id="vision-mission">
+      <div className="vision-mission-container">
+        <div className="vision-mission-header">
+          <span className="vision-mission-badge">BeePro Academy</span>
+          <h2>Vision & Mission</h2>
+          <p className="vision-mission-subtitle">رؤيتنا ومهمتنا</p>
+        </div>
+
+        <div className="vision-mission-grid">
+          <article className="vision-mission-card vision-card">
+            <div className="vm-card-icon" aria-hidden="true">👁️</div>
+            <div className="vm-card-labels">
+              <h3>{VISION_MISSION_CONTENT.vision.titleEn}</h3>
+              <h4>{VISION_MISSION_CONTENT.vision.titleAr}</h4>
+            </div>
+            <div className="vm-card-body">
+              <p className="vm-text-en" dir="ltr">{VISION_MISSION_CONTENT.vision.textEn}</p>
+              <p className="vm-text-ar" dir="rtl">{VISION_MISSION_CONTENT.vision.textAr}</p>
+            </div>
+          </article>
+
+          <article className="vision-mission-card mission-card">
+            <div className="vm-card-icon" aria-hidden="true">🎯</div>
+            <div className="vm-card-labels">
+              <h3>{VISION_MISSION_CONTENT.mission.titleEn}</h3>
+              <h4>{VISION_MISSION_CONTENT.mission.titleAr}</h4>
+            </div>
+            <div className="vm-card-body">
+              <p className="vm-text-en" dir="ltr">{VISION_MISSION_CONTENT.mission.textEn}</p>
+              <p className="vm-text-ar" dir="rtl">{VISION_MISSION_CONTENT.mission.textAr}</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Teacher Signup CTA
+const TeacherSignupSection = ({ onTeachClick }) => {
+  return (
+    <section className="teacher-signup-section" id="teach">
+      <div className="teacher-signup-container">
+        <div className="teacher-signup-content">
+          <span className="teacher-signup-badge">For Educators</span>
+          <h2>Share Your Expertise on BeePro Academy</h2>
+          <p>
+            Create courses, host live sessions, and connect with students across financial markets,
+            data analysis, and IT. Instructor accounts require admin approval before you can publish.
+          </p>
+          <ul className="teacher-signup-benefits">
+            <li>Build and manage your own courses</li>
+            <li>Live classes via Jitsi or Google Meet</li>
+            <li>Real-time chat with enrolled students</li>
+            <li>Custom payment methods for paid courses</li>
+          </ul>
+          <button type="button" className="teacher-signup-btn" onClick={onTeachClick}>
+            Register as a Teacher
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 // Platform Features Section
 const PlatformSection = () => {
   const features = [
@@ -134,7 +220,7 @@ const PlatformSection = () => {
       <div className="platform-container">
         <div className="platform-header">
           <h2>Master Financial Markets Analysis</h2>
-          <p>BePro-Academy is your gateway to professional financial education. Learn from industry experts, gain practical skills, and transform your career in finance.</p>
+          <p>BeePro-Academy is your gateway to professional financial education. Learn from industry experts, gain practical skills, and transform your career in finance.</p>
         </div>
         
         <div className="features-grid">
@@ -144,6 +230,7 @@ const PlatformSection = () => {
               to={feature.link}
               className="feature-card"
               style={{ animationDelay: `${0.1 * (index + 1)}s`, textDecoration: 'none' }}
+              onClick={() => trackEvent('course_view', { content_category: feature.title })}
             >
               <div className="feature-icon">{feature.icon}</div>
               <h3>{feature.title}</h3>
@@ -197,7 +284,7 @@ const StatsSection = () => {
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 3 }}>
         <div className="new-section-content">
-          <h2>Your Journey to Financial Excellence Starts Here with BePro-Academy</h2>
+          <h2>Your Journey to Financial Excellence Starts Here with BeePro-Academy</h2>
           
           <div className="education-features">
             {features.map((feature, index) => (
@@ -343,6 +430,7 @@ const ContactSection = () => {
     setTimeout(() => {
       setIsSubmitting(false);
       setSubmitMessage(`Thank you ${formData.name}! Message sent successfully.`);
+      trackEvent('contact_submit', { form_name: 'landing_contact', subject: formData.subject });
       setFormData({ name: '', phone: '', email: '', subject: '', message: '' });
       
       setTimeout(() => setSubmitMessage(''), 3000);
@@ -447,7 +535,7 @@ const ContactSection = () => {
           <div className="contact-methods">
             <div className="contact-method">
               <span className="contact-method-icon">📧</span>
-              <span>info@bepro-academy.com</span>
+              <span>info@beepro-academy.com</span>
             </div>
             <div className="contact-method">
               <span className="contact-method-icon">💬</span>
@@ -475,28 +563,41 @@ const TeamIcons = () => {
   const [activePopup, setActivePopup] = useState(null);
 
   const teamMembers = {
-    ahmedsaeid: {
-      name: 'Ahmed Saeid',
-      title: 'Senior Academic Lecturer & Financial Data Analysis Expert',
-      badge: 'Global Expert',
+    mohammed: {
+      name: 'Mohammed',
+      title: 'Independent Stock & Crypto Analyst / Portfolio Manager',
+      badge: 'Market Expert',
       avatar: '/assets/photo_5987888613921852797_y.jpg',
       isImage: true,
-      about: 'Ahmed Saeid is a world-renowned academic lecturer with exceptional expertise in company, financial, and stock data analysis. With decades of experience in both academic and professional spheres, he has established himself as a leading authority in financial markets analysis and economic data interpretation.',
-      expertise: [
-        { icon: '📊', text: 'Financial Data Analysis' },
-        { icon: '💹', text: 'Stock Market Analytics' },
-        { icon: '🏢', text: 'Company Valuation' },
-        { icon: '📈', text: 'Economic Data Interpretation' },
-        { icon: '🎯', text: 'Risk Assessment' },
-        { icon: '🔍', text: 'Market Research' }
+      hideContact: true,
+      about: 'Independent stock and crypto analyst and portfolio manager with hands-on experience across U.S. equities, Saudi markets, and digital assets. Combines technical and fundamental analysis with macroeconomic cycle research to deliver risk-adjusted strategies and weekly market insights.',
+      experienceRole: 'Freelance | January 2019 - Present',
+      experience: [
+        'Conducted technical/fundamental analysis across 3+ global markets (U.S./Saudi equities, crypto)',
+        'Managed private portfolios achieving 15%+ average annual risk-adjusted returns',
+        'Developed multi-market strategies using price action and macroeconomic cycle analysis',
+        'Produced weekly market reports forecasting trends based on economic indicators'
       ],
-      achievements: [
-        'Delivered keynote presentations at over 50 international financial conferences',
-        'Guest lecturer at leading universities including Harvard, Oxford, and MIT',
-        'Published 30+ peer-reviewed papers on financial markets analysis',
-        'Conducted specialized workshops for Fortune 500 companies',
-        'Mentored 1000+ professionals in advanced financial data analysis',
-        'Recipient of the Global Excellence Award in Financial Education (2023)'
+      certifications: [
+        'Advanced Technical Analysis (Self-Directed)',
+        'Crypto Markets & Blockchain Fundamentals',
+        'Sector Rotation Strategies & U.S. Market Behavior'
+      ],
+      education: [
+        {
+          degree: 'B.Sc. Mechanical Engineering',
+          institution: 'Higher Institute of Engineering & Technology in Aviation, Egypt',
+          year: '2019'
+        }
+      ],
+      expertiseTitle: 'Skills & Abilities',
+      expertise: [
+        { icon: '📈', text: 'Technical Analysis: Support/Resistance, Chart Patterns, RSI, MACD' },
+        { icon: '📊', text: 'Fundamental Analysis: Earnings Evaluation, Market Sentiment, Economic Reports' },
+        { icon: '💼', text: 'Portfolio Management: Asset Allocation, Risk-Adjusted Returns' },
+        { icon: '🌐', text: 'Markets: U.S. Equities, Saudi Stocks, Cryptocurrencies' },
+        { icon: '🛠️', text: 'Tools: TradingView, Microsoft Excel (Data Analysis, Risk Models)' },
+        { icon: '🛡️', text: 'Risk Management: Capital Preservation, Strategy Backtesting' }
       ]
     },
     abdullahkofiyh: {
@@ -506,9 +607,9 @@ const TeamIcons = () => {
       avatar: '/assets/abdullah1.jpg',
       isImage: true,
       isCeo: true,
-      about: 'Abdullah Kofiyh is the visionary CEO and Platform Administrator of BePro-Academy. With a passion for democratizing financial education, he has built a world-class platform that connects top educators with ambitious learners globally.',
-      vision: 'Under Abdullah Kofiyh\'s leadership, BePro-Academy has become a premier destination for financial education, offering cutting-edge courses, expert mentorship, and industry-recognized certifications. His commitment to excellence ensures every student receives the highest quality educational experience.',
-      email: 'info@bepro-academy.com'
+      about: 'Abdullah Kofiyh is the visionary CEO and Platform Administrator of BeePro-Academy. With a passion for democratizing financial education, he has built a world-class platform that connects top educators with ambitious learners globally.',
+      vision: 'Under Abdullah Kofiyh\'s leadership, BeePro-Academy has become a premier destination for financial education, offering cutting-edge courses, expert mentorship, and industry-recognized certifications. His commitment to excellence ensures every student receives the highest quality educational experience.',
+      email: 'info@beepro-academy.com'
     },
     abdullahbabrouk: {
       name: 'Abdullah Babrouk',
@@ -517,7 +618,7 @@ const TeamIcons = () => {
       avatar: '/assets/abdullah2.jpg',
       isImage: true,
       hasWhatsapp: true,
-      about: 'Abdullah Babrouk is our dynamic Chief Marketing & Public Relations Officer. A young visionary leader in his 30s, he drives BePro-Academy\'s marketing strategies and public relations initiatives with innovative approaches and modern marketing techniques.',
+      about: 'Abdullah Babrouk is our dynamic Chief Marketing & Public Relations Officer. A young visionary leader in his 30s, he drives BeePro-Academy\'s marketing strategies and public relations initiatives with innovative approaches and modern marketing techniques.',
       expertise: [
         { icon: '📱', text: 'Digital Marketing' },
         { icon: '📢', text: 'Public Relations' },
@@ -532,9 +633,9 @@ const TeamIcons = () => {
   return (
     <>
       <div className="team-icons">
-        <div className="team-button mohammed" onClick={() => setActivePopup('ahmedsaeid')}>
-          <img src="/assets/photo_5987888613921852797_y.jpg" alt="Ahmed Saeid - Expert Instructor" />
-          <span className="team-tooltip">Expert Instructor</span>
+        <div className="team-button mohammed" onClick={() => setActivePopup('mohammed')}>
+          <img src="/assets/photo_5987888613921852797_y.jpg" alt="Mohammed - Lead Instructor" />
+          <span className="team-tooltip">Lead Instructor</span>
         </div>
         <div className="team-button abdullah" onClick={() => setActivePopup('abdullahkofiyh')}>
           <img src="/assets/abdullah1.jpg" alt="Abdullah Kofiyh - CEO" />
@@ -587,9 +688,49 @@ const TeamIcons = () => {
               </div>
             )}
             
+            {member.experience && (
+              <div className="popup-section">
+                <h3>💼 Professional Experience</h3>
+                {member.experienceRole && (
+                  <p className="experience-role">{member.experienceRole}</p>
+                )}
+                <ul className="experience-list">
+                  {member.experience.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {member.certifications && (
+              <div className="popup-section">
+                <h3>🎓 Certifications & Training</h3>
+                <ul className="certifications-list">
+                  {member.certifications.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {member.education && (
+              <div className="popup-section">
+                <h3>🏫 Education</h3>
+                <div className="education-list">
+                  {member.education.map((item, index) => (
+                    <div key={index} className="education-card">
+                      <p className="education-degree">{item.degree}</p>
+                      <p className="education-institution">{item.institution}</p>
+                      {item.year && <p className="education-year">{item.year}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             {member.expertise && (
               <div className="popup-section">
-                <h3>💡 Areas of Expertise</h3>
+                <h3>💡 {member.expertiseTitle || 'Areas of Expertise'}</h3>
                 <div className="expertise-grid">
                   {member.expertise.map((item, index) => (
                     <div key={index} className="expertise-card">
@@ -612,15 +753,17 @@ const TeamIcons = () => {
               </div>
             )}
             
-            <div className="popup-section">
-              <h3>📞 {member.isCeo ? 'Contact Information' : 'Direct Contact'}</h3>
-              <div className="whatsapp-contact-box">
-                <p className="whatsapp-title">
-                  <span>💬</span> Contact
-                </p>
-                {member.email && <p className="whatsapp-email">📧 Email: {member.email}</p>}
+            {!member.hideContact && (
+              <div className="popup-section">
+                <h3>📞 {member.isCeo ? 'Contact Information' : 'Direct Contact'}</h3>
+                <div className="whatsapp-contact-box">
+                  <p className="whatsapp-title">
+                    <span>💬</span> Contact
+                  </p>
+                  {member.email && <p className="whatsapp-email">📧 Email: {member.email}</p>}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       ))}
@@ -632,7 +775,7 @@ const TeamIcons = () => {
 const ChatbotWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { type: 'bot', text: "Hi! 👋 Welcome to BePro-Academy!", time: 'Just now' },
+    { type: 'bot', text: "Hi! 👋 Welcome to BeePro-Academy!", time: 'Just now' },
     { type: 'bot', text: "I'm here to help you explore our financial education programs. What would you like to know?", time: 'Just now' }
   ]);
   const [inputValue, setInputValue] = useState('');
@@ -663,7 +806,7 @@ const ChatbotWidget = () => {
     } else if (lowerMessage.includes('start') || lowerMessage.includes('begin')) {
       return "Getting started is easy!\n\n1. Click 'Sign Up' to create your account\n2. Choose your learning path\n3. Start with our free introduction course\n4. Progress at your own pace\n\nWould you like me to guide you to the registration?";
     } else if (lowerMessage.includes('support') || lowerMessage.includes('help')) {
-      return "We provide 24/7 support through:\n\n📧 Email: info@bepro-academy.com\n💬 Live chat (you're using it now!)\n👥 Community forums\n\nHow can I assist you today?";
+      return "We provide 24/7 support through:\n\n📧 Email: info@beepro-academy.com\n💬 Live chat (you're using it now!)\n👥 Community forums\n\nHow can I assist you today?";
     } else {
       return "Thanks for your question! Our courses cover everything from basic market analysis to advanced trading strategies. What specific aspect of financial education interests you most?";
     }
@@ -717,7 +860,7 @@ const ChatbotWidget = () => {
             <div className="online-indicator"></div>
           </div>
           <div className="chat-header-info">
-            <h3>BePro Assistant</h3>
+            <h3>BeePro Assistant</h3>
             <p>Always here to help</p>
           </div>
         </div>
@@ -777,11 +920,11 @@ const LandingFooter = () => {
     <footer className="landing-footer">
       <div className="footer-content">
         <div className="footer-grid">
-          {/* About BePro-Academy */}
+          {/* About BeePro-Academy */}
           <div className="footer-section">
-            <h3>About BePro-Academy</h3>
+            <h3>About BeePro-Academy</h3>
             <p>
-              BePro-Academy is the premier destination for financial markets education. We combine cutting-edge technology with expert instruction to deliver transformative learning experiences.
+              BeePro-Academy is the premier destination for financial markets education. We combine cutting-edge technology with expert instruction to deliver transformative learning experiences.
             </p>
             <div className="footer-badges">
               <span className="footer-badge">250+ Students</span>
@@ -828,8 +971,8 @@ const LandingFooter = () => {
         <div className="footer-bottom">
           <div className="footer-bottom-content">
             <div className="footer-brand">
-              <h2>BEPRO-ACADEMY</h2>
-              <p>© 2024 BePro-Academy. All rights reserved.</p>
+              <h2>BEEPRO-ACADEMY</h2>
+              <p>© 2024 BeePro-Academy. All rights reserved.</p>
             </div>
             <div className="footer-legal">
               <a href="#terms">Terms of Service</a>
@@ -840,7 +983,7 @@ const LandingFooter = () => {
           
           <div className="footer-credits">
             <p>Powered by Advanced Financial Education Technology</p>
-            <p>Platform Administrators: Abdullah Kofiyh & Abdullah Babrouk | Lead Instructor: Ahmed Saeid</p>
+            <p>Platform Administrators: Abdullah Kofiyh & Abdullah Babrouk | Lead Instructor: Mohammed</p>
           </div>
         </div>
       </div>
@@ -849,7 +992,8 @@ const LandingFooter = () => {
 };
 
 // Auth Modal Component
-const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
+const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType = 'student' }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [accountType, setAccountType] = useState('student');
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -863,13 +1007,14 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       setActiveTab(initialTab);
+      setAccountType(normalizeSignupAccountType(initialAccountType));
       setError('');
       setSuccess('');
     } else {
       document.body.style.overflow = '';
     }
     return () => { document.body.style.overflow = ''; };
-  }, [isOpen, initialTab]);
+  }, [isOpen, initialTab, initialAccountType]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -879,13 +1024,14 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
     try {
       const result = await login(loginData.email, loginData.password);
       if (result.success) {
+        trackEvent('login', { method: 'email' });
         setSuccess('Login successful! Redirecting...');
         setTimeout(() => {
           onClose();
           window.location.href = '/dashboard';
         }, 1000);
       } else {
-        setError(result.error || 'Login failed. Please check your credentials.');
+        setError(formatErrorMessage(result.error) || 'Login failed. Please check your credentials.');
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
@@ -916,15 +1062,35 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
         email: registerData.email,
         password: registerData.password,
         fullName: registerData.name,
-        role: accountType === 'academic' ? 'instructor' : 'student'
+        role: accountType
       });
       
       if (result.success) {
-        setSuccess('Account created! Please check your email for verification or login now.');
+        const emailNotice = result.emailDeliveryFailed
+          ? 'Account created, but the confirmation email could not be sent. Sign in directly, or disable "Confirm email" in Supabase Dashboard → Authentication → Email.'
+          : null;
+
+        if (result.pendingApproval) {
+          trackEvent('instructor_application', { method: 'email' });
+          setSuccess(
+            emailNotice
+              ? `${emailNotice} Instructor application submitted — admin approval required before teaching.`
+              : 'Instructor application submitted. An admin must approve your account before you can teach.'
+          );
+        } else {
+          trackEvent('sign_up', { method: 'email', account_type: accountType });
+          setSuccess(
+            emailNotice || 'Account created! Please check your email for verification or login now.'
+          );
+        }
         setRegisterData({ name: '', email: '', password: '', confirmPassword: '' });
-        setTimeout(() => setActiveTab('login'), 2000);
+        setTimeout(() => setActiveTab('login'), 2500);
       } else {
-        setError(result.error || 'Registration failed. Please try again.');
+        const errText = formatErrorMessage(result.error);
+        const message = errText.includes('VITE_ADMIN_EMAILS')
+          ? 'Admin registration is only available for authorized emails in VITE_ADMIN_EMAILS.'
+          : (errText || 'Registration failed. Please try again.');
+        setError(message);
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
@@ -949,7 +1115,7 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
       <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
         <div className="auth-modal-header">
           <button className="auth-modal-close" onClick={onClose}>✕</button>
-          <h2>{activeTab === 'login' ? 'Welcome Back' : 'Join BePro-Academy'}</h2>
+          <h2>{activeTab === 'login' ? 'Welcome Back' : 'Join BeePro-Academy'}</h2>
           <p>{activeTab === 'login' ? 'Continue your journey in finance' : 'Start your financial education today'}</p>
         </div>
         <div className="auth-modal-body">
@@ -1005,6 +1171,15 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                   required
                 />
               </div>
+              <div className="auth-forgot-row">
+                <Link
+                  to="/forgot-password"
+                  className="auth-forgot-link"
+                  onClick={onClose}
+                >
+                  {t('auth.login.forgot')}
+                </Link>
+              </div>
               <button type="submit" className="submit-btn" disabled={isLoading}>
                 {isLoading ? 'Logging in...' : 'Login to Account'}
               </button>
@@ -1036,6 +1211,51 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                   onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
                   required
                 />
+              </div>
+              <div className="form-group account-type">
+                <label>Account Type</label>
+                <div className="type-options">
+                  <div className="type-option">
+                    <input
+                      type="radio"
+                      id="account-student"
+                      name="accountType"
+                      checked={accountType === 'student'}
+                      onChange={() => setAccountType('student')}
+                    />
+                    <label htmlFor="account-student">Student</label>
+                  </div>
+                  <div className="type-option">
+                    <input
+                      type="radio"
+                      id="account-teacher"
+                      name="accountType"
+                      checked={accountType === 'teacher'}
+                      onChange={() => setAccountType('teacher')}
+                    />
+                    <label htmlFor="account-teacher">Teacher</label>
+                  </div>
+                  <div className="type-option">
+                    <input
+                      type="radio"
+                      id="account-admin"
+                      name="accountType"
+                      checked={accountType === 'admin'}
+                      onChange={() => setAccountType('admin')}
+                    />
+                    <label htmlFor="account-admin">Admin</label>
+                  </div>
+                </div>
+                {accountType === 'teacher' && (
+                  <p style={{ marginTop: '10px', fontSize: '0.85rem', color: '#b45309' }}>
+                    Teacher accounts require admin approval before you can create courses.
+                  </p>
+                )}
+                {accountType === 'admin' && (
+                  <p style={{ marginTop: '10px', fontSize: '0.85rem', color: '#64748b' }}>
+                    Admin signup is limited to emails configured in VITE_ADMIN_EMAILS.
+                  </p>
+                )}
               </div>
               <div className="form-group">
                 <label htmlFor="register-email">Email Address</label>
@@ -1112,17 +1332,17 @@ const LandingNavbar = ({ onAuthClick }) => {
   }, []);
 
   const navLinks = [
+    { label: 'Vision', href: '#vision-mission' },
     { label: 'Financial Markets', href: '/financial-markets' },
     { label: 'Data Analysis', href: '/data-analysis' },
     { label: 'IT', href: '/it' },
-    { label: 'Create Course', href: '/create-course' },
     { label: 'Contact', href: '#contact' }
   ];
 
   return (
     <nav className={`top-navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="nav-logo">
-        <h1>BEPRO-ACADEMY</h1>
+        <h1>BEEPRO-ACADEMY</h1>
       </div>
       
       <button className="nav-mobile-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -1140,6 +1360,7 @@ const LandingNavbar = ({ onAuthClick }) => {
       </div>
       
       <div className="nav-auth">
+        <button className="nav-teach-btn" onClick={() => onAuthClick('register', 'teacher')}>Teach</button>
         <button className="nav-login-btn" onClick={() => onAuthClick('login')}>Login</button>
         <button className="nav-register-btn" onClick={() => onAuthClick('register')}>Sign Up</button>
       </div>
@@ -1164,6 +1385,7 @@ const LandingPage = () => {
       <LandingNavbar onAuthClick={openAuthModal} />
       <HeroSection />
       <StatementsSection />
+      <VisionMissionSection />
       <PlatformSection />
       <StatsSection />
       <CategorySections />

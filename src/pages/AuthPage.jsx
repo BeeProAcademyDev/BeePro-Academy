@@ -100,7 +100,7 @@ const AuthPage = () => {
         };
       case 'signup':
         return {
-          title: 'Join BePro Academy',
+          title: 'Join BeePro Academy',
           subtitle: 'Create your account to start learning',
           buttonText: 'Sign Up',
           icon: User

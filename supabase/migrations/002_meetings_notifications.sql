@@ -148,7 +148,15 @@ CREATE POLICY "Teachers and admins can create notifications"
         EXISTS (
             SELECT 1 FROM public.users
             WHERE users.id = auth.uid()
-            AND users.role IN ('instructor', 'admin')
+            AND users.role IN ('instructor', 'teacher', 'admin')
+        )
+        OR (
+            course_id IS NOT NULL
+            AND EXISTS (
+                SELECT 1 FROM public.courses c
+                WHERE c.id = notifications.course_id
+                AND c.instructor_id = auth.uid()
+            )
         )
     );
 

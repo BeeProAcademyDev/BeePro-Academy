@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { normalizeSignupAccountType } from '../../lib/roles'
+import { formatErrorMessage } from '../../lib/supabaseErrors'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useAuth } from '../../contexts/AuthContext'
@@ -20,7 +22,11 @@ const Register = () => {
   const { language } = useLanguage()
   const { register } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
+  const [accountType, setAccountType] = useState(() => (
+    normalizeSignupAccountType(searchParams.get('role'))
+  ))
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -90,15 +96,40 @@ const Register = () => {
         email: formData.email,
         password: formData.password,
         fullName: formData.name,
-        role: 'student'
+        role: accountType
       })
       if (result.success) {
-        navigate('/dashboard')
+        const emailNotice = result.emailDeliveryFailed
+          ? (language === 'ar'
+            ? 'تم إنشاء حسابك، لكن لم يُرسل بريد التأكيد. يمكنك تسجيل الدخول مباشرة إذا كان التأكيد معطّلاً في Supabase.'
+            : 'Account created, but the confirmation email could not be sent. You can sign in directly if email confirmation is disabled in Supabase.')
+          : null
+
+        if (result.pendingApproval) {
+          navigate('/dashboard', {
+            state: {
+              registrationNotice: language === 'ar'
+                ? [emailNotice, 'تم إرسال طلب التسجيل كمدرس. سيتم تفعيل حسابك بعد موافقة الإدارة.'].filter(Boolean).join(' ')
+                : [emailNotice, 'Your instructor application was submitted. Your account will be activated after admin approval.'].filter(Boolean).join(' ')
+            }
+          })
+        } else {
+          navigate('/dashboard', {
+            state: emailNotice ? { registrationNotice: emailNotice } : undefined
+          })
+        }
       } else {
-        setError(result.error || (language === 'ar' ? 'حدث خطأ في إنشاء الحساب' : 'Registration failed'))
+        const fallback = language === 'ar' ? 'حدث خطأ في إنشاء الحساب' : 'Registration failed'
+        const errText = formatErrorMessage(result.error)
+        const message = errText.includes('VITE_ADMIN_EMAILS')
+          ? (language === 'ar'
+            ? 'لا يمكن التسجيل كإداري إلا بالبريد المصرّح به في VITE_ADMIN_EMAILS'
+            : errText)
+          : (errText || fallback)
+        setError(message)
       }
     } catch (err) {
-      setError(language === 'ar' ? 'حدث خطأ غير متوقع' : 'An unexpected error occurred')
+      setError(formatErrorMessage(err) || (language === 'ar' ? 'حدث خطأ غير متوقع' : 'An unexpected error occurred'))
     } finally {
       setIsLoading(false)
     }
@@ -124,9 +155,13 @@ const Register = () => {
               ✦ Empowering Minds Through Professional Education ✦
             </p>
             <p className="text-secondary-600 dark:text-secondary-400">
-              {language === 'ar'
-                ? 'أنشئ حسابك وابدأ رحلة التعلم'
-                : 'Create your account and start learning'
+              {accountType === 'teacher'
+                ? (language === 'ar'
+                  ? 'قدّم طلبك للتدريس — يتطلب موافقة الإدارة'
+                  : 'Apply to teach on BeePro — admin approval required')
+                : (language === 'ar'
+                  ? 'أنشئ حسابك وابدأ رحلة التعلم'
+                  : 'Create your account and start learning')
               }
             </p>
           </div>
@@ -160,6 +195,62 @@ const Register = () => {
                     required
                   />
                 </div>
+              </div>
+
+              {/* Account Type */}
+              <div>
+                <label className="label">
+                  {language === 'ar' ? 'نوع الحساب' : 'Account Type'}
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('student')}
+                    className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                      accountType === 'student'
+                        ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20'
+                        : 'border-secondary-200 dark:border-dark-border'
+                    }`}
+                  >
+                    {language === 'ar' ? 'طالب' : 'Student'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('teacher')}
+                    className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                      accountType === 'teacher'
+                        ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20'
+                        : 'border-secondary-200 dark:border-dark-border'
+                    }`}
+                  >
+                    {language === 'ar' ? 'مدرس' : 'Teacher'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('admin')}
+                    className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                      accountType === 'admin'
+                        ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20'
+                        : 'border-secondary-200 dark:border-dark-border'
+                    }`}
+                  >
+                    {language === 'ar' ? 'إداري' : 'Admin'}
+                  </button>
+                </div>
+                {accountType === 'teacher' && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
+                    {language === 'ar'
+                      ? 'سيتم مراجعة طلبك من قبل الإدارة قبل تفعيل صلاحيات المدرس.'
+                      : 'Your application will be reviewed by an admin before you can create courses.'}
+                  </p>
+                )}
+                {accountType === 'admin' && (
+                  <p className="text-sm text-secondary-500 mt-2">
+                    {language === 'ar'
+                      ? 'التسجيل كإداري متاح فقط للبريد المضاف في VITE_ADMIN_EMAILS.'
+                      : 'Admin registration is only available for emails listed in VITE_ADMIN_EMAILS.'}
+                  </p>
+                )}
               </div>
 
               {/* Email */}

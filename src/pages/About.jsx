@@ -9,13 +9,16 @@ const About = () => {
 
   const teamMembers = [
     {
-      name: 'Ahmed Saeid',
-      title: language === 'ar' ? 'محاضر أكاديمي أول وخبير تحليل البيانات المالية' : 'Senior Academic Lecturer & Financial Data Analysis Expert',
-      badge: language === 'ar' ? 'خبير عالمي' : 'Global Expert',
-      avatar: '🧔‍♂️',
-      about: language === 'ar' 
-        ? 'أحمد سعيد محاضر أكاديمي عالمي معروف بخبرته الاستثنائية في تحليل بيانات الشركات والأسواق المالية والأسهم.'
-        : 'Ahmed Saeid is a world-renowned academic lecturer with exceptional expertise in company, financial, and stock data analysis.',
+      name: 'Mohammed',
+      title: language === 'ar'
+        ? 'محلل أسهم وعملات رقمية مستقل / مدير محافظ'
+        : 'Independent Stock & Crypto Analyst / Portfolio Manager',
+      badge: language === 'ar' ? 'خبير أسواق' : 'Market Expert',
+      avatar: '/assets/photo_5987888613921852797_y.jpg',
+      isImage: true,
+      about: language === 'ar'
+        ? 'محلل مستقل للأسهم والعملات الرقمية ومدير محافظ بخبرة في أسواق أمريكا والسعودية والعملات الرقمية، يجمع بين التحليل الفني والأساسي لبناء استراتيجيات محافظ متوازنة المخاطر.'
+        : 'Independent stock and crypto analyst and portfolio manager with experience across U.S. equities, Saudi markets, and digital assets, combining technical and fundamental analysis for risk-adjusted portfolio strategies.',
     },
     {
       name: 'Abdullah Kofiyh',
@@ -24,8 +27,8 @@ const About = () => {
       avatar: '/assets/abdullah1.jpg',
       isImage: true,
       about: language === 'ar'
-        ? 'عبدالله كوفية هو الرئيس التنفيذي صاحب الرؤية ومدير منصة BePro-Academy.'
-        : 'Abdullah Kofiyh is the visionary CEO and Platform Administrator of BePro-Academy.',
+        ? 'عبدالله كوفية هو الرئيس التنفيذي صاحب الرؤية ومدير منصة BeePro-Academy.'
+        : 'Abdullah Kofiyh is the visionary CEO and Platform Administrator of BeePro-Academy.',
     },
     {
       name: 'Abdullah Babrouk',
@@ -86,8 +89,8 @@ const About = () => {
             <h1>{language === 'ar' ? 'من نحن' : 'About Us'}</h1>
             <p>
               {language === 'ar'
-                ? 'BePro Academy هي منصة تعليمية رائدة تهدف إلى تطوير مهارات الأفراد في البرمجة والتصميم وتقنية المعلومات والأسواق المالية.'
-                : 'BePro Academy is a leading educational platform aimed at developing individuals\' skills in Programming, Design, IT, and Financial Markets.'
+                ? 'BeePro Academy هي منصة تعليمية رائدة تهدف إلى تطوير مهارات الأفراد في البرمجة والتصميم وتقنية المعلومات والأسواق المالية.'
+                : 'BeePro Academy is a leading educational platform aimed at developing individuals\' skills in Programming, Design, IT, and Financial Markets.'
               }
             </p>
           </div>
@@ -119,8 +122,8 @@ const About = () => {
               </h3>
               <p className="text-white/80 text-lg leading-relaxed">
                 {language === 'ar'
-                  ? 'تمكين الأفراد من تحقيق أهدافهم المالية من خلال توفير تعليم عالي الجودة ومناهج متقدمة في تحليل الأسواق المالية والتداول الاحترافي.'
-                  : 'Empowering individuals to achieve their financial goals by providing high-quality education and advanced curricula in financial market analysis and professional trading.'
+                  ? 'مهمتنا هي تزويد الأفراد الذين يسعون لتطوير أنفسهم شخصياً ومهنياً بالمعرفة والمهارات الأساسية اللازمة لتحقيق أهدافهم.'
+                  : 'Our mission is to equip individuals dedicated to their personal and professional development with essential knowledge and skills.'
                 }
               </p>
             </div>
@@ -131,8 +134,8 @@ const About = () => {
               </h3>
               <p className="text-white/80 text-lg leading-relaxed">
                 {language === 'ar'
-                  ? 'أن نكون المنصة التعليمية الرائدة عالمياً في مجال الأسواق المالية، ونساهم في بناء جيل من المحللين والمتداولين المحترفين.'
-                  : 'To be the world\'s leading educational platform in financial markets, contributing to building a generation of professional analysts and traders.'
+                  ? 'إن تحقيق مكانة بين المؤسسات الأكاديمية الرائدة في الشرق الأوسط هو رؤيتنا.'
+                  : 'Achieving a position among the leading academic institutions in the Middle East is our vision.'
                 }
               </p>
             </div>
@@ -168,8 +171,8 @@ const About = () => {
           </h2>
           <p className="bepro-section-subtitle">
             {language === 'ar'
-              ? 'تعرف على الخبراء الذين يقفون وراء نجاح BePro Academy'
-              : 'Meet the experts behind the success of BePro Academy'
+              ? 'تعرف على الخبراء الذين يقفون وراء نجاح BeePro Academy'
+              : 'Meet the experts behind the success of BeePro Academy'
             }
           </p>
           <div className="bepro-grid-3 mt-12">
@@ -203,8 +206,8 @@ const About = () => {
             </h2>
             <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
               {language === 'ar'
-                ? 'انضم إلى آلاف الطلاب الذين يثقون في BePro Academy لتحقيق أهدافهم المالية والمهنية.'
-                : 'Join thousands of students who trust BePro Academy to achieve their financial and professional goals.'
+                ? 'انضم إلى آلاف الطلاب الذين يثقون في BeePro Academy لتحقيق أهدافهم المالية والمهنية.'
+                : 'Join thousands of students who trust BeePro Academy to achieve their financial and professional goals.'
               }
             </p>
             <div className="flex flex-wrap justify-center gap-4">

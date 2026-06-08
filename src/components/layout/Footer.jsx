@@ -51,7 +51,7 @@ const Footer = () => {
                 <span className="text-white font-bold text-xl">B</span>
               </div>
               <span className="text-xl font-bold text-white">
-                BePro Academy
+                BeePro Academy
               </span>
             </Link>
             <p className="text-secondary-400 text-sm leading-relaxed mb-6">
@@ -114,7 +114,7 @@ const Footer = () => {
             <ul className="space-y-3 mb-6">
               <li className="flex items-center gap-3 text-secondary-400">
                 <FiMail className="w-5 h-5 text-primary-400 shrink-0" />
-                <span>info@beproacademy.com</span>
+                <span>info@beepro-academy.com</span>
               </li>
               <li className="flex items-center gap-3 text-secondary-400">
                 <FiPhone className="w-5 h-5 text-primary-400 shrink-0" />
@@ -153,7 +153,7 @@ const Footer = () => {
         <div className="container-custom py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-secondary-500 text-sm">
-              © {new Date().getFullYear()} BePro Academy. {t('footer.copyright')}
+              © {new Date().getFullYear()} BeePro Academy. {t('footer.copyright')}
             </p>
             <div className="flex items-center gap-6">
               <Link

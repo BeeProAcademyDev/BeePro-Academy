@@ -1,9 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { enrollmentService, meetingService } from '../services/api'
+import { paymentService } from '../services/paymentAPI'
+import { getMeetingJoinTarget, pickJoinableMeeting } from '../lib/jitsi'
+import { isStudentUser } from '../lib/roles'
 import Button from '../components/ui/Button'
 import { 
   FiPlay, 
@@ -21,7 +25,9 @@ import {
   FiHeart,
   FiArrowRight,
   FiArrowLeft,
-  FiUser
+  FiUser,
+  FiVideo,
+  FiMessageCircle
 } from 'react-icons/fi'
 
 const CourseDetailsDB = () => {
@@ -34,15 +40,64 @@ const CourseDetailsDB = () => {
   const [course, setCourse] = useState(null)
   const [lessons, setLessons] = useState([])
   const [isEnrolled, setIsEnrolled] = useState(false)
+  const [hasApprovedPayment, setHasApprovedPayment] = useState(false)
   const [loading, setLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(false)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [expandedSections, setExpandedSections] = useState(['section-1'])
+  const [liveMeetings, setLiveMeetings] = useState([])
   const isPaidCourse = Number(course?.price || 0) > 0
-  const isStudent = user?.role === 'student'
+  const isStudent = isStudentUser(user)
+
+  const hasCourseAccess = isEnrolled || hasApprovedPayment
+
+  const joinableMeeting = useMemo(
+    () => pickJoinableMeeting(liveMeetings),
+    [liveMeetings]
+  )
   
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight
+
+  const renderJoinSessionLink = (className = 'btn btn-primary w-full inline-flex items-center justify-center gap-2') => {
+    const joinTarget = joinableMeeting ? getMeetingJoinTarget(joinableMeeting) : null
+
+    if (joinTarget?.type === 'external') {
+      return (
+        <a
+          href={joinTarget.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={className}
+        >
+          <FiVideo className="w-5 h-5" />
+          {language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join Live Session'}
+        </a>
+      )
+    }
+
+    if (joinTarget?.type === 'jitsi') {
+      return (
+        <Link
+          to={`/courses/${course.id}/learn?session=${joinableMeeting.id}`}
+          className={className}
+        >
+          <FiVideo className="w-5 h-5" />
+          {language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join Live Session'}
+        </Link>
+      )
+    }
+
+    return (
+      <Link
+        to={`/courses/${course.id}/learn?session=live`}
+        className={className}
+      >
+        <FiVideo className="w-5 h-5" />
+        {language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join Live Session'}
+      </Link>
+    )
+  }
 
   // Fetch course details
   useEffect(() => {
@@ -55,6 +110,25 @@ const CourseDetailsDB = () => {
       checkEnrollmentStatus()
     }
   }, [isAuthenticated, user, course])
+
+  useEffect(() => {
+    const loadLiveMeetings = async () => {
+      if (!course?.id || !hasCourseAccess) {
+        setLiveMeetings([])
+        return
+      }
+
+      try {
+        const meetings = await meetingService.getMeetingsByCourse(course.id)
+        setLiveMeetings(meetings || [])
+      } catch (err) {
+        console.error('Live meetings fetch error:', err)
+        setLiveMeetings([])
+      }
+    }
+
+    loadLiveMeetings()
+  }, [course?.id, hasCourseAccess])
 
   const fetchCourseData = async () => {
     try {
@@ -115,18 +189,34 @@ const CourseDetailsDB = () => {
         .select('id')
         .eq('user_id', user.id)
         .eq('course_id', course.id)
-        .single()
+        .maybeSingle()
 
-      setIsEnrolled(!!data)
+      if (error && error.code !== 'PGRST116') {
+        throw error
+      }
+
+      const enrolled = !!data
+      setIsEnrolled(enrolled)
+
+      const paidCourse = Number(course.price || 0) > 0
+      if (!enrolled && paidCourse) {
+        const approved = await paymentService.hasApprovedPaymentForCourse(user.id, course.id)
+        setHasApprovedPayment(approved)
+      } else {
+        setHasApprovedPayment(false)
+      }
     } catch (err) {
       console.error('Enrollment check error:', err)
       setIsEnrolled(false)
+      setHasApprovedPayment(false)
     }
   }
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
-      const redirectPath = `/courses/${course?.id}/checkout`
+      const redirectPath = isPaidCourse
+        ? `/courses/${course?.id}/checkout`
+        : `/courses/${course?.id}`
       navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`)
       return
     }
@@ -135,6 +225,24 @@ const CourseDetailsDB = () => {
 
     if (!isStudent && isPaidCourse) {
       setError(language === 'ar' ? 'الدفع متاح للطلاب فقط' : 'Payment is allowed for students only')
+      return
+    }
+
+    if (!isPaidCourse) {
+      setEnrolling(true)
+      setError(null)
+      try {
+        await enrollmentService.enrollInCourse(course.id)
+        setIsEnrolled(true)
+        navigate(`/courses/${course.id}/learn`)
+      } catch (err) {
+        setError(
+          err.message
+          || (language === 'ar' ? 'تعذر التسجيل في الدورة' : 'Failed to enroll in course')
+        )
+      } finally {
+        setEnrolling(false)
+      }
       return
     }
 
@@ -255,10 +363,53 @@ const CourseDetailsDB = () => {
                       <FiBookOpen className="w-16 h-16 text-white opacity-50" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <button className="w-16 h-16 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform">
-                      <FiPlay className="w-6 h-6 text-primary-500 ms-1" />
-                    </button>
+                  <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center">
+                    {hasCourseAccess ? (
+                      (() => {
+                        const joinTarget = joinableMeeting ? getMeetingJoinTarget(joinableMeeting) : null
+                        if (joinTarget?.type === 'external') {
+                          return (
+                            <a
+                              href={joinTarget.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group flex flex-col items-center gap-2"
+                              title={language === 'ar' ? 'انضم للجلسة المباشرة' : 'Join live session'}
+                            >
+                              <span className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                                <FiVideo className="w-7 h-7" />
+                              </span>
+                              <span className="text-sm font-semibold text-white drop-shadow">
+                                {language === 'ar' ? 'انضم للجلسة' : 'Join Session'}
+                              </span>
+                            </a>
+                          )
+                        }
+
+                        return (
+                          <Link
+                            to={
+                              joinableMeeting
+                                ? `/courses/${course.id}/learn?session=${joinableMeeting.id}`
+                                : `/courses/${course.id}/learn?session=live`
+                            }
+                            className="group flex flex-col items-center gap-2"
+                            title={language === 'ar' ? 'انضم للجلسة المباشرة' : 'Join live session'}
+                          >
+                            <span className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                              <FiVideo className="w-7 h-7" />
+                            </span>
+                            <span className="text-sm font-semibold text-white drop-shadow">
+                              {language === 'ar' ? 'انضم للجلسة' : 'Join Session'}
+                            </span>
+                          </Link>
+                        )
+                      })()
+                    ) : (
+                      <span className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
+                        <FiPlay className="w-6 h-6 text-primary-500 ms-1" />
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -268,10 +419,13 @@ const CourseDetailsDB = () => {
                     {isPaidCourse ? `$${course.price}` : (language === 'ar' ? 'مجاني' : 'Free')}
                   </div>
 
-                  {isEnrolled ? (
-                    <Button to={`/courses/${course.id}/learn`} fullWidth icon={ArrowIcon} iconPosition="end">
-                      {language === 'ar' ? 'متابعة التعلم' : 'Continue Learning'}
-                    </Button>
+                  {hasCourseAccess ? (
+                    <div className="space-y-3">
+                      {renderJoinSessionLink()}
+                      <Button to={`/courses/${course.id}/learn`} fullWidth icon={ArrowIcon} iconPosition="end" variant="outline">
+                        {language === 'ar' ? 'متابعة التعلم' : 'Continue Learning'}
+                      </Button>
+                    </div>
                   ) : (
                     <Button 
                       onClick={handleEnroll}
@@ -279,13 +433,25 @@ const CourseDetailsDB = () => {
                       size="lg"
                       disabled={enrolling || (isPaidCourse && !isStudent)}
                     >
-                      {enrolling 
-                        ? (language === 'ar' ? 'جاري التسجيل...' : 'Enrolling...') 
+                      {enrolling
+                        ? (language === 'ar' ? 'جاري التسجيل...' : 'Enrolling...')
                         : (isPaidCourse && !isStudent)
                           ? (language === 'ar' ? 'الدفع للطلاب فقط' : 'Students Only')
-                          : (language === 'ar' ? 'ادفع للحصول على الدورة' : 'Pay to Get Course')
+                          : isPaidCourse
+                            ? (language === 'ar' ? 'ادفع للحصول على الدورة' : 'Pay to Get Course')
+                            : (language === 'ar' ? 'سجّل مجاناً' : 'Enroll for Free')
                       }
                     </Button>
+                  )}
+
+                  {isAuthenticated && isStudent && (
+                    <Link
+                      to={`/courses/${course.id}/learn?tab=chat`}
+                      className="btn btn-secondary w-full mt-3 inline-flex items-center justify-center gap-2"
+                    >
+                      <FiMessageCircle className="w-4 h-4" />
+                      {language === 'ar' ? 'الدردشة مع المدرس' : 'Chat with instructor'}
+                    </Link>
                   )}
 
                   {/* Features */}
@@ -312,20 +478,25 @@ const CourseDetailsDB = () => {
               {isPaidCourse ? `$${course.price}` : (language === 'ar' ? 'مجاني' : 'Free')}
             </span>
           </div>
-          {isEnrolled ? (
-            <Button to={`/courses/${course.id}/learn`} icon={ArrowIcon} iconPosition="end">
-              {language === 'ar' ? 'متابعة' : 'Continue'}
-            </Button>
+          {hasCourseAccess ? (
+            <div className="flex items-center gap-2">
+              {renderJoinSessionLink('btn btn-primary btn-sm inline-flex items-center gap-2')}
+              <Button to={`/courses/${course.id}/learn`} icon={ArrowIcon} iconPosition="end" variant="outline" size="sm">
+                {language === 'ar' ? 'متابعة' : 'Continue'}
+              </Button>
+            </div>
           ) : (
             <Button 
               onClick={handleEnroll}
               disabled={enrolling || (isPaidCourse && !isStudent)}
             >
-              {enrolling 
-                ? (language === 'ar' ? 'تسجيل...' : 'Enrolling...') 
+              {enrolling
+                ? (language === 'ar' ? 'تسجيل...' : 'Enrolling...')
                 : (isPaidCourse && !isStudent)
                   ? (language === 'ar' ? 'للطلاب فقط' : 'Students Only')
-                  : (language === 'ar' ? 'ادفع' : 'Pay')
+                  : isPaidCourse
+                    ? (language === 'ar' ? 'ادفع' : 'Pay')
+                    : (language === 'ar' ? 'مجاني' : 'Free')
               }
             </Button>
           )}
@@ -406,12 +577,12 @@ const CourseDetailsDB = () => {
                             className="flex items-center justify-between p-4 hover:bg-secondary-50 dark:hover:bg-dark-border/50 transition-colors"
                           >
                             <div className="flex items-center gap-3">
-                              {isEnrolled ? (
+                              {isEnrolled || hasCourseAccess ? (
                                 <FiPlay className="w-5 h-5 text-primary-500" />
                               ) : (
                                 <FiLock className="w-5 h-5 text-secondary-400" />
                               )}
-                              <span className={!isEnrolled ? 'text-secondary-400' : ''}>
+                              <span className={!(isEnrolled || hasCourseAccess) ? 'text-secondary-400' : ''}>
                                 {lesson.title}
                               </span>
                             </div>

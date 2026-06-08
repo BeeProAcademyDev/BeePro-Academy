@@ -15,8 +15,11 @@ import Contact from './pages/Contact'
 import CourseLearn from './pages/CourseLearn'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import ForgotPassword from './pages/auth/ForgotPassword'
+import ResetPassword from './pages/auth/ResetPassword'
 import CreateCourse from './pages/teacher/CreateCourse'
 import EditCourse from './pages/teacher/EditCourse'
+import TeacherLiveSession from './pages/teacher/TeacherLiveSession'
 
 // Category Pages
 import ProgrammingPage from './pages/categories/ProgrammingPage'
@@ -60,6 +63,11 @@ const TeacherRoute = ({ children }) => {
     return <Navigate to="/login" replace />
   }
   
+  // Pending instructors must wait for admin approval
+  if (normalizedRole === 'pending_instructor') {
+    return <Navigate to="/dashboard" replace />
+  }
+
   // Check if user is teacher/instructor or admin
   if (normalizedRole !== 'teacher' && normalizedRole !== 'instructor' && normalizedRole !== 'admin') {
     return <Navigate to="/dashboard" replace />
@@ -187,36 +195,30 @@ function App() {
           </PublicRoute>
         } 
       />
+
+      <Route
+        path="/register/teacher"
+        element={<Navigate to="/register?role=teacher" replace />}
+      />
       
-      <Route 
-        path="/forgot-password" 
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <Layout showFooter={false}>
+              <ForgotPassword />
+            </Layout>
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/reset-password"
         element={
           <Layout showFooter={false}>
-            <div className="min-h-screen pt-20 pb-16 flex items-center">
-              <div className="container-custom">
-                <div className="max-w-md mx-auto">
-                  <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold mb-2">Reset Password</h1>
-                    <p className="text-secondary-600 dark:text-secondary-400">
-                      Enter your email to receive a password reset link
-                    </p>
-                  </div>
-                  <div className="card card-body">
-                    <form className="space-y-6">
-                      <div>
-                        <label className="label">Email</label>
-                        <input type="email" className="input" placeholder="your@email.com" />
-                      </div>
-                      <button type="submit" className="btn btn-primary w-full">
-                        Send Reset Link
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ResetPassword />
           </Layout>
-        } 
+        }
       />
 
       {/* Protected Routes */}
@@ -270,6 +272,17 @@ function App() {
         element={
           <TeacherRoute>
             <CreateCourse />
+          </TeacherRoute>
+        }
+      />
+
+      <Route
+        path="/teacher/live-session"
+        element={
+          <TeacherRoute>
+            <Layout showFooter={false}>
+              <TeacherLiveSession />
+            </Layout>
           </TeacherRoute>
         }
       />

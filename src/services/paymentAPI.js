@@ -41,8 +41,6 @@ const ensurePublicUserProfile = async (userId) => {
 
   const email = authUser?.email || ''
   const fullName = authUser?.user_metadata?.full_name || email.split('@')[0] || 'Student'
-  const roleFromMeta = authUser?.user_metadata?.role
-  const role = roleFromMeta === 'admin' || roleFromMeta === 'instructor' ? roleFromMeta : 'student'
 
   const { error: upsertError } = await supabase
     .from('users')
@@ -51,7 +49,7 @@ const ensurePublicUserProfile = async (userId) => {
         id: userId,
         email,
         full_name: fullName,
-        role
+        role: 'student'
       },
       { onConflict: 'id' }
     )
@@ -75,7 +73,7 @@ const ensurePublicUserProfile = async (userId) => {
             id: userId,
             email: fallbackEmail,
             full_name: fullName,
-            role
+            role: 'student'
           },
           { onConflict: 'id' }
         )
@@ -98,6 +96,71 @@ export const PAYMENT_TYPES = [
   { value: 'bank_transfer', label: 'Bank Transfer' },
   { value: 'other', label: 'Other' }
 ]
+
+const isRpcSignatureMismatch = (error) => {
+  const text = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase()
+  return (
+    error?.code === 'PGRST202' ||
+    text.includes('could not find the function') ||
+    text.includes('function public.approve_payment_submission') ||
+    text.includes('function public.reject_payment_submission') ||
+    text.includes('reviewer_id')
+  )
+}
+
+const callPaymentReviewRpc = async (functionName, { submissionId, reviewerId, reviewNotes = null }) => {
+  const { error: modernError } = await supabase.rpc(functionName, {
+    submission_id: submissionId,
+    review_notes: reviewNotes
+  })
+
+  if (!modernError) {
+    return { ok: true, error: null }
+  }
+
+  if (reviewerId && isRpcSignatureMismatch(modernError)) {
+    const { error: legacyError } = await supabase.rpc(functionName, {
+      submission_id: submissionId,
+      reviewer_id: reviewerId,
+      review_notes: reviewNotes
+    })
+
+    if (!legacyError) {
+      return { ok: true, error: null }
+    }
+
+    return { ok: false, error: legacyError }
+  }
+
+  return { ok: false, error: modernError }
+}
+
+const formatPaymentReviewError = (error, action = 'approve') => {
+  const text = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase()
+  const verb = action === 'approve' ? 'approve' : 'reject'
+
+  if (text.includes('infinite recursion')) {
+    return 'Payment RLS policy error (infinite recursion). Run supabase/migrations/020_fix_payment_submissions_rls_recursion.sql in the Supabase SQL Editor, then retry.'
+  }
+
+  if (text.includes('could not find the function') || error?.code === 'PGRST202') {
+    return `Payment ${verb} function is missing in Supabase. Apply migrations 004, 007, 018, and 021 in the SQL Editor, then retry.`
+  }
+
+  if (text.includes('course_id') && text.includes('notifications')) {
+    return 'Notifications table is missing course_id. Run supabase/migrations/021_fix_notifications_columns.sql in the Supabase SQL Editor, then retry.'
+  }
+
+  if (text.includes('admin') || text.includes('instructor') || text.includes('access denied')) {
+    return error?.message || `You are not allowed to ${verb} this payment.`
+  }
+
+  if (text.includes('not found') || text.includes('already processed')) {
+    return error?.message || 'Payment submission is no longer pending.'
+  }
+
+  return error?.message || `Failed to ${verb} payment submission.`
+}
 
 export const paymentService = {
   async hasApprovedPaymentForCourse(studentId, courseId) {
@@ -252,10 +315,21 @@ export const paymentService = {
       `)
       .eq('instructor_id', instructorId)
       .order('created_at', { ascending: false })
-      .limit(50)
+      .limit(100)
 
-    if (error) throw error
-    return data || []
+    if (!error) {
+      return data || []
+    }
+
+    const { data: basicData, error: basicError } = await supabase
+      .from('payment_submissions')
+      .select('*')
+      .eq('instructor_id', instructorId)
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    if (basicError) throw basicError
+    return basicData || []
   },
 
   async getAllPaymentSubmissions() {
@@ -443,77 +517,17 @@ export const paymentService = {
       return true
     }
 
-    const { error } = await supabase.rpc('approve_payment_submission', {
-      submission_id: submissionId,
-      reviewer_id: reviewerId,
-      review_notes: reviewNotes
+    const rpcResult = await callPaymentReviewRpc('approve_payment_submission', {
+      submissionId,
+      reviewerId,
+      reviewNotes
     })
 
-    if (!error) return true
-
-    const rpcMessage = `${error.message || ''} ${error.details || ''}`.toLowerCase()
-
-    const { data: submissionRow, error: submissionLookupError } = await supabase
-      .from('payment_submissions')
-      .select('id, student_id, course_id')
-      .eq('id', submissionId)
-      .single()
-
-    if (submissionLookupError) throw submissionLookupError
-
-    let { error: fallbackError } = await supabase
-      .from('payment_submissions')
-      .update({
-        status: 'approved',
-        reviewed_by: reviewerId,
-        reviewed_at: new Date().toISOString(),
-        review_notes: reviewNotes
-      })
-      .eq('id', submissionId)
-
-    // Legacy schemas may not have review metadata columns yet.
-    if (fallbackError) {
-      const fallbackMsg = `${fallbackError.message || ''} ${fallbackError.details || ''}`.toLowerCase()
-      const hasMissingReviewCols =
-        fallbackMsg.includes('reviewed_by') ||
-        fallbackMsg.includes('reviewed_at') ||
-        fallbackMsg.includes('review_notes')
-
-      if (hasMissingReviewCols) {
-        const retry = await supabase
-          .from('payment_submissions')
-          .update({ status: 'approved' })
-          .eq('id', submissionId)
-        fallbackError = retry.error
-      }
-    }
-
-    if (fallbackError) throw fallbackError
-
-    if (submissionRow?.student_id && submissionRow?.course_id) {
-      const { error: enrollError } = await supabase
-        .from('enrollments')
-        .upsert(
-          {
-            user_id: submissionRow.student_id,
-            course_id: submissionRow.course_id,
-            enrolled_at: new Date().toISOString(),
-            progress: 0
-          },
-          { onConflict: 'user_id,course_id' }
-        )
-
-      if (enrollError) {
-        throw enrollError
-      }
-    }
-
-    if (rpcMessage.includes('permission') || rpcMessage.includes('policy') || rpcMessage.includes('rls')) {
-      // Fallback succeeded but RPC failed due policy mismatch; keep operation successful.
+    if (rpcResult.ok) {
       return true
     }
 
-    return true
+    throw new Error(formatPaymentReviewError(rpcResult.error, 'approve'))
   },
 
   async rejectPaymentSubmission({ submissionId, reviewerId, reviewNotes = null }) {
@@ -521,49 +535,17 @@ export const paymentService = {
       return true
     }
 
-    const { error } = await supabase.rpc('reject_payment_submission', {
-      submission_id: submissionId,
-      reviewer_id: reviewerId,
-      review_notes: reviewNotes
+    const rpcResult = await callPaymentReviewRpc('reject_payment_submission', {
+      submissionId,
+      reviewerId,
+      reviewNotes
     })
 
-    if (!error) return true
-
-    const rpcMessage = `${error.message || ''} ${error.details || ''}`.toLowerCase()
-
-    let { error: fallbackError } = await supabase
-      .from('payment_submissions')
-      .update({
-        status: 'rejected',
-        reviewed_by: reviewerId,
-        reviewed_at: new Date().toISOString(),
-        review_notes: reviewNotes
-      })
-      .eq('id', submissionId)
-
-    if (fallbackError) {
-      const fallbackMsg = `${fallbackError.message || ''} ${fallbackError.details || ''}`.toLowerCase()
-      const hasMissingReviewCols =
-        fallbackMsg.includes('reviewed_by') ||
-        fallbackMsg.includes('reviewed_at') ||
-        fallbackMsg.includes('review_notes')
-
-      if (hasMissingReviewCols) {
-        const retry = await supabase
-          .from('payment_submissions')
-          .update({ status: 'rejected' })
-          .eq('id', submissionId)
-        fallbackError = retry.error
-      }
-    }
-
-    if (fallbackError) throw fallbackError
-
-    if (rpcMessage.includes('permission') || rpcMessage.includes('policy') || rpcMessage.includes('rls')) {
+    if (rpcResult.ok) {
       return true
     }
 
-    return true
+    throw new Error(formatPaymentReviewError(rpcResult.error, 'reject'))
   }
 }
 

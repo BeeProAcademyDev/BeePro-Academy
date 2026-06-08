@@ -1,5 +1,8 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { authService, userService } from '../services/api'
+import { resolveUserRole, isPendingInstructor } from '../lib/roles'
+import { formatErrorMessage } from '../lib/supabaseErrors'
+import supabase from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
@@ -13,24 +16,16 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
+  const [session, setSession] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const applyRoleFallback = (userData) => {
     if (!userData) return userData
 
-    const email = (userData.email || '').toString().trim().toLowerCase()
-    const configuredAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS || 'admin@bepro.academy')
-      .split(',')
-      .map((entry) => entry.trim().toLowerCase())
-      .filter(Boolean)
-
-    const role = (userData.role || '').toString().trim().toLowerCase()
-    const isAdminEmail = configuredAdminEmails.includes(email)
-
     return {
       ...userData,
-      role: isAdminEmail ? 'admin' : (role || userData.role)
+      role: resolveUserRole(userData)
     }
   }
 
@@ -38,7 +33,7 @@ export const AuthProvider = ({ children }) => {
     if (!userData?.id) return userData
 
     const email = (userData.email || '').toString().trim().toLowerCase()
-    const configuredAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS || 'admin@bepro.academy')
+    const configuredAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS || 'admin@beepro.academy')
       .split(',')
       .map((entry) => entry.trim().toLowerCase())
       .filter(Boolean)
@@ -56,18 +51,41 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const buildSessionUser = (authUser) => {
+    if (!authUser?.id) return null
+    return applyRoleFallback({
+      id: authUser.id,
+      email: authUser.email,
+      full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
+      avatar_url: authUser.user_metadata?.avatar_url || null,
+      role: authUser.user_metadata?.role
+    })
+  }
+
+  const effectiveUser = useMemo(() => {
+    if (user?.id) return user
+    if (session?.user?.id) return buildSessionUser(session.user)
+    return null
+  }, [user, session])
+
   // Check for existing session on mount
   useEffect(() => {
     checkUser()
-    
+
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session: activeSession } }) => {
+        setSession(activeSession)
+      })
+    }
+
     // Listen for auth state changes
-    const subscription = authService.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        fetchUserProfile(session.user)
+    const subscription = authService.onAuthStateChange((event, activeSession) => {
+      setSession(activeSession || null)
+
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && activeSession?.user) {
+        fetchUserProfile(activeSession.user)
       } else if (event === 'SIGNED_OUT') {
         setUser(null)
-      } else if (event === 'TOKEN_REFRESHED') {
-        // Session refreshed, user still logged in
       }
     })
 
@@ -80,12 +98,33 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true)
       const currentUser = await authService.getCurrentUser()
-      const withRoleFallback = applyRoleFallback(currentUser)
+      if (!currentUser?.id) {
+        setUser(null)
+        return
+      }
+
+      const profile = await userService.getOrCreateProfile(currentUser.id, {
+        email: currentUser.email,
+        full_name: currentUser.full_name || currentUser.user_metadata?.full_name,
+        avatar_url: currentUser.avatar_url || currentUser.user_metadata?.avatar_url
+      })
+
+      const withRoleFallback = applyRoleFallback({ ...currentUser, ...profile })
       const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
       setUser(syncedUser)
     } catch (err) {
       console.error('Error checking user:', err)
-      setUser(null)
+      try {
+        const { data: { session: activeSession } } = await supabase.auth.getSession()
+        setSession(activeSession)
+        if (activeSession?.user) {
+          setUser(buildSessionUser(activeSession.user))
+        } else {
+          setUser(null)
+        }
+      } catch {
+        setUser(null)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -131,8 +170,9 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true, user: authUser }
     } catch (err) {
-      setError(err.message)
-      return { success: false, error: err.message }
+      const message = formatErrorMessage(err)
+      setError(message)
+      return { success: false, error: message }
     } finally {
       setIsLoading(false)
     }
@@ -142,23 +182,35 @@ export const AuthProvider = ({ children }) => {
     try {
       setError(null)
       setIsLoading(true)
-      const { user: authUser, session } = await authService.signUp({
+      const signupResult = await authService.signUp({
         email,
         password,
         fullName,
         role
       })
+      const authUser = signupResult?.user
+      const resolvedRole = signupResult?.resolvedRole || role
       
       if (authUser) {
-        const withRoleFallback = applyRoleFallback({ ...authUser, full_name: fullName, role })
+        const withRoleFallback = applyRoleFallback({
+          ...authUser,
+          full_name: fullName,
+          role: resolvedRole
+        })
         const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
         setUser(syncedUser)
       }
       
-      return { success: true, user: authUser }
+      return {
+        success: true,
+        user: authUser,
+        pendingApproval: isPendingInstructor(resolvedRole),
+        emailDeliveryFailed: Boolean(signupResult?.emailDeliveryFailed)
+      }
     } catch (err) {
-      setError(err.message)
-      return { success: false, error: err.message }
+      const message = formatErrorMessage(err)
+      setError(message)
+      return { success: false, error: message }
     } finally {
       setIsLoading(false)
     }
@@ -169,10 +221,12 @@ export const AuthProvider = ({ children }) => {
       setError(null)
       await authService.signOut()
       setUser(null)
+      setSession(null)
       return { success: true }
     } catch (err) {
-      setError(err.message)
-      return { success: false, error: err.message }
+      const message = formatErrorMessage(err)
+      setError(message)
+      return { success: false, error: message }
     }
   }
 
@@ -182,8 +236,9 @@ export const AuthProvider = ({ children }) => {
       await authService.resetPassword(email)
       return { success: true }
     } catch (err) {
-      setError(err.message)
-      return { success: false, error: err.message }
+      const message = formatErrorMessage(err)
+      setError(message)
+      return { success: false, error: message }
     }
   }
 
@@ -193,8 +248,9 @@ export const AuthProvider = ({ children }) => {
       await authService.updatePassword(newPassword)
       return { success: true }
     } catch (err) {
-      setError(err.message)
-      return { success: false, error: err.message }
+      const message = formatErrorMessage(err)
+      setError(message)
+      return { success: false, error: message }
     }
   }
 
@@ -207,8 +263,9 @@ export const AuthProvider = ({ children }) => {
       setUser(prev => ({ ...prev, ...updatedProfile }))
       return { success: true, profile: updatedProfile }
     } catch (err) {
-      setError(err.message)
-      return { success: false, error: err.message }
+      const message = formatErrorMessage(err)
+      setError(message)
+      return { success: false, error: message }
     }
   }
 
@@ -221,14 +278,16 @@ export const AuthProvider = ({ children }) => {
       setUser(prev => ({ ...prev, avatar_url: url }))
       return { success: true, url }
     } catch (err) {
-      setError(err.message)
-      return { success: false, error: err.message }
+      const message = formatErrorMessage(err)
+      setError(message)
+      return { success: false, error: message }
     }
   }
 
   const value = {
-    user,
-    isAuthenticated: !!user,
+    user: effectiveUser,
+    session,
+    isAuthenticated: !!effectiveUser?.id,
     isLoading,
     error,
     login,

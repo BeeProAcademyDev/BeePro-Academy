@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@jitsi/react-sdk": "^1.4.4",
     "@supabase/supabase-js": "^2.93.2",
     "axios": "^1.6.2",
     "i18next": "^23.7.6",

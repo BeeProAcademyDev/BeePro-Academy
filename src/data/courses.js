@@ -288,8 +288,8 @@ export const testimonials = [
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
     role: 'مطور ويب',
     roleEn: 'Web Developer',
-    content: 'بفضل BePro Academy تمكنت من الحصول على وظيفة أحلامي كمطور ويب. المحتوى ممتاز والمدربين محترفين.',
-    contentEn: 'Thanks to BePro Academy, I was able to land my dream job as a web developer. The content is excellent and the instructors are professional.',
+    content: 'بفضل BeePro Academy تمكنت من الحصول على وظيفة أحلامي كمطور ويب. المحتوى ممتاز والمدربين محترفين.',
+    contentEn: 'Thanks to BeePro Academy, I was able to land my dream job as a web developer. The content is excellent and the instructors are professional.',
     rating: 5
   },
   {
