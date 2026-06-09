@@ -278,10 +278,14 @@ export const authService = {
 
       if (profileError) throw clarifySupabaseConnectionError(profileError)
 
+      const appRole = (profile?.role || user.user_metadata?.role || 'student').toString().trim().toLowerCase()
+      const safeRole = ['authenticated', 'anon', 'service_role'].includes(appRole) ? 'student' : appRole
+
       return {
         ...(profile || {}),
         ...user,
-        email: user.email || profile?.email || ''
+        email: user.email || profile?.email || '',
+        role: safeRole
       }
     } catch (e) {
       throw clarifySupabaseConnectionError(e)

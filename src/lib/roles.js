@@ -52,8 +52,23 @@ export function resolveSignupRole(selectedRole, email) {
   return ROLES.STUDENT
 }
 
+const AUTH_JWT_ROLES = new Set(['authenticated', 'anon', 'service_role'])
+
 export function normalizeRole(role) {
-  return (role || '').toString().trim().toLowerCase()
+  const normalized = (role || '').toString().trim().toLowerCase()
+  if (AUTH_JWT_ROLES.has(normalized)) return ''
+  return normalized
+}
+
+/** App role from DB profile / signup metadata — never Supabase JWT role ("authenticated"). */
+export function resolveAppRole(profile, authUser) {
+  const fromProfile = normalizeRole(profile?.role)
+  if (fromProfile) return fromProfile
+
+  const fromMetadata = normalizeRole(authUser?.user_metadata?.role)
+  if (fromMetadata) return fromMetadata
+
+  return ROLES.STUDENT
 }
 
 export function isPendingInstructor(role) {
@@ -129,6 +144,7 @@ export default {
   normalizeSignupAccountType,
   resolveSignupRole,
   normalizeRole,
+  resolveAppRole,
   isPendingInstructor,
   isApprovedInstructor,
   isAdmin,

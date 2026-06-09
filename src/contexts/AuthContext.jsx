@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { authService, userService } from '../services/api'
-import { resolveUserRole, isPendingInstructor, isAdminEmail } from '../lib/roles'
+import { resolveUserRole, isPendingInstructor, isAdminEmail, resolveAppRole } from '../lib/roles'
 import { formatErrorMessage } from '../lib/supabaseErrors'
 import supabase from '../lib/supabase'
 
@@ -32,11 +32,12 @@ export const AuthProvider = ({ children }) => {
   const mergeAuthProfile = (authUser, profile) => {
     const authEmail = (authUser?.email || '').toString().trim()
     return {
-      ...profile,
       ...authUser,
+      ...profile,
       email: authEmail || profile?.email || '',
       full_name: profile?.full_name || authUser?.full_name || authUser?.user_metadata?.full_name,
-      avatar_url: profile?.avatar_url || authUser?.avatar_url || authUser?.user_metadata?.avatar_url
+      avatar_url: profile?.avatar_url || authUser?.avatar_url || authUser?.user_metadata?.avatar_url,
+      role: resolveAppRole(profile, authUser)
     }
   }
 
