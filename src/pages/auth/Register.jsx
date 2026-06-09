@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { normalizeSignupAccountType } from '../../lib/roles'
+import { getLandingAuthUrl } from '../../lib/authRoutes'
 import { formatErrorMessage } from '../../lib/supabaseErrors'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -398,7 +399,7 @@ const Register = () => {
             {/* Login Link */}
             <p className="text-center mt-6 text-secondary-600 dark:text-secondary-400">
               {t('auth.register.hasAccount')}{' '}
-              <Link to="/login" className="text-primary-500 hover:text-primary-600 font-medium">
+              <Link to={getLandingAuthUrl('login')} className="text-primary-500 hover:text-primary-600 font-medium">
                 {t('auth.register.login')}
               </Link>
             </p>

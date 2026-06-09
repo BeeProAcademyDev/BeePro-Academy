@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
@@ -13,8 +13,8 @@ import PaymentCheckout from './pages/PaymentCheckout'
 import About from './pages/About'
 import Contact from './pages/Contact'
 import CourseLearn from './pages/CourseLearn'
-import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import { getLandingAuthUrl } from './lib/authRoutes'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import ResetPassword from './pages/auth/ResetPassword'
 import CreateCourse from './pages/teacher/CreateCourse'
@@ -27,9 +27,17 @@ import ITPage from './pages/categories/ITPage'
 import DataAnalysisPage from './pages/categories/DataAnalysisPage'
 import FinancialMarketsPage from './pages/categories/FinancialMarketsPage'
 
+const LoginRedirect = () => {
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  params.set('auth', 'login')
+  return <Navigate to={`/?${params.toString()}`} replace />
+}
+
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
   
   if (isLoading) {
     return (
@@ -40,7 +48,8 @@ const ProtectedRoute = ({ children }) => {
   }
   
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    const redirect = `${location.pathname}${location.search}`
+    return <Navigate to={getLandingAuthUrl('login', { redirect })} replace />
   }
   
   return children
@@ -49,6 +58,7 @@ const ProtectedRoute = ({ children }) => {
 // Teacher Route (only for teachers/admins)
 const TeacherRoute = ({ children }) => {
   const { user, isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
   const normalizedRole = (user?.role || '').toString().trim().toLowerCase()
   
   if (isLoading) {
@@ -60,7 +70,8 @@ const TeacherRoute = ({ children }) => {
   }
   
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    const redirect = `${location.pathname}${location.search}`
+    return <Navigate to={getLandingAuthUrl('login', { redirect })} replace />
   }
   
   // Pending instructors must wait for admin approval
@@ -174,16 +185,7 @@ function App() {
       />
 
       {/* Auth Routes */}
-      <Route 
-        path="/login" 
-        element={
-          <PublicRoute>
-            <Layout showFooter={false}>
-              <Login />
-            </Layout>
-          </PublicRoute>
-        } 
-      />
+      <Route path="/login" element={<LoginRedirect />} />
       
       <Route 
         path="/register" 

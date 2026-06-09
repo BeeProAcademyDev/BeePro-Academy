@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { getLandingAuthUrl } from '../../lib/authRoutes'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useAuth } from '../../contexts/AuthContext'
@@ -112,7 +113,7 @@ const ResetPassword = () => {
         if (supabase) {
           await supabase.auth.signOut()
         }
-        window.setTimeout(() => navigate('/login', { replace: true }), 2500)
+        window.setTimeout(() => navigate(getLandingAuthUrl('login'), { replace: true }), 2500)
       } else {
         setError(result.error || (isAr ? 'تعذر تحديث كلمة المرور' : 'Could not update password'))
       }
@@ -144,7 +145,7 @@ const ResetPassword = () => {
             <Link to="/forgot-password" className="btn btn-primary w-full">
               {t('auth.forgot.submit')}
             </Link>
-            <Link to="/login" className="block mt-3 text-sm text-primary-500 hover:text-primary-600">
+            <Link to={getLandingAuthUrl('login')} className="block mt-3 text-sm text-primary-500 hover:text-primary-600">
               {t('auth.forgot.back')}
             </Link>
           </div>

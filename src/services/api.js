@@ -193,7 +193,7 @@ export const authService = {
 
     try {
       const emailRedirectTo = typeof window !== 'undefined'
-        ? `${window.location.origin}/login`
+        ? `${window.location.origin}/?auth=login`
         : undefined
 
       const { data, error } = await supabase.auth.signUp({

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
+import { getLandingAuthUrl } from '../lib/authRoutes'
 import Button from '../components/ui/Button'
 import { courses, courseLessons } from '../data/courses'
 import { 
@@ -191,7 +192,7 @@ const CourseDetails = () => {
                       </Button>
                     </>
                   ) : (
-                    <Button to="/login" fullWidth size="lg">
+                    <Button to={getLandingAuthUrl('login')} fullWidth size="lg">
                       {t('course.enroll')}
                     </Button>
                   )}
@@ -244,7 +245,7 @@ const CourseDetails = () => {
               {t('course.continue')}
             </Button>
           ) : (
-            <Button to="/login">
+            <Button to={getLandingAuthUrl('login')}>
               {t('course.enroll')}
             </Button>
           )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -992,7 +992,7 @@ const LandingFooter = () => {
 };
 
 // Auth Modal Component
-const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType = 'student' }) => {
+const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType = 'student', redirectTo = '/dashboard' }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -1027,7 +1027,7 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
       if (result.success) {
         trackEvent('login', { method: 'email' });
         onClose();
-        navigate('/dashboard', { replace: true });
+        navigate(redirectTo || '/dashboard', { replace: true });
       } else {
         setError(formatErrorMessage(result.error) || 'Login failed. Please check your credentials.');
       }
@@ -1368,14 +1368,40 @@ const LandingNavbar = ({ onAuthClick }) => {
 
 // Main Landing Page Component
 const LandingPage = () => {
-  const [authModal, setAuthModal] = useState({ isOpen: false, tab: 'login' });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [authModal, setAuthModal] = useState({
+    isOpen: false,
+    tab: 'login',
+    accountType: 'student'
+  });
 
-  const openAuthModal = (tab) => {
-    setAuthModal({ isOpen: true, tab });
+  const rawRedirect = searchParams.get('redirect') || '/dashboard';
+  const redirectTo = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+    ? rawRedirect
+    : '/dashboard';
+
+  useEffect(() => {
+    const authTab = searchParams.get('auth');
+    if (authTab === 'login' || authTab === 'register') {
+      const role = searchParams.get('role');
+      setAuthModal({
+        isOpen: true,
+        tab: authTab,
+        accountType: role === 'teacher' ? 'teacher' : 'student'
+      });
+    }
+  }, [searchParams]);
+
+  const openAuthModal = (tab, accountType = 'student') => {
+    setAuthModal({ isOpen: true, tab, accountType });
   };
 
   const closeAuthModal = () => {
-    setAuthModal({ isOpen: false, tab: 'login' });
+    setAuthModal({ isOpen: false, tab: 'login', accountType: 'student' });
+    const next = new URLSearchParams(searchParams);
+    next.delete('auth');
+    next.delete('role');
+    setSearchParams(next, { replace: true });
   };
 
   return (
@@ -1395,6 +1421,8 @@ const LandingPage = () => {
         isOpen={authModal.isOpen}
         onClose={closeAuthModal}
         initialTab={authModal.tab}
+        initialAccountType={authModal.accountType}
+        redirectTo={redirectTo}
       />
     </div>
   );

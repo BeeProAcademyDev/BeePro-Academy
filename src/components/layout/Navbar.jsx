@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { getLandingAuthUrl } from '../../lib/authRoutes'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -211,7 +212,7 @@ const Navbar = () => {
               </>
             ) : (
               <div className="hidden md:flex items-center gap-3">
-                <Link to="/login" className="btn-ghost px-4 py-2 rounded-lg">
+                <Link to={getLandingAuthUrl('login')} className="btn-ghost px-4 py-2 rounded-lg">
                   {t('nav.login')}
                 </Link>
                 <Link to="/register?role=teacher" className="btn-ghost px-4 py-2 rounded-lg">
@@ -284,7 +285,7 @@ const Navbar = () => {
               {!isAuthenticated && (
                 <div className="mt-4 pt-4 border-t border-secondary-100 dark:border-dark-border flex flex-col gap-3">
                   <Link 
-                    to="/login" 
+                    to={getLandingAuthUrl('login')} 
                     className="btn btn-secondary w-full"
                     onClick={() => setIsMenuOpen(false)}
                   >

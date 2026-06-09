@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { getLandingAuthUrl } from '../../lib/authRoutes'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useAuth } from '../../contexts/AuthContext'
@@ -73,7 +74,7 @@ const ForgotPassword = () => {
                 <p className="text-sm text-secondary-500 mb-6">
                   {t('auth.forgot.successMessage')}
                 </p>
-                <Link to="/login" className="btn btn-primary w-full inline-flex items-center justify-center gap-2">
+                <Link to={getLandingAuthUrl('login')} className="btn btn-primary w-full inline-flex items-center justify-center gap-2">
                   <BackIcon className="w-4 h-4" />
                   {t('auth.forgot.back')}
                 </Link>
@@ -108,7 +109,7 @@ const ForgotPassword = () => {
                 </Button>
 
                 <Link
-                  to="/login"
+                  to={getLandingAuthUrl('login')}
                   className="flex items-center justify-center gap-2 text-sm text-primary-500 hover:text-primary-600"
                 >
                   <BackIcon className="w-4 h-4" />

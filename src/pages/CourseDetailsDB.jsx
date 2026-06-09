@@ -8,6 +8,7 @@ import { enrollmentService, meetingService } from '../services/api'
 import { paymentService } from '../services/paymentAPI'
 import { getMeetingJoinTarget, pickJoinableMeeting } from '../lib/jitsi'
 import { isStudentUser } from '../lib/roles'
+import { getLandingAuthUrl } from '../lib/authRoutes'
 import Button from '../components/ui/Button'
 import { 
   FiPlay, 
@@ -217,7 +218,7 @@ const CourseDetailsDB = () => {
       const redirectPath = isPaidCourse
         ? `/courses/${course?.id}/checkout`
         : `/courses/${course?.id}`
-      navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`)
+      navigate(getLandingAuthUrl('login', { redirect: redirectPath }))
       return
     }
 
