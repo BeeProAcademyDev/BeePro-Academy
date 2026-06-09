@@ -49,6 +49,21 @@ const Dashboard = () => {
   const [myCourses, setMyCourses] = useState([])
   const [isLoadingCourses, setIsLoadingCourses] = useState(false)
   const [adminSubTab, setAdminSubTab] = useState('users')
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const tab = params.get('tab')
+    const sub = params.get('sub')
+    const validTabs = ['courses', 'teacher', 'admin', 'progress', 'certificates', 'settings']
+    const validAdminSubs = ['users', 'payments']
+
+    if (tab && validTabs.includes(tab)) {
+      setActiveTab(tab)
+    }
+    if (sub && validAdminSubs.includes(sub)) {
+      setAdminSubTab(sub)
+    }
+  }, [location.search])
   const [paymentMethods, setPaymentMethods] = useState([])
   const [paymentSubmissions, setPaymentSubmissions] = useState([])
   const [isLoadingPayments, setIsLoadingPayments] = useState(false)
@@ -450,7 +465,7 @@ const Dashboard = () => {
   ]
 
   return (
-    <div className="min-h-screen pt-20 pb-16 bg-secondary-50 dark:bg-dark-bg">
+    <div className="min-h-screen pt-6 pb-16 bg-secondary-50 dark:bg-dark-bg">
       <div className="container-custom">
         {(isPendingTeacher || location.state?.registrationNotice) && (
           <div className="mb-6 card card-body border border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-200">

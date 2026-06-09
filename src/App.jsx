@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
-import Navbar from './components/layout/Navbar'
+import SiteNavbar from './components/layout/SiteNavbar'
 import Footer from './components/layout/Footer'
 
 // Pages
@@ -110,8 +110,8 @@ const PublicRoute = ({ children }) => {
 const Layout = ({ children, showFooter = true }) => {
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1">{children}</main>
+      <SiteNavbar />
+      <main className="flex-1 site-main-offset">{children}</main>
       {showFooter && <Footer />}
     </div>
   )
@@ -273,7 +273,9 @@ function App() {
         path="/teacher/create-course"
         element={
           <TeacherRoute>
-            <CreateCourse />
+            <Layout showFooter={false}>
+              <CreateCourse />
+            </Layout>
           </TeacherRoute>
         }
       />
@@ -293,7 +295,9 @@ function App() {
         path="/teacher/edit-course/:id"
         element={
           <TeacherRoute>
-            <EditCourse />
+            <Layout showFooter={false}>
+              <EditCourse />
+            </Layout>
           </TeacherRoute>
         }
       />
@@ -303,7 +307,7 @@ function App() {
         element={
           <TeacherRoute>
             <Layout>
-              <div className="min-h-screen pt-24 pb-16">
+              <div className="min-h-screen pt-6 pb-16">
                 <div className="container-custom">
                   <div className="flex justify-between items-center mb-8">
                     <h1 className="text-3xl font-bold">كورساتي</h1>
@@ -329,7 +333,7 @@ function App() {
         element={
           <ProtectedRoute>
             <Layout>
-              <div className="min-h-screen pt-24 pb-16">
+              <div className="min-h-screen pt-6 pb-16">
                 <div className="container-custom">
                   <h1 className="text-4xl font-bold mb-8">Admin Panel</h1>
                   <div className="grid md:grid-cols-3 gap-6">
@@ -366,7 +370,7 @@ function App() {
         path="*" 
         element={
           <Layout>
-            <div className="min-h-screen pt-24 pb-16 flex items-center justify-center">
+            <div className="min-h-screen pt-6 pb-16 flex items-center justify-center">
               <div className="text-center">
                 <h1 className="text-6xl font-bold text-primary-500 mb-4">404</h1>
                 <h2 className="text-2xl font-bold mb-4">Page Not Found</h2>

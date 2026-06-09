@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { trackEvent } from '../lib/analytics';
 import { normalizeSignupAccountType } from '../lib/roles';
 import { formatErrorMessage } from '../lib/supabaseErrors';
+import SiteNavbar from '../components/layout/SiteNavbar';
 import './LandingPage.css';
 
 const VISION_MISSION_CONTENT = {
@@ -1316,56 +1317,6 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
   );
 };
 
-// Navigation Bar Component
-const LandingNavbar = ({ onAuthClick }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const navLinks = [
-    { label: 'Vision', href: '#vision-mission' },
-    { label: 'Financial Markets', href: '/financial-markets' },
-    { label: 'Data Analysis', href: '/data-analysis' },
-    { label: 'IT', href: '/it' },
-    { label: 'Contact', href: '#contact' }
-  ];
-
-  return (
-    <nav className={`top-navbar ${scrolled ? 'scrolled' : ''}`}>
-      <div className="nav-logo">
-        <h1>BEEPRO-ACADEMY</h1>
-      </div>
-      
-      <button className="nav-mobile-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        ☰
-      </button>
-      
-      <div className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        {navLinks.map((link, index) => (
-          link.href.startsWith('#') ? (
-            <a key={index} href={link.href} className="nav-link">{link.label}</a>
-          ) : (
-            <Link key={index} to={link.href} className="nav-link">{link.label}</Link>
-          )
-        ))}
-      </div>
-      
-      <div className="nav-auth">
-        <button className="nav-teach-btn" onClick={() => onAuthClick('register', 'teacher')}>Teach</button>
-        <button className="nav-login-btn" onClick={() => onAuthClick('login')}>Login</button>
-        <button className="nav-register-btn" onClick={() => onAuthClick('register')}>Sign Up</button>
-      </div>
-    </nav>
-  );
-};
-
 // Main Landing Page Component
 const LandingPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1406,7 +1357,7 @@ const LandingPage = () => {
 
   return (
     <div className="landing-page">
-      <LandingNavbar onAuthClick={openAuthModal} />
+      <SiteNavbar onAuthClick={openAuthModal} />
       <HeroSection />
       <StatementsSection />
       <VisionMissionSection />
