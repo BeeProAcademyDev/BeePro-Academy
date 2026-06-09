@@ -42,6 +42,15 @@ import { courses as mockCourses, categories as mockCategories } from '../data/co
 // Check if Supabase is available
 const isSupabaseAvailable = () => !!supabase
 
+const SUPABASE_CONFIG_ERROR =
+  'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel (Production + Preview), then redeploy.'
+
+function assertSupabaseAvailable() {
+  if (!isSupabaseAvailable()) {
+    throw new Error(SUPABASE_CONFIG_ERROR)
+  }
+}
+
 const isMissingTableError = (error) => {
   const text = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase()
   return (
@@ -1053,6 +1062,14 @@ export const adminService = {
     return { data, count }
   },
 
+  async getAllUsersAdmin() {
+    assertSupabaseAvailable()
+
+    const { data, error } = await supabase.rpc('admin_get_all_users')
+    if (error) throw error
+    return data || []
+  },
+
   // Update user role (admin only)
   async updateUserRole(userId, role) {
     if (!isSupabaseAvailable()) {
@@ -1068,6 +1085,82 @@ export const adminService = {
 
     if (error) throw error
     return data
+  },
+
+  async updateUserRoleAdmin(targetUserId, newRole) {
+    assertSupabaseAvailable()
+
+    const { data, error } = await supabase.rpc('admin_update_user_role', {
+      target_user_id: targetUserId,
+      new_role: newRole
+    })
+
+    if (error) throw error
+    return data
+  },
+
+  async getUserDetailsAdmin(targetUserId) {
+    assertSupabaseAvailable()
+
+    const { data, error } = await supabase.rpc('admin_get_user_details', {
+      target_user_id: targetUserId
+    })
+
+    if (error) throw error
+    return data
+  },
+
+  async getUserDetailsFallback(targetUserId, selectedFromList = null) {
+    assertSupabaseAvailable()
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', targetUserId)
+      .maybeSingle()
+
+    let courses = []
+    let enrollments = []
+
+    if ((profile?.role || '').toLowerCase() === 'instructor') {
+      const { data: instructorCourses } = await supabase
+        .from('courses')
+        .select('id, title, status')
+        .eq('instructor_id', targetUserId)
+        .order('created_at', { ascending: false })
+
+      courses = (instructorCourses || []).map((course) => ({
+        ...course,
+        enrollments: 0
+      }))
+    }
+
+    if ((profile?.role || '').toLowerCase() === 'student') {
+      const { data: studentEnrollments } = await supabase
+        .from('enrollments')
+        .select('id, progress, course:courses(title, instructor:users!instructor_id(full_name))')
+        .eq('user_id', targetUserId)
+        .order('enrolled_at', { ascending: false })
+
+      enrollments = (studentEnrollments || []).map((enrollment) => ({
+        id: enrollment.id,
+        progress: enrollment.progress || 0,
+        course_title: enrollment.course?.title || 'N/A',
+        instructor_name: enrollment.course?.instructor?.full_name || 'N/A'
+      }))
+    }
+
+    const fallbackUser = profile || selectedFromList
+    if (!fallbackUser) {
+      throw new Error('User details are not available')
+    }
+
+    return {
+      success: true,
+      user: fallbackUser,
+      courses,
+      enrollments
+    }
   },
 
   async approveInstructor(targetUserId) {

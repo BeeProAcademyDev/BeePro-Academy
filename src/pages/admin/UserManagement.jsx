@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
-import { supabase } from '../../lib/supabase'
 import { adminService, userService } from '../../services/api'
 import { getRoleLabel as getSharedRoleLabel } from '../../lib/roles'
 import { 
@@ -75,19 +74,7 @@ const UserManagement = () => {
     try {
       await ensureAdminRoleInDatabase()
 
-      const { data, error } = await supabase.rpc('admin_get_all_users')
-
-      if (error) {
-        const { data: fallbackUsers } = await adminService.getAllUsers({ limit: 500, offset: 0 })
-        const safeUsers = (fallbackUsers || []).map((item) => ({
-          ...item,
-          total_courses: item.total_courses || 0,
-          total_enrollments: item.total_enrollments || 0
-        }))
-        setUsers(safeUsers)
-        return
-      }
-
+      const data = await adminService.getAllUsersAdmin()
       setUsers(data || [])
     } catch (error) {
       console.error('Error fetching users:', error)
@@ -113,6 +100,24 @@ const UserManagement = () => {
         const adminHint = getAccessDeniedHint()
         alert(language === 'ar' ? `تم رفض الوصول: ${adminHint}` : `Access denied: ${adminHint}`)
         return
+      }
+
+      const configError = (error?.message || '').includes('Supabase is not configured')
+      if (!configError) {
+        try {
+          const { data: fallbackUsers } = await adminService.getAllUsers({ limit: 500, offset: 0 })
+          const safeUsers = (fallbackUsers || []).map((item) => ({
+            ...item,
+            total_courses: item.total_courses || 0,
+            total_enrollments: item.total_enrollments || 0
+          }))
+          if (safeUsers.length > 0) {
+            setUsers(safeUsers)
+            return
+          }
+        } catch (fallbackError) {
+          console.error('Fallback users fetch failed:', fallbackError)
+        }
       }
 
       const details = error?.message || error?.details || error?.hint || ''
@@ -189,13 +194,8 @@ const UserManagement = () => {
 
     setActionLoading(targetUserId)
     try {
-      const { data, error } = await supabase.rpc('admin_update_user_role', {
-        target_user_id: targetUserId,
-        new_role: newRole
-      })
+      const data = await adminService.updateUserRoleAdmin(targetUserId, newRole)
 
-      if (error) throw error
-      
       if (data.success) {
         alert(language === 'ar' 
           ? `تم تحديث دور المستخدم إلى ${getRoleLabel(newRole)}` 
@@ -212,12 +212,7 @@ const UserManagement = () => {
         try {
           await ensureAdminRoleInDatabase()
 
-          const { data: retriedData, error: retriedError } = await supabase.rpc('admin_update_user_role', {
-            target_user_id: targetUserId,
-            new_role: newRole
-          })
-
-          if (retriedError) throw retriedError
+          const retriedData = await adminService.updateUserRoleAdmin(targetUserId, newRole)
 
           if (retriedData?.success) {
             alert(language === 'ar'
@@ -263,12 +258,8 @@ const UserManagement = () => {
     const selectedFromList = users.find((listUser) => listUser.id === targetUserId)
 
     try {
-      const { data, error } = await supabase.rpc('admin_get_user_details', {
-        target_user_id: targetUserId
-      })
+      const data = await adminService.getUserDetailsAdmin(targetUserId)
 
-      if (error) throw error
-      
       if (data.success) {
         setSelectedUser(data)
         setShowUserDetails(true)
@@ -278,51 +269,8 @@ const UserManagement = () => {
 
       // Fallback to direct queries so admins can still inspect user details.
       try {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', targetUserId)
-          .maybeSingle()
-
-        let courses = []
-        let enrollments = []
-
-        if ((profile?.role || '').toLowerCase() === 'instructor') {
-          const { data: instructorCourses } = await supabase
-            .from('courses')
-            .select('id, title, status')
-            .eq('instructor_id', targetUserId)
-            .order('created_at', { ascending: false })
-          courses = (instructorCourses || []).map((course) => ({
-            ...course,
-            enrollments: 0
-          }))
-        }
-
-        if ((profile?.role || '').toLowerCase() === 'student') {
-          const { data: studentEnrollments } = await supabase
-            .from('enrollments')
-            .select('id, progress, course:courses(title, instructor:users!instructor_id(full_name))')
-            .eq('user_id', targetUserId)
-            .order('enrolled_at', { ascending: false })
-
-          enrollments = (studentEnrollments || []).map((enrollment) => ({
-            id: enrollment.id,
-            progress: enrollment.progress || 0,
-            course_title: enrollment.course?.title || 'N/A',
-            instructor_name: enrollment.course?.instructor?.full_name || 'N/A'
-          }))
-        }
-
-        const fallbackUser = profile || selectedFromList
-        if (!fallbackUser) throw new Error('User details are not available')
-
-        setSelectedUser({
-          success: true,
-          user: fallbackUser,
-          courses,
-          enrollments
-        })
+        const fallbackDetails = await adminService.getUserDetailsFallback(targetUserId, selectedFromList)
+        setSelectedUser(fallbackDetails)
         setShowUserDetails(true)
       } catch (fallbackError) {
         console.error('Fallback user details failed:', fallbackError)
