@@ -60,6 +60,13 @@ export function normalizeRole(role) {
   return normalized
 }
 
+/** Normalize legacy DB role values for admin UI and comparisons. */
+export function normalizeDbRole(role) {
+  const normalized = normalizeRole(role)
+  if (normalized === 'teacher') return ROLES.INSTRUCTOR
+  return normalized || ROLES.STUDENT
+}
+
 /** App role from DB profile / signup metadata — never Supabase JWT role ("authenticated"). */
 export function resolveAppRole(profile, authUser) {
   const fromProfile = normalizeRole(profile?.role)
@@ -144,6 +151,7 @@ export default {
   normalizeSignupAccountType,
   resolveSignupRole,
   normalizeRole,
+  normalizeDbRole,
   resolveAppRole,
   isPendingInstructor,
   isApprovedInstructor,

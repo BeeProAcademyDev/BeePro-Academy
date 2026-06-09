@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { adminService, userService } from '../../services/api'
-import { getRoleLabel as getSharedRoleLabel } from '../../lib/roles'
+import { getRoleLabel as getSharedRoleLabel, normalizeDbRole } from '../../lib/roles'
 import { 
   FiUsers, 
   FiSearch, 
@@ -131,6 +131,39 @@ const UserManagement = () => {
     }
   }
 
+  const showRoleUpdateSuccess = (newRole) => {
+    alert(language === 'ar'
+      ? `تم تحديث دور المستخدم إلى ${getRoleLabel(newRole)}`
+      : `User role updated to ${getRoleLabel(newRole)}`)
+    fetchUsers()
+  }
+
+  const handleRoleChangeError = (error, actionLabelEn, actionLabelAr) => {
+    console.error(`Role change failed (${actionLabelEn}):`, error)
+    const details = error?.message || ''
+    const hint = isAccessDeniedError(error) ? getAccessDeniedHint() : details
+    alert(
+      language === 'ar'
+        ? `فشل ${actionLabelAr}${hint ? `: ${hint}` : ''}`
+        : `Failed to ${actionLabelEn}${hint ? `: ${hint}` : ''}`
+    )
+  }
+
+  const applyRoleChange = async (targetUserId, newRole) => {
+    await ensureAdminRoleInDatabase()
+
+    try {
+      await adminService.updateUserRoleAdmin(targetUserId, newRole)
+      return
+    } catch (rpcError) {
+      if (!isAccessDeniedError(rpcError)) {
+        throw rpcError
+      }
+    }
+
+    await adminService.updateUserRole(targetUserId, newRole)
+  }
+
   const approveInstructor = async (targetUserId) => {
     if (!user?.id) {
       alert(language === 'ar' ? 'يجب تسجيل الدخول' : 'You must be signed in')
@@ -145,19 +178,14 @@ const UserManagement = () => {
     setActionLoading(targetUserId)
     try {
       await ensureAdminRoleInDatabase()
-      const data = await adminService.approveInstructor(targetUserId)
-      if (data?.success === false) throw new Error(data.error)
-
-      alert(language === 'ar' ? 'تم قبول المدرس بنجاح' : 'Instructor approved successfully')
-      fetchUsers()
+      await adminService.approveInstructor(targetUserId)
+      showRoleUpdateSuccess('instructor')
     } catch (error) {
-      console.error('Error approving instructor:', error)
       try {
-        await adminService.updateUserRole(targetUserId, 'instructor')
-        alert(language === 'ar' ? 'تم قبول المدرس بنجاح' : 'Instructor approved successfully')
-        fetchUsers()
+        await applyRoleChange(targetUserId, 'instructor')
+        showRoleUpdateSuccess('instructor')
       } catch (fallbackError) {
-        alert(language === 'ar' ? 'فشل قبول المدرس' : 'Failed to approve instructor')
+        handleRoleChangeError(fallbackError, 'approve instructor', 'قبول المدرس')
       }
     } finally {
       setActionLoading(null)
@@ -169,19 +197,15 @@ const UserManagement = () => {
 
     setActionLoading(targetUserId)
     try {
-      const data = await adminService.rejectInstructor(targetUserId)
-      if (data?.success === false) throw new Error(data.error)
-
-      alert(language === 'ar' ? 'تم رفض طلب المدرس' : 'Instructor application rejected')
-      fetchUsers()
+      await ensureAdminRoleInDatabase()
+      await adminService.rejectInstructor(targetUserId)
+      showRoleUpdateSuccess('student')
     } catch (error) {
-      console.error('Error rejecting instructor:', error)
       try {
-        await adminService.updateUserRole(targetUserId, 'student')
-        alert(language === 'ar' ? 'تم رفض طلب المدرس' : 'Instructor application rejected')
-        fetchUsers()
+        await applyRoleChange(targetUserId, 'student')
+        showRoleUpdateSuccess('student')
       } catch (fallbackError) {
-        alert(language === 'ar' ? 'فشل رفض الطلب' : 'Failed to reject application')
+        handleRoleChangeError(fallbackError, 'reject instructor application', 'رفض طلب المدرس')
       }
     } finally {
       setActionLoading(null)
@@ -194,58 +218,10 @@ const UserManagement = () => {
 
     setActionLoading(targetUserId)
     try {
-      const data = await adminService.updateUserRoleAdmin(targetUserId, newRole)
-
-      if (data.success) {
-        alert(language === 'ar' 
-          ? `تم تحديث دور المستخدم إلى ${getRoleLabel(newRole)}` 
-          : `User role updated to ${getRoleLabel(newRole)}`
-        )
-        fetchUsers() // Refresh the list
-      } else {
-        throw new Error(data.error)
-      }
+      await applyRoleChange(targetUserId, newRole)
+      showRoleUpdateSuccess(newRole)
     } catch (error) {
-      console.error('Error updating user role:', error)
-
-      if (isAccessDeniedError(error)) {
-        try {
-          await ensureAdminRoleInDatabase()
-
-          const retriedData = await adminService.updateUserRoleAdmin(targetUserId, newRole)
-
-          if (retriedData?.success) {
-            alert(language === 'ar'
-              ? `تم تحديث دور المستخدم إلى ${getRoleLabel(newRole)}`
-              : `User role updated to ${getRoleLabel(newRole)}`)
-            fetchUsers()
-            return
-          }
-
-          if (retriedData && retriedData.success === false) {
-            throw new Error(retriedData.error || 'Access denied. Admin role required.')
-          }
-        } catch (retryError) {
-          console.error('Role update retry after admin sync failed:', retryError)
-        }
-
-        try {
-          await adminService.updateUserRole(targetUserId, newRole)
-          alert(language === 'ar'
-            ? `تم تحديث دور المستخدم إلى ${getRoleLabel(newRole)}`
-            : `User role updated to ${getRoleLabel(newRole)}`)
-          fetchUsers()
-          return
-        } catch (fallbackError) {
-          console.error('Fallback role update after P0001 failed:', fallbackError)
-        }
-
-        const adminHint = getAccessDeniedHint()
-        alert(language === 'ar' ? `تم رفض الوصول: ${adminHint}` : `Access denied: ${adminHint}`)
-        return
-      }
-
-      alert(language === 'ar' ? 'خطأ في تحديث دور المستخدم' : 'Error updating user role')
+      handleRoleChangeError(error, 'update user role', 'تحديث دور المستخدم')
     } finally {
       setActionLoading(null)
     }
@@ -302,13 +278,13 @@ const UserManagement = () => {
     return colors[role] || 'bg-gray-100 text-gray-800'
   }
 
-  const pendingInstructors = users.filter((u) => u.role === 'pending_instructor')
+  const pendingInstructors = users.filter((u) => normalizeDbRole(u.role) === 'pending_instructor')
 
   // Filter users based on search term and role
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter
+    const matchesRole = roleFilter === 'all' || normalizeDbRole(user.role) === roleFilter
     return matchesSearch && matchesRole
   })
 
@@ -509,7 +485,7 @@ const UserManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(userData.role)}`}>
-                        {getRoleLabel(userData.role)}
+                        {getRoleLabel(normalizeDbRole(userData.role))}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -539,7 +515,7 @@ const UserManagement = () => {
                         </button>
                         
                         {/* Role Conversion Buttons */}
-                        {userData.role === 'pending_instructor' && (
+                        {normalizeDbRole(userData.role) === 'pending_instructor' && (
                           <>
                             <button
                               onClick={() => approveInstructor(userData.id)}
@@ -564,7 +540,7 @@ const UserManagement = () => {
                           </>
                         )}
 
-                        {userData.role === 'student' && (
+                        {normalizeDbRole(userData.role) === 'student' && (
                           <button
                             onClick={() => updateUserRole(userData.id, 'instructor')}
                             disabled={actionLoading === userData.id}
@@ -579,7 +555,7 @@ const UserManagement = () => {
                           </button>
                         )}
                         
-                        {userData.role !== 'student' && (
+                        {normalizeDbRole(userData.role) !== 'student' && normalizeDbRole(userData.role) !== 'admin' && (
                           <button
                             onClick={() => updateUserRole(userData.id, 'student')}
                             disabled={actionLoading === userData.id}

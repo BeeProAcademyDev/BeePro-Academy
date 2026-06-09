@@ -37,7 +37,7 @@ import {
   mapAuthSignupError,
   mapSignupProfileError
 } from '../lib/supabaseErrors'
-import { resolveSignupRole, isAdminEmail } from '../lib/roles'
+import { resolveSignupRole, isAdminEmail, normalizeDbRole, normalizeRole } from '../lib/roles'
 import { courses as mockCourses, categories as mockCategories } from '../data/courses'
 
 // Check if Supabase is available
@@ -50,6 +50,35 @@ function assertSupabaseAvailable() {
   if (!isSupabaseAvailable()) {
     throw new Error(SUPABASE_CONFIG_ERROR)
   }
+}
+
+function parseRpcJsonResult(data) {
+  if (data == null) {
+    return { success: false, error: 'Empty RPC response' }
+  }
+
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data)
+    } catch {
+      return { success: false, error: data }
+    }
+  }
+
+  return data
+}
+
+function assertRoleUpdateResult(profile, expectedRole) {
+  const expected = normalizeDbRole(expectedRole)
+  const actual = normalizeDbRole(profile?.role)
+
+  if (!profile?.id || actual !== expected) {
+    throw new Error(
+      'Role was not updated in the database. Run supabase/fix-admin-access.sql and ensure migration 017 is applied.'
+    )
+  }
+
+  return profile
 }
 
 const isMissingTableError = (error) => {
@@ -1076,33 +1105,48 @@ export const adminService = {
     return data || []
   },
 
-  // Update user role (admin only)
+  // Update user role (admin only — direct table update fallback)
   async updateUserRole(userId, role) {
-    if (!isSupabaseAvailable()) {
-      return { id: userId, role }
-    }
+    assertSupabaseAvailable()
 
+    const normalizedRole = normalizeDbRole(role)
     const { data, error } = await supabase
       .from('users')
-      .update({ role })
+      .update({ role: normalizedRole })
       .eq('id', userId)
       .select()
       .single()
 
     if (error) throw error
-    return data
+    return assertRoleUpdateResult(data, normalizedRole)
   },
 
   async updateUserRoleAdmin(targetUserId, newRole) {
     assertSupabaseAvailable()
 
+    const normalizedRole = normalizeDbRole(newRole)
     const { data, error } = await supabase.rpc('admin_update_user_role', {
       target_user_id: targetUserId,
-      new_role: newRole
+      new_role: normalizedRole
     })
 
     if (error) throw error
-    return data
+
+    const result = parseRpcJsonResult(data)
+    if (result?.success === false) {
+      throw new Error(result.error || 'Role update failed')
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('id, role, email, full_name')
+      .eq('id', targetUserId)
+      .single()
+
+    if (profileError) throw profileError
+    assertRoleUpdateResult(profile, normalizedRole)
+
+    return result
   },
 
   async getUserDetailsAdmin(targetUserId) {
@@ -1170,29 +1214,55 @@ export const adminService = {
   },
 
   async approveInstructor(targetUserId) {
-    if (!isSupabaseAvailable()) {
-      return { success: true }
-    }
+    assertSupabaseAvailable()
 
     const { data, error } = await supabase.rpc('admin_approve_instructor', {
       target_user_id: targetUserId
     })
 
     if (error) throw error
-    return data
+
+    const result = parseRpcJsonResult(data)
+    if (result?.success === false) {
+      throw new Error(result.error || 'Failed to approve instructor')
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('id, role')
+      .eq('id', targetUserId)
+      .single()
+
+    if (profileError) throw profileError
+    assertRoleUpdateResult(profile, 'instructor')
+
+    return result
   },
 
   async rejectInstructor(targetUserId) {
-    if (!isSupabaseAvailable()) {
-      return { success: true }
-    }
+    assertSupabaseAvailable()
 
     const { data, error } = await supabase.rpc('admin_reject_instructor', {
       target_user_id: targetUserId
     })
 
     if (error) throw error
-    return data
+
+    const result = parseRpcJsonResult(data)
+    if (result?.success === false) {
+      throw new Error(result.error || 'Failed to reject instructor')
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('id, role')
+      .eq('id', targetUserId)
+      .single()
+
+    if (profileError) throw profileError
+    assertRoleUpdateResult(profile, 'student')
+
+    return result
   }
 }
 
