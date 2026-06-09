@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -994,6 +994,7 @@ const LandingFooter = () => {
 // Auth Modal Component
 const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType = 'student' }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [accountType, setAccountType] = useState('student');
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -1025,11 +1026,8 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
       const result = await login(loginData.email, loginData.password);
       if (result.success) {
         trackEvent('login', { method: 'email' });
-        setSuccess('Login successful! Redirecting...');
-        setTimeout(() => {
-          onClose();
-          window.location.href = '/dashboard';
-        }, 1000);
+        onClose();
+        navigate('/dashboard', { replace: true });
       } else {
         setError(formatErrorMessage(result.error) || 'Login failed. Please check your credentials.');
       }

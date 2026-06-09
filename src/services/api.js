@@ -36,7 +36,7 @@ import {
   mapAuthSignupError,
   mapSignupProfileError
 } from '../lib/supabaseErrors'
-import { resolveSignupRole } from '../lib/roles'
+import { resolveSignupRole, isAdminEmail } from '../lib/roles'
 import { courses as mockCourses, categories as mockCategories } from '../data/courses'
 
 // Check if Supabase is available
@@ -217,6 +217,15 @@ export const authService = {
       })
 
       if (error) throw clarifySupabaseConnectionError(error)
+
+      if (data?.user && isAdminEmail(email)) {
+        try {
+          await supabase.rpc('sync_admin_role_if_allowed')
+        } catch (syncError) {
+          console.warn('[signIn] Admin role sync failed:', syncError?.message || syncError)
+        }
+      }
+
       return data
     } catch (e) {
       throw clarifySupabaseConnectionError(e)
@@ -258,7 +267,11 @@ export const authService = {
 
       if (profileError) throw clarifySupabaseConnectionError(profileError)
 
-      return { ...user, ...(profile || {}) }
+      return {
+        ...(profile || {}),
+        ...user,
+        email: user.email || profile?.email || ''
+      }
     } catch (e) {
       throw clarifySupabaseConnectionError(e)
     }
@@ -878,6 +891,18 @@ export const userService = {
           profile = updated
         } else {
           profile = { ...profile, role: 'student' }
+        }
+      }
+
+      const authEmail = (userData.email || profile.email || '').toString().trim().toLowerCase()
+      if (isAdminEmail(authEmail) && profile.role !== 'admin') {
+        try {
+          const synced = await userService.ensureUserRole(userId, authEmail, 'admin')
+          if (synced?.role === 'admin') {
+            profile = { ...profile, ...synced, email: userData.email || synced.email || profile.email }
+          }
+        } catch (syncError) {
+          console.warn('[getOrCreateProfile] Admin role sync failed:', syncError?.message || syncError)
         }
       }
     }

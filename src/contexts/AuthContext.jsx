@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { authService, userService } from '../services/api'
-import { resolveUserRole, isPendingInstructor } from '../lib/roles'
+import { resolveUserRole, isPendingInstructor, isAdminEmail } from '../lib/roles'
 import { formatErrorMessage } from '../lib/supabaseErrors'
 import supabase from '../lib/supabase'
 
@@ -29,25 +29,31 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const mergeAuthProfile = (authUser, profile) => {
+    const authEmail = (authUser?.email || '').toString().trim()
+    return {
+      ...profile,
+      ...authUser,
+      email: authEmail || profile?.email || '',
+      full_name: profile?.full_name || authUser?.full_name || authUser?.user_metadata?.full_name,
+      avatar_url: profile?.avatar_url || authUser?.avatar_url || authUser?.user_metadata?.avatar_url
+    }
+  }
+
   const syncAdminRoleIfNeeded = async (userData) => {
     if (!userData?.id) return userData
 
     const email = (userData.email || '').toString().trim().toLowerCase()
-    const configuredAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS || 'admin@beepro.academy')
-      .split(',')
-      .map((entry) => entry.trim().toLowerCase())
-      .filter(Boolean)
-
-    if (!configuredAdminEmails.includes(email)) {
+    if (!isAdminEmail(email)) {
       return userData
     }
 
     try {
       const syncedProfile = await userService.ensureUserRole(userData.id, email, 'admin')
-      return { ...userData, ...syncedProfile, role: 'admin' }
+      return applyRoleFallback(mergeAuthProfile(userData, { ...syncedProfile, role: 'admin' }))
     } catch (err) {
       console.warn('Unable to sync admin role in users table:', err)
-      return { ...userData, role: 'admin' }
+      return applyRoleFallback({ ...userData, role: 'admin' })
     }
   }
 
@@ -97,9 +103,19 @@ export const AuthProvider = ({ children }) => {
   const checkUser = async () => {
     try {
       setIsLoading(true)
-      const currentUser = await authService.getCurrentUser()
+      let currentUser = await authService.getCurrentUser()
+
+      if (!currentUser?.id && supabase) {
+        const { data: { session: activeSession } } = await supabase.auth.getSession()
+        if (activeSession?.user) {
+          setSession(activeSession)
+          currentUser = activeSession.user
+        }
+      }
+
       if (!currentUser?.id) {
         setUser(null)
+        setSession(null)
         return
       }
 
@@ -109,8 +125,8 @@ export const AuthProvider = ({ children }) => {
         avatar_url: currentUser.avatar_url || currentUser.user_metadata?.avatar_url
       })
 
-      const withRoleFallback = applyRoleFallback({ ...currentUser, ...profile })
-      const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
+      const mergedUser = mergeAuthProfile(currentUser, profile)
+      const syncedUser = await syncAdminRoleIfNeeded(applyRoleFallback(mergedUser))
       setUser(syncedUser)
     } catch (err) {
       console.error('Error checking user:', err)
@@ -138,14 +154,13 @@ export const AuthProvider = ({ children }) => {
         full_name: authUser.user_metadata?.full_name,
         avatar_url: authUser.user_metadata?.avatar_url
       })
-      const withRoleFallback = applyRoleFallback({ ...authUser, ...profile })
-      const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
+      const mergedUser = mergeAuthProfile(authUser, profile)
+      const syncedUser = await syncAdminRoleIfNeeded(applyRoleFallback(mergedUser))
       setUser(syncedUser)
     } catch (err) {
       console.error('Error fetching/creating profile:', err)
       // Still allow login even if profile fetch fails
-      const withRoleFallback = applyRoleFallback(authUser)
-      const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
+      const syncedUser = await syncAdminRoleIfNeeded(applyRoleFallback(authUser))
       setUser(syncedUser)
     }
   }
@@ -155,6 +170,10 @@ export const AuthProvider = ({ children }) => {
       setError(null)
       setIsLoading(true)
       const { user: authUser, session } = await authService.signIn({ email, password })
+
+      if (session) {
+        setSession(session)
+      }
       
       if (authUser) {
         // Use getOrCreateProfile to handle users without a profile
@@ -163,8 +182,8 @@ export const AuthProvider = ({ children }) => {
           full_name: authUser.user_metadata?.full_name,
           avatar_url: authUser.user_metadata?.avatar_url
         })
-        const withRoleFallback = applyRoleFallback({ ...authUser, ...profile })
-        const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
+        const mergedUser = mergeAuthProfile(authUser, profile)
+        const syncedUser = await syncAdminRoleIfNeeded(applyRoleFallback(mergedUser))
         setUser(syncedUser)
       }
       
