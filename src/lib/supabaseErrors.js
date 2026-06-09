@@ -88,6 +88,28 @@ export function isAuthEmailDeliveryError(error) {
  * @param {unknown} error
  * @returns {Error}
  */
+export function mapAuthLoginError(error) {
+  const message = formatErrorMessage(error)
+  const lower = message.toLowerCase()
+
+  if (
+    lower.includes('invalid login credentials')
+    || lower.includes('invalid email or password')
+  ) {
+    return new Error(
+      'Invalid email or password. If you only ran SQL on the users table, create the account in Supabase Dashboard → Authentication → Users → Add user (check Auto confirm). Or use Forgot password to reset.'
+    )
+  }
+
+  if (lower.includes('email not confirmed')) {
+    return new Error(
+      'Email not confirmed. In Supabase Dashboard → Authentication → Providers → Email, disable "Confirm email", or confirm the user under Authentication → Users.'
+    )
+  }
+
+  return error instanceof Error ? error : new Error(message)
+}
+
 export function mapAuthSignupError(error) {
   const message = formatErrorMessage(error)
   const lower = message.toLowerCase()

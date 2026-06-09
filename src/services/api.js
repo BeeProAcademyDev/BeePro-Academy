@@ -33,6 +33,7 @@ function mergeMeetingRows(primary = [], secondary = []) {
 import {
   clarifySupabaseConnectionError,
   isAuthEmailDeliveryError,
+  mapAuthLoginError,
   mapAuthSignupError,
   mapSignupProfileError
 } from '../lib/supabaseErrors'
@@ -220,14 +221,15 @@ export const authService = {
     }
 
     try {
+      const normalizedEmail = (email || '').toString().trim().toLowerCase()
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password
       })
 
-      if (error) throw clarifySupabaseConnectionError(error)
+      if (error) throw mapAuthLoginError(clarifySupabaseConnectionError(error))
 
-      if (data?.user && isAdminEmail(email)) {
+      if (data?.user && isAdminEmail(normalizedEmail)) {
         try {
           await supabase.rpc('sync_admin_role_if_allowed')
         } catch (syncError) {
