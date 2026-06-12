@@ -1,4 +1,6 @@
-const JITSI_DOMAIN = import.meta.env.VITE_JITSI_DOMAIN || 'meet.jit.si'
+const RAW_JITSI_DOMAIN = import.meta.env.VITE_JITSI_DOMAIN || ''
+const JITSI_DOMAIN = RAW_JITSI_DOMAIN.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '')
+const PUBLIC_MEET_JITSI_DOMAIN = 'meet.jit.si'
 
 export function generateJitsiRoomName(courseTitle = 'course', sessionTitle = 'session') {
   const base = `${courseTitle}_${sessionTitle}`
@@ -13,6 +15,22 @@ export function generateJitsiRoomName(courseTitle = 'course', sessionTitle = 'se
 
 export function getJitsiDomain() {
   return JITSI_DOMAIN
+}
+
+export function isPublicMeetJitsiDomain(domain = JITSI_DOMAIN) {
+  return domain.trim().toLowerCase() === PUBLIC_MEET_JITSI_DOMAIN
+}
+
+export function getJitsiConfigurationIssue() {
+  if (!JITSI_DOMAIN) {
+    return 'Jitsi is not configured. Set VITE_JITSI_DOMAIN to a self-hosted Jitsi or JaaS domain.'
+  }
+
+  if (isPublicMeetJitsiDomain()) {
+    return 'meet.jit.si requires authenticated room creation and may show Google/GitHub/Facebook login. Use a self-hosted Jitsi domain or JaaS for embedded platform calls.'
+  }
+
+  return ''
 }
 
 export function getJitsiExternalUrl(roomName) {
@@ -113,6 +131,8 @@ export function pickJoinableMeeting(meetings = [], courseId = null) {
 export default {
   generateJitsiRoomName,
   getJitsiDomain,
+  isPublicMeetJitsiDomain,
+  getJitsiConfigurationIssue,
   getJitsiExternalUrl,
   getCourseLiveRoomName,
   isExternalGoogleMeet,

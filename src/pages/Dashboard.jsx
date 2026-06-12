@@ -9,6 +9,7 @@ import { courses } from '../data/courses'
 import { courseService, enrollmentService, notificationService, userService, chatService } from '../services/api'
 import { paymentService, PAYMENT_TYPES } from '../services/paymentAPI'
 import UserManagement from './admin/UserManagement'
+import AdminCRM from './admin/AdminCRM'
 import { getRoleLabel, isPendingInstructor, shouldShowStudentChatBell, resolveUserRole } from '../lib/roles'
 import {
   FiBook,
@@ -55,7 +56,7 @@ const Dashboard = () => {
     const tab = params.get('tab')
     const sub = params.get('sub')
     const validTabs = ['courses', 'teacher', 'admin', 'progress', 'certificates', 'settings']
-    const validAdminSubs = ['users', 'payments']
+    const validAdminSubs = ['users', 'payments', 'crm']
 
     if (tab && validTabs.includes(tab)) {
       setActiveTab(tab)
@@ -1204,10 +1205,24 @@ const Dashboard = () => {
                     <FiDollarSign className="w-4 h-4 inline mr-2" />
                     {language === 'ar' ? 'إدارة المدفوعات' : 'Payment Management'}
                   </button>
+                  <button
+                    onClick={() => setAdminSubTab('crm')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      adminSubTab === 'crm'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <FiMessageCircle className="w-4 h-4 inline mr-2" />
+                    CRM
+                  </button>
                 </div>
 
                 {/* Users Management */}
                 {adminSubTab === 'users' && <UserManagement />}
+
+                {/* CRM */}
+                {adminSubTab === 'crm' && <AdminCRM />}
 
                 {/* Payments Management */}
                 {adminSubTab === 'payments' && (

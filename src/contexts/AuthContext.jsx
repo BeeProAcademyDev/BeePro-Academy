@@ -198,7 +198,7 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const register = async ({ email, password, fullName, role = 'student' }) => {
+  const register = async ({ email, password, fullName, phone = '', role = 'student' }) => {
     try {
       setError(null)
       setIsLoading(true)
@@ -206,6 +206,7 @@ export const AuthProvider = ({ children }) => {
         email,
         password,
         fullName,
+        phone,
         role
       })
       const authUser = signupResult?.user
@@ -215,6 +216,7 @@ export const AuthProvider = ({ children }) => {
         const withRoleFallback = applyRoleFallback({
           ...authUser,
           full_name: fullName,
+          phone,
           role: resolvedRole
         })
         const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)

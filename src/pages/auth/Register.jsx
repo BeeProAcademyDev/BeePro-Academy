@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import Button from '../../components/ui/Button'
 import { 
   FiUser,
+  FiPhone,
   FiMail, 
   FiLock, 
   FiEye, 
@@ -30,6 +31,7 @@ const Register = () => {
   ))
   const [formData, setFormData] = useState({
     name: '',
+    phone: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -74,6 +76,12 @@ const Register = () => {
       return
     }
 
+    if (!formData.phone.trim()) {
+      setError(language === 'ar' ? 'يرجى إدخال رقم الهاتف' : 'Please enter your phone number')
+      setIsLoading(false)
+      return
+    }
+
     if (!isPasswordValid) {
       setError(language === 'ar' ? 'كلمة المرور لا تستوفي الشروط' : 'Password does not meet requirements')
       setIsLoading(false)
@@ -97,6 +105,7 @@ const Register = () => {
         email: formData.email,
         password: formData.password,
         fullName: formData.name,
+        phone: formData.phone,
         role: accountType
       })
       if (result.success) {
@@ -193,6 +202,26 @@ const Register = () => {
                     onChange={handleChange}
                     className="input ps-12"
                     placeholder={language === 'ar' ? 'أحمد محمد' : 'John Doe'}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label htmlFor="phone" className="label">
+                  {language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
+                </label>
+                <div className="relative">
+                  <FiPhone className="absolute top-1/2 -translate-y-1/2 start-4 w-5 h-5 text-secondary-400" />
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="input ps-12"
+                    placeholder={language === 'ar' ? 'مثال: 01012345678' : 'Example: 01012345678'}
                     required
                   />
                 </div>

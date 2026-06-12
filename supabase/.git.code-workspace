@@ -1,0 +1,31 @@
+{
+	"folders": [
+		{
+			"path": "../.git"
+		},
+		{
+			"path": "../components"
+		},
+		{
+			"path": "../dist"
+		},
+		{
+			"path": "../lib"
+		},
+		{
+			"path": "../node_modules"
+		},
+		{
+			"path": "../public"
+		},
+		{
+			"path": "../services"
+		},
+		{
+			"path": "../src"
+		},
+		{
+			"path": "."
+		}
+	]
+}

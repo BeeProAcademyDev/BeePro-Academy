@@ -559,219 +559,6 @@ const ContactSection = () => {
   );
 };
 
-// Team Icons Component
-const TeamIcons = () => {
-  const [activePopup, setActivePopup] = useState(null);
-
-  const teamMembers = {
-    mohammed: {
-      name: 'Mohammed',
-      title: 'Independent Stock & Crypto Analyst / Portfolio Manager',
-      badge: 'Market Expert',
-      avatar: '/assets/photo_5987888613921852797_y.jpg',
-      isImage: true,
-      hideContact: true,
-      about: 'Independent stock and crypto analyst and portfolio manager with hands-on experience across U.S. equities, Saudi markets, and digital assets. Combines technical and fundamental analysis with macroeconomic cycle research to deliver risk-adjusted strategies and weekly market insights.',
-      experienceRole: 'Freelance | January 2019 - Present',
-      experience: [
-        'Conducted technical/fundamental analysis across 3+ global markets (U.S./Saudi equities, crypto)',
-        'Managed private portfolios achieving 15%+ average annual risk-adjusted returns',
-        'Developed multi-market strategies using price action and macroeconomic cycle analysis',
-        'Produced weekly market reports forecasting trends based on economic indicators'
-      ],
-      certifications: [
-        'Advanced Technical Analysis (Self-Directed)',
-        'Crypto Markets & Blockchain Fundamentals',
-        'Sector Rotation Strategies & U.S. Market Behavior'
-      ],
-      education: [
-        {
-          degree: 'B.Sc. Mechanical Engineering',
-          institution: 'Higher Institute of Engineering & Technology in Aviation, Egypt',
-          year: '2019'
-        }
-      ],
-      expertiseTitle: 'Skills & Abilities',
-      expertise: [
-        { icon: '📈', text: 'Technical Analysis: Support/Resistance, Chart Patterns, RSI, MACD' },
-        { icon: '📊', text: 'Fundamental Analysis: Earnings Evaluation, Market Sentiment, Economic Reports' },
-        { icon: '💼', text: 'Portfolio Management: Asset Allocation, Risk-Adjusted Returns' },
-        { icon: '🌐', text: 'Markets: U.S. Equities, Saudi Stocks, Cryptocurrencies' },
-        { icon: '🛠️', text: 'Tools: TradingView, Microsoft Excel (Data Analysis, Risk Models)' },
-        { icon: '🛡️', text: 'Risk Management: Capital Preservation, Strategy Backtesting' }
-      ]
-    },
-    abdullahkofiyh: {
-      name: 'Abdullah Kofiyh',
-      title: 'CEO & Platform Administrator',
-      badge: 'Young Leader',
-      avatar: '/assets/abdullah1.jpg',
-      isImage: true,
-      isCeo: true,
-      about: 'Abdullah Kofiyh is the visionary CEO and Platform Administrator of BeePro-Academy. With a passion for democratizing financial education, he has built a world-class platform that connects top educators with ambitious learners globally.',
-      vision: 'Under Abdullah Kofiyh\'s leadership, BeePro-Academy has become a premier destination for financial education, offering cutting-edge courses, expert mentorship, and industry-recognized certifications. His commitment to excellence ensures every student receives the highest quality educational experience.',
-      email: 'info@beepro-academy.com'
-    },
-    abdullahbabrouk: {
-      name: 'Abdullah Babrouk',
-      title: 'Chief Marketing & Public Relations Officer (CMO & PRO)',
-      badge: 'Young Marketing Leader',
-      avatar: '/assets/abdullah2.jpg',
-      isImage: true,
-      hasWhatsapp: true,
-      about: 'Abdullah Babrouk is our dynamic Chief Marketing & Public Relations Officer. A young visionary leader in his 30s, he drives BeePro-Academy\'s marketing strategies and public relations initiatives with innovative approaches and modern marketing techniques.',
-      expertise: [
-        { icon: '📱', text: 'Digital Marketing' },
-        { icon: '📢', text: 'Public Relations' },
-        { icon: '🎯', text: 'Brand Strategy' },
-        { icon: '📈', text: 'Growth Marketing' },
-        { icon: '🤝', text: 'Partnership Development' },
-        { icon: '💬', text: 'Social Media Strategy' }
-      ]
-    }
-  };
-
-  return (
-    <>
-      <div className="team-icons">
-        <div className="team-button mohammed" onClick={() => setActivePopup('mohammed')}>
-          <img src="/assets/photo_5987888613921852797_y.jpg" alt="Mohammed - Lead Instructor" />
-          <span className="team-tooltip">Lead Instructor</span>
-        </div>
-        <div className="team-button abdullah" onClick={() => setActivePopup('abdullahkofiyh')}>
-          <img src="/assets/abdullah1.jpg" alt="Abdullah Kofiyh - CEO" />
-          <span className="team-tooltip">CEO</span>
-        </div>
-        <div className="team-button babrouk" onClick={() => setActivePopup('abdullahbabrouk')}>
-          <img src="/assets/abdullah2.jpg" alt="Abdullah Babrouk - CMO" />
-          <span className="whatsapp-badge">💬</span>
-          <span className="team-tooltip">CMO & PRO</span>
-        </div>
-      </div>
-
-      {/* Popup Overlay */}
-      <div 
-        className={`popup-overlay ${activePopup ? 'active' : ''}`} 
-        onClick={() => setActivePopup(null)}
-      />
-
-      {/* Team Member Popups */}
-      {Object.entries(teamMembers).map(([key, member]) => (
-        <div key={key} className={`team-popup ${activePopup === key ? 'active' : ''}`}>
-          <div className={`popup-header ${member.isCeo ? 'ceo' : ''}`}>
-            <button className="popup-close" onClick={() => setActivePopup(null)}>✕</button>
-          </div>
-          <div className="popup-content">
-            <div className="member-header">
-              <div className={`member-avatar ${member.isCeo ? 'ceo' : ''}`}>
-                {member.isImage ? (
-                  <img src={member.avatar} alt={member.name} />
-                ) : (
-                  member.avatar
-                )}
-              </div>
-              <div className="member-info">
-                <h2>{member.name}</h2>
-                <p className="title">{member.title}</p>
-                <span className="badge">{member.badge}</span>
-              </div>
-            </div>
-            
-            <div className="popup-section">
-              <h3>📖 About</h3>
-              <p>{member.about}</p>
-            </div>
-            
-            {member.vision && (
-              <div className="popup-section">
-                <h3>🎯 Leadership Vision</h3>
-                <p>{member.vision}</p>
-              </div>
-            )}
-            
-            {member.experience && (
-              <div className="popup-section">
-                <h3>💼 Professional Experience</h3>
-                {member.experienceRole && (
-                  <p className="experience-role">{member.experienceRole}</p>
-                )}
-                <ul className="experience-list">
-                  {member.experience.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {member.certifications && (
-              <div className="popup-section">
-                <h3>🎓 Certifications & Training</h3>
-                <ul className="certifications-list">
-                  {member.certifications.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {member.education && (
-              <div className="popup-section">
-                <h3>🏫 Education</h3>
-                <div className="education-list">
-                  {member.education.map((item, index) => (
-                    <div key={index} className="education-card">
-                      <p className="education-degree">{item.degree}</p>
-                      <p className="education-institution">{item.institution}</p>
-                      {item.year && <p className="education-year">{item.year}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {member.expertise && (
-              <div className="popup-section">
-                <h3>💡 {member.expertiseTitle || 'Areas of Expertise'}</h3>
-                <div className="expertise-grid">
-                  {member.expertise.map((item, index) => (
-                    <div key={index} className="expertise-card">
-                      <span>{item.icon}</span>
-                      <span>{item.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {member.achievements && (
-              <div className="popup-section">
-                <h3>🏆 Key Achievements</h3>
-                <ul className="achievements-list">
-                  {member.achievements.map((achievement, index) => (
-                    <li key={index}>{achievement}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            
-            {!member.hideContact && (
-              <div className="popup-section">
-                <h3>📞 {member.isCeo ? 'Contact Information' : 'Direct Contact'}</h3>
-                <div className="whatsapp-contact-box">
-                  <p className="whatsapp-title">
-                    <span>💬</span> Contact
-                  </p>
-                  {member.email && <p className="whatsapp-email">📧 Email: {member.email}</p>}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
-    </>
-  );
-};
-
 // Chatbot Widget Component
 const ChatbotWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -999,7 +786,7 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
   const [activeTab, setActiveTab] = useState(initialTab);
   const [accountType, setAccountType] = useState('student');
   const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [registerData, setRegisterData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [registerData, setRegisterData] = useState({ name: '', phone: '', email: '', password: '', confirmPassword: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -1049,6 +836,12 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
       setIsLoading(false);
       return;
     }
+
+    if (!registerData.phone.trim()) {
+      setError('Phone number is required');
+      setIsLoading(false);
+      return;
+    }
     
     if (registerData.password.length < 6) {
       setError('Password must be at least 6 characters');
@@ -1061,6 +854,7 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
         email: registerData.email,
         password: registerData.password,
         fullName: registerData.name,
+        phone: registerData.phone,
         role: accountType
       });
       
@@ -1082,7 +876,7 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
             emailNotice || 'Account created! Please check your email for verification or login now.'
           );
         }
-        setRegisterData({ name: '', email: '', password: '', confirmPassword: '' });
+        setRegisterData({ name: '', phone: '', email: '', password: '', confirmPassword: '' });
         setTimeout(() => setActiveTab('login'), 2500);
       } else {
         const errText = formatErrorMessage(result.error);
@@ -1208,6 +1002,18 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
                   placeholder="Enter your full name"
                   value={registerData.name}
                   onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="register-phone">Phone Number</label>
+                <input
+                  type="tel"
+                  id="register-phone"
+                  className="form-control"
+                  placeholder="Enter your phone number"
+                  value={registerData.phone}
+                  onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
                   required
                 />
               </div>
@@ -1366,7 +1172,6 @@ const LandingPage = () => {
       <CategorySections />
       <ContactSection />
       <LandingFooter />
-      <TeamIcons />
       <ChatbotWidget />
       <AuthModal
         isOpen={authModal.isOpen}

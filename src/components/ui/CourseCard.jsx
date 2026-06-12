@@ -17,12 +17,21 @@ const CourseCard = ({ course, variant = 'default' }) => {
   const { language, isRTL } = useLanguage()
   const { user, isAuthenticated } = useAuth()
 
+  const fallbackThumbnail = '/assets/hero-background.png'
+  const thumbnailSrc = course.thumbnail || course.thumbnail_url || course.image || fallbackThumbnail
+  const instructor = typeof course.instructor === 'object' && course.instructor
+    ? course.instructor
+    : {
+        name: course.instructor || course.instructor_name || 'Instructor',
+        nameEn: course.instructor || course.instructor_name || 'Instructor',
+        avatar: course.instructorAvatar || course.instructor_avatar || '/assets/abdullah1.jpg'
+      }
   const isEnrolled = isAuthenticated && user?.enrolledCourses?.includes(course.id)
   const progress = user?.progress?.[course.id] || 0
 
-  const title = language === 'ar' ? course.title : course.titleEn
-  const description = language === 'ar' ? course.description : course.descriptionEn
-  const instructorName = language === 'ar' ? course.instructor.name : course.instructor.nameEn
+  const title = language === 'ar' ? course.title : (course.titleEn || course.title)
+  const description = language === 'ar' ? course.description : (course.descriptionEn || course.description)
+  const instructorName = language === 'ar' ? instructor.name : (instructor.nameEn || instructor.name)
 
   const getLevelBadge = (level) => {
     const levels = {
@@ -42,9 +51,12 @@ const CourseCard = ({ course, variant = 'default' }) => {
         {/* Thumbnail */}
         <div className="relative w-full md:w-64 h-48 md:h-auto shrink-0 overflow-hidden">
           <img
-            src={course.thumbnail}
+            src={thumbnailSrc}
             alt={title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(event) => {
+              event.currentTarget.src = fallbackThumbnail
+            }}
           />
           {course.isFree && (
             <span className="absolute top-3 start-3 badge bg-green-500 text-white">
@@ -90,9 +102,12 @@ const CourseCard = ({ course, variant = 'default' }) => {
           <div className="mt-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img
-                src={course.instructor.avatar}
+                src={instructor.avatar || '/assets/abdullah1.jpg'}
                 alt={instructorName}
                 className="w-8 h-8 rounded-full object-cover"
+                onError={(event) => {
+                  event.currentTarget.src = '/assets/abdullah1.jpg'
+                }}
               />
               <span className="text-sm font-medium">{instructorName}</span>
             </div>
@@ -131,9 +146,12 @@ const CourseCard = ({ course, variant = 'default' }) => {
       {/* Thumbnail */}
       <div className="relative aspect-video overflow-hidden">
         <img
-          src={course.thumbnail}
+          src={thumbnailSrc}
           alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          onError={(event) => {
+            event.currentTarget.src = fallbackThumbnail
+          }}
         />
         
         {/* Overlay on hover */}
@@ -191,9 +209,12 @@ const CourseCard = ({ course, variant = 'default' }) => {
         {/* Instructor */}
         <div className="flex items-center gap-2.5 mb-4">
           <img
-            src={course.instructor.avatar}
+            src={instructor.avatar || '/assets/abdullah1.jpg'}
             alt={instructorName}
             className="w-8 h-8 rounded-full object-cover border-2 border-[#2E2E2E]"
+            onError={(event) => {
+              event.currentTarget.src = '/assets/abdullah1.jpg'
+            }}
           />
           <span className="text-sm text-gray-400 font-medium">
             {instructorName}

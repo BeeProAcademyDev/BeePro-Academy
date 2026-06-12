@@ -96,8 +96,9 @@ const warnMissingMeetingsTable = () => {
   )
 }
 
-async function syncSignupUserProfile({ userId, email, fullName, resolvedRole }) {
+async function syncSignupUserProfile({ userId, email, fullName, phone = '', resolvedRole }) {
   const safeRole = resolvedRole === 'admin' ? 'student' : resolvedRole
+  const normalizedPhone = (phone || '').toString().trim()
 
   const { data: profileById, error: fetchByIdError } = await supabase
     .from('users')
@@ -112,7 +113,7 @@ async function syncSignupUserProfile({ userId, email, fullName, resolvedRole }) 
   if (profileById) {
     const { error: updateError } = await supabase
       .from('users')
-      .update({ full_name: fullName })
+      .update({ full_name: fullName, phone: normalizedPhone || null })
       .eq('id', userId)
 
     if (updateError) {
@@ -147,6 +148,7 @@ async function syncSignupUserProfile({ userId, email, fullName, resolvedRole }) 
       id: userId,
       email: emailToUse,
       full_name: fullName,
+      phone: normalizedPhone || null,
       role: safeRole
     })
 
@@ -167,13 +169,13 @@ async function syncSignupUserProfile({ userId, email, fullName, resolvedRole }) 
     )
   }
 
-  return { id: userId, email: emailToUse, role: safeRole }
+  return { id: userId, email: emailToUse, phone: normalizedPhone || null, role: safeRole }
 }
 
 // ============ AUTH SERVICES ============
 export const authService = {
   // Sign up with email and password
-  async signUp({ email, password, fullName, role = 'student' }) {
+  async signUp({ email, password, fullName, phone = '', role = 'student' }) {
     let resolvedRole
     try {
       resolvedRole = resolveSignupRole(role, email)
@@ -186,7 +188,7 @@ export const authService = {
 
     if (!isSupabaseAvailable()) {
       return {
-        user: { id: 'mock-user-id', email, full_name: fullName, role: resolvedRole },
+        user: { id: 'mock-user-id', email, full_name: fullName, phone, role: resolvedRole },
         session: { access_token: 'mock-token' }
       }
     }
@@ -203,6 +205,7 @@ export const authService = {
           emailRedirectTo,
           data: {
             full_name: fullName,
+            phone,
             role: resolvedRole
           }
         }
@@ -219,6 +222,7 @@ export const authService = {
           userId: data.user.id,
           email: data.user.email,
           fullName,
+          phone,
           resolvedRole
         })
 
@@ -900,6 +904,7 @@ export const userService = {
           userId,
           email: userData.email || '',
           fullName: userData.full_name || userData.email?.split('@')[0] || 'User',
+          phone: userData.phone || userData.phone_number || '',
           resolvedRole: 'student'
         })
         if (userData.avatar_url) {
@@ -1263,6 +1268,89 @@ export const adminService = {
     assertRoleUpdateResult(profile, 'student')
 
     return result
+  },
+
+  async getCrmContacts() {
+    if (!isSupabaseAvailable()) {
+      return []
+    }
+
+    const [
+      { data: users, error: usersError },
+      { data: payments, error: paymentsError },
+      { data: enrollments, error: enrollmentsError }
+    ] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, full_name, email, phone, role, avatar_url, created_at')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('payment_submissions')
+        .select(`
+          id,
+          student_id,
+          course_id,
+          amount,
+          currency,
+          status,
+          submitted_at,
+          created_at,
+          additional_notes,
+          transaction_reference,
+          course:courses(id, title)
+        `)
+        .order('submitted_at', { ascending: false }),
+      supabase
+        .from('enrollments')
+        .select('id, user_id, course_id, enrolled_at, course:courses(id, title)')
+        .order('enrolled_at', { ascending: false })
+    ])
+
+    if (usersError) throw usersError
+    if (paymentsError) throw paymentsError
+    if (enrollmentsError) throw enrollmentsError
+
+    const paymentsByUser = new Map()
+    ;(payments || []).forEach((payment) => {
+      const rows = paymentsByUser.get(payment.student_id) || []
+      rows.push(payment)
+      paymentsByUser.set(payment.student_id, rows)
+    })
+
+    const enrollmentsByUser = new Map()
+    ;(enrollments || []).forEach((enrollment) => {
+      const rows = enrollmentsByUser.get(enrollment.user_id) || []
+      rows.push(enrollment)
+      enrollmentsByUser.set(enrollment.user_id, rows)
+    })
+
+    return (users || []).map((profile) => {
+      const userPayments = paymentsByUser.get(profile.id) || []
+      const approvedPayments = userPayments.filter((payment) => (
+        (payment.status || '').toString().trim().toLowerCase() === 'approved'
+      ))
+      const userEnrollments = enrollmentsByUser.get(profile.id) || []
+      const courseTitles = [
+        ...new Set(
+          approvedPayments
+            .map((payment) => payment.course?.title)
+            .filter(Boolean)
+        )
+      ]
+
+      return {
+        ...profile,
+        payment_status: approvedPayments.length > 0 ? 'have payment' : 'without payment',
+        approved_payments_count: approvedPayments.length,
+        total_payments_count: userPayments.length,
+        total_paid_amount: approvedPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+        latest_payment_at: approvedPayments[0]?.submitted_at || approvedPayments[0]?.created_at || null,
+        latest_payment_notes: userPayments[0]?.additional_notes || '',
+        latest_transaction_reference: userPayments[0]?.transaction_reference || '',
+        paid_course_titles: courseTitles,
+        enrollment_count: userEnrollments.length
+      }
+    })
   }
 }
 

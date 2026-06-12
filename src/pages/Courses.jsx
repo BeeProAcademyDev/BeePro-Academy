@@ -53,7 +53,7 @@ const Courses = () => {
           titleEn: course.title_en || course.title,
           description: course.description,
           descriptionEn: course.description_en || course.description,
-          thumbnail: course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400',
+          thumbnail: course.thumbnail_url || course.image_url || course.image || '/assets/hero-background.png',
           price: course.price || 0,
           category: normalizeCategoryId(course.category),
           level: course.level || 'beginner',
@@ -61,8 +61,12 @@ const Courses = () => {
           students: course.students || 0,
           lessons: course.lessons_count || 0,
           duration: course.duration || 0,
-          instructor: course.instructor?.full_name || 'Instructor',
-          instructorAvatar: course.instructor?.avatar_url,
+          instructor: {
+            name: course.instructor?.full_name || 'Instructor',
+            nameEn: course.instructor?.full_name || 'Instructor',
+            avatar: course.instructor?.avatar_url || '/assets/abdullah1.jpg'
+          },
+          instructorAvatar: course.instructor?.avatar_url || '/assets/abdullah1.jpg',
           tags: [],
           createdAt: course.created_at
         }))

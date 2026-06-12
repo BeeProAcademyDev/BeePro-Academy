@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { JitsiMeeting } from '@jitsi/react-sdk'
-import { getJitsiDomain } from '../../lib/jitsi'
+import { getJitsiConfigurationIssue, getJitsiDomain } from '../../lib/jitsi'
 import './JitsiMeetingRoom.css'
 
 const JitsiMeetingRoom = ({
@@ -11,6 +11,7 @@ const JitsiMeetingRoom = ({
   language = 'ar'
 }) => {
   const domain = getJitsiDomain()
+  const configurationIssue = getJitsiConfigurationIssue()
 
   const configOverwrite = useMemo(() => ({
     startWithAudioMuted: false,
@@ -40,10 +41,16 @@ const JitsiMeetingRoom = ({
     ]
   }), [language])
 
-  if (!roomName) {
+  if (!roomName || configurationIssue) {
     return (
       <div className="jitsi-room jitsi-room--error">
-        <p>{language === 'ar' ? 'غرفة الاجتماع غير متاحة' : 'Meeting room is not available'}</p>
+        <p>
+          {configurationIssue
+            ? (language === 'ar'
+                ? 'Jitsi غير مضبوط للمنصة. استخدم دومين Jitsi خاص أو JaaS بدلاً من meet.jit.si حتى لا تظهر شاشة تسجيل Google.'
+                : configurationIssue)
+            : (language === 'ar' ? 'غرفة الاجتماع غير متاحة' : 'Meeting room is not available')}
+        </p>
       </div>
     )
   }
