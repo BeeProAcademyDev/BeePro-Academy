@@ -1,0 +1,14 @@
+-- =====================================================
+-- DEPRECATED
+-- =====================================================
+--
+-- This repository previously stored the "core schema" here.
+-- That caused drift because `supabase db reset` applies ONLY
+-- migrations under `supabase/migrations/*`.
+--
+-- The schema is now defined in:
+--   - `supabase/migrations/001_init.sql`
+--   - `supabase/migrations/*` (all subsequent changes)
+--
+-- Keep this file empty to avoid duplicated definitions.
+-- =====================================================
