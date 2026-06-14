@@ -544,6 +544,7 @@ select.form-control {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   background: white;
   padding: 15px 20px;
   border-radius: 10px;
@@ -574,6 +575,8 @@ select.form-control {
 
 .meeting-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
 }
 
@@ -630,6 +633,16 @@ select.form-control {
   box-shadow: 0 5px 20px rgba(0, 137, 123, 0.4);
 }
 
+.btn-google-meet {
+  background: linear-gradient(135deg, #0056e6 0%, #2a93d5 100%);
+  color: white;
+}
+
+.btn-google-meet:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0, 86, 230, 0.35);
+}
+
 .btn-link {
   background: #e3f2fd;
   color: #1976d2;
@@ -641,6 +654,13 @@ select.form-control {
 .btn-copy {
   background: #fff3e0;
   color: #f57c00;
+  font-size: 0.9rem;
+  padding: 8px 16px;
+}
+
+.btn-danger {
+  background: #ffebee;
+  color: #c62828;
   font-size: 0.9rem;
   padding: 8px 16px;
 }
@@ -849,6 +869,51 @@ select.form-control {
   padding: 25px;
 }
 
+.meeting-platform-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.meeting-platform-picker button {
+  border: 2px solid #e0e0e0;
+  background: #f8f9fa;
+  color: #333;
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.meeting-platform-picker button.active {
+  border-color: #0056e6;
+  background: #e6f0ff;
+  color: #003380;
+  box-shadow: 0 8px 20px rgba(0, 86, 230, 0.14);
+}
+
+.meeting-integration-note {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #e3f2fd;
+  color: #0d47a1;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.meeting-integration-note code {
+  direction: ltr;
+  display: inline-block;
+  padding: 0 4px;
+  font-size: 0.84rem;
+  color: #00111a;
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 4px;
+}
+
 .modal-footer {
   padding: 15px 25px 25px;
   display: flex;
@@ -918,8 +983,28 @@ select.form-control {
     text-align: center;
   }
 
+  .meeting-actions {
+    justify-content: center;
+    width: 100%;
+  }
+
   .section-header {
     flex-direction: column;
     gap: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .meeting-platform-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    justify-content: center;
   }
 }

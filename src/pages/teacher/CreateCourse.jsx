@@ -260,6 +260,10 @@ const CreateCourse = () => {
     setShowMeetingModal(true)
   }
 
+  const removeMeeting = (index) => {
+    setScheduledMeetings(prev => prev.filter((_, i) => i !== index))
+  }
+
   const createMeetingSession = async () => {
     if (!meetingData.title || !meetingData.scheduled_at) {
       setError('يرجى إدخال عنوان الاجتماع والوقت')
@@ -571,14 +575,14 @@ const CreateCourse = () => {
                     onClick={() => openMeetingModal('jitsi')}
                   >
                     <span>🎥</span>
-                    إنشاء Jitsi
+                    إنشاء Jitsi داخل المنصة
                   </button>
                   <button
-                    className="btn btn-secondary"
+                    className="btn btn-google-meet"
                     onClick={() => openMeetingModal('google_meet')}
                   >
                     <span>📅</span>
-                    Google Meet
+                    إنشاء Google Meet
                   </button>
                 </div>
               </div>
@@ -618,6 +622,12 @@ const CreateCourse = () => {
                             </button>
                           </>
                         )}
+                        <button
+                          className="btn btn-danger"
+                          onClick={() => removeMeeting(index)}
+                        >
+                          حذف
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -923,6 +933,31 @@ const CreateCourse = () => {
               </button>
             </div>
             <div className="modal-body">
+              <div className="meeting-platform-picker" role="group" aria-label="Meeting platform">
+                <button
+                  type="button"
+                  className={meetingPlatform === 'jitsi' ? 'active' : ''}
+                  onClick={() => setMeetingPlatform('jitsi')}
+                >
+                  🎥 Jitsi
+                </button>
+                <button
+                  type="button"
+                  className={meetingPlatform === 'google_meet' ? 'active' : ''}
+                  onClick={() => setMeetingPlatform('google_meet')}
+                >
+                  📅 Google Meet
+                </button>
+              </div>
+
+              {meetingPlatform === 'google_meet' && (
+                <div className="meeting-integration-note">
+                  سيتم إنشاء حدث في Google Calendar وإرجاع رابط Google Meet تلقائيًا. تأكد من ضبط
+                  <code> VITE_GOOGLE_CALENDAR_CLIENT_ID </code>
+                  في إعدادات المشروع.
+                </div>
+              )}
+
               <div className="form-group">
                 <label>عنوان الجلسة *</label>
                 <input
