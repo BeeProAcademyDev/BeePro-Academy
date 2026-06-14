@@ -526,6 +526,51 @@ select.form-control {
   font-size: 0.85rem;
 }
 
+/* Meeting Tools */
+.meeting-tools-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 28px;
+  padding: 22px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #e6f0ff 0%, #eef9ff 100%);
+  border: 1px solid rgba(0, 86, 230, 0.18);
+  box-shadow: 0 12px 28px rgba(0, 86, 230, 0.1);
+}
+
+.meeting-tools-kicker {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 86, 230, 0.12);
+  color: #003380;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.meeting-tools-panel h3 {
+  margin: 0 0 6px;
+  color: #00111a;
+  font-size: 1.2rem;
+}
+
+.meeting-tools-panel p {
+  margin: 0;
+  color: #42526b;
+  line-height: 1.6;
+}
+
+.meeting-tools-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 /* Scheduled Meetings */
 .scheduled-meetings {
   background: #e8f5e9;
@@ -983,6 +1028,16 @@ select.form-control {
     text-align: center;
   }
 
+  .meeting-tools-panel {
+    align-items: stretch;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .meeting-tools-actions {
+    justify-content: center;
+  }
+
   .meeting-actions {
     justify-content: center;
     width: 100%;
@@ -995,6 +1050,11 @@ select.form-control {
 }
 
 @media (max-width: 480px) {
+  .meeting-tools-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
   .meeting-platform-picker {
     grid-template-columns: 1fr;
   }

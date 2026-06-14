@@ -409,6 +409,34 @@ const CreateCourse = () => {
     return '📁'
   }
 
+  const renderMeetingTools = () => (
+    <div className="meeting-tools-panel">
+      <div>
+        <span className="meeting-tools-kicker">جلسات مباشرة</span>
+        <h3>أنشئ اجتماع للكورس</h3>
+        <p>يمكنك إنشاء Google Meet من Google Calendar أو جلسة Jitsi داخل المنصة.</p>
+      </div>
+      <div className="meeting-tools-actions">
+        <button
+          type="button"
+          className="btn btn-google-meet"
+          onClick={() => openMeetingModal('google_meet')}
+        >
+          <span>📅</span>
+          إنشاء Google Meet
+        </button>
+        <button
+          type="button"
+          className="btn btn-meet"
+          onClick={() => openMeetingModal('jitsi')}
+        >
+          <span>🎥</span>
+          إنشاء Jitsi
+        </button>
+      </div>
+    </div>
+  )
+
   return (
     <div className="create-course-page">
       <div className="create-course-container">
@@ -427,7 +455,7 @@ const CreateCourse = () => {
           <div className="step-line" />
           <div className={`step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
             <div className="step-number">{step > 2 ? '✓' : '2'}</div>
-            <span>إضافة الدروس</span>
+            <span>الدروس والجلسات</span>
           </div>
           <div className="step-line" />
           <div className={`step ${step >= 3 ? 'active' : ''}`}>
@@ -548,6 +576,8 @@ const CreateCourse = () => {
                   style={{ display: 'none' }}
                 />
               </div>
+
+              {renderMeetingTools()}
             </div>
 
             <div className="step-actions">
@@ -568,24 +598,10 @@ const CreateCourse = () => {
           <div className="step-content">
             <div className="form-section">
               <div className="section-header">
-                <h2>📚 إضافة الدروس</h2>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    className="btn btn-meet"
-                    onClick={() => openMeetingModal('jitsi')}
-                  >
-                    <span>🎥</span>
-                    إنشاء Jitsi داخل المنصة
-                  </button>
-                  <button
-                    className="btn btn-google-meet"
-                    onClick={() => openMeetingModal('google_meet')}
-                  >
-                    <span>📅</span>
-                    إنشاء Google Meet
-                  </button>
-                </div>
+                <h2>📚 إضافة الدروس والجلسات</h2>
               </div>
+
+              {renderMeetingTools()}
 
               {/* Scheduled Meetings */}
               {scheduledMeetings.length > 0 && (
