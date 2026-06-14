@@ -19,6 +19,7 @@ export function getNavbarContext(pathname = '', search = '') {
     '/data-analysis',
     '/it',
     '/programming',
+    '/blogs',
     '/about',
     '/contact',
   ]
@@ -35,12 +36,14 @@ export function getNavbarLinks(context, { language = 'en', isAdmin = false, isTe
     { label: 'Financial Markets', href: '/financial-markets', type: 'route' },
     { label: 'Data Analysis', href: '/data-analysis', type: 'route' },
     { label: 'IT', href: '/it', type: 'route' },
+    { label: language === 'ar' ? 'Blogs' : 'Blogs', href: '/blogs', type: 'route' },
     { label: 'Contact', href: '#contact', type: 'hash' },
   ]
 
   const appLinks = [
     { label: t('nav.home'), href: '/', type: 'route' },
     { label: t('nav.courses'), href: '/courses', type: 'route' },
+    { label: language === 'ar' ? 'المدونة' : 'Blogs', href: '/blogs', type: 'route' },
     { label: t('nav.categories'), href: '/categories', type: 'route' },
     { label: t('nav.about'), href: '/about', type: 'route' },
     { label: t('nav.contact'), href: '/contact', type: 'route' },
@@ -49,6 +52,7 @@ export function getNavbarLinks(context, { language = 'en', isAdmin = false, isTe
   const dashboardLinks = [
     { label: t('nav.dashboard'), href: '/dashboard', type: 'route' },
     { label: t('nav.courses'), href: '/courses', type: 'route' },
+    { label: language === 'ar' ? 'المدونة' : 'Blogs', href: '/blogs', type: 'route' },
     ...(isTeacher
       ? [{ label: language === 'ar' ? 'إدارة الكورسات' : 'Manage Courses', href: '/dashboard?tab=teacher', type: 'route' }]
       : []),
@@ -59,6 +63,7 @@ export function getNavbarLinks(context, { language = 'en', isAdmin = false, isTe
 
   const adminLinks = [
     { label: language === 'ar' ? 'لوحة الإدارة' : 'Admin Panel', href: '/dashboard?tab=admin', type: 'route' },
+    { label: language === 'ar' ? 'إدارة المدونة' : 'Manage Blogs', href: '/admin/blogs', type: 'route' },
     { label: language === 'ar' ? 'المستخدمون' : 'Users', href: '/dashboard?tab=admin&sub=users', type: 'route' },
     { label: language === 'ar' ? 'المدفوعات' : 'Payments', href: '/dashboard?tab=admin&sub=payments', type: 'route' },
     { label: t('nav.courses'), href: '/courses', type: 'route' },
@@ -77,6 +82,7 @@ export function getNavbarLinks(context, { language = 'en', isAdmin = false, isTe
     { label: 'Data Analysis', href: '/data-analysis', type: 'route' },
     { label: 'IT', href: '/it', type: 'route' },
     { label: t('nav.courses'), href: '/courses', type: 'route' },
+    { label: language === 'ar' ? 'المدونة' : 'Blogs', href: '/blogs', type: 'route' },
     { label: 'Contact', href: '/#contact', type: 'route' },
   ]
 

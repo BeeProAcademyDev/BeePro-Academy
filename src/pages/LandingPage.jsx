@@ -7,6 +7,25 @@ import { trackEvent } from '../lib/analytics';
 import { normalizeSignupAccountType } from '../lib/roles';
 import { formatErrorMessage } from '../lib/supabaseErrors';
 import SiteNavbar from '../components/layout/SiteNavbar';
+import {
+  FiActivity,
+  FiAward,
+  FiBarChart2,
+  FiBookOpen,
+  FiCheckCircle,
+  FiEdit3,
+  FiEye,
+  FiMail,
+  FiMessageCircle,
+  FiMonitor,
+  FiPlayCircle,
+  FiShield,
+  FiTarget,
+  FiTool,
+  FiTrendingUp,
+  FiUsers,
+  FiVideo
+} from 'react-icons/fi';
 import './LandingPage.css';
 
 const VISION_MISSION_CONTENT = {
@@ -27,12 +46,33 @@ const VISION_MISSION_CONTENT = {
 // Hero Section Component
 const HeroSection = () => {
   const videoRef = useRef(null);
+  const { i18n } = useTranslation();
+  const [latestPosts, setLatestPosts] = useState([]);
+
+  const isAr = i18n.language === 'ar';
 
   useEffect(() => {
     // Set video playback speed to 0.5 (slow motion)
     if (videoRef.current) {
       videoRef.current.playbackRate = 0.5;
     }
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    import('../services/api')
+      .then(({ blogService }) => blogService.getPublishedPosts())
+      .then((posts) => {
+        if (mounted) setLatestPosts((posts || []).slice(0, 3));
+      })
+      .catch((error) => {
+        console.warn('Unable to load landing blog posts:', error);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return (
@@ -60,6 +100,25 @@ const HeroSection = () => {
                 {[...Array(10)].map((_, i) => <span key={i}></span>)}
               </div>
             </div>
+            <div className="hero-blog-panel">
+              <div className="hero-blog-header">
+                <span>{isAr ? 'مدونة المنصة' : 'Platform Blogs'}</span>
+                <Link to="/blogs">{isAr ? 'عرض الكل' : 'View all'}</Link>
+              </div>
+              <div className="hero-blog-list">
+                {latestPosts.length > 0 ? latestPosts.map((post) => (
+                  <Link key={post.id} to="/blogs" className="hero-blog-item">
+                    <strong>{isAr ? post.title || post.title_en : post.title_en || post.title}</strong>
+                    <span>{isAr ? post.excerpt || post.excerpt_en : post.excerpt_en || post.excerpt}</span>
+                  </Link>
+                )) : (
+                  <Link to="/blogs" className="hero-blog-item hero-blog-item-empty">
+                    <strong>{isAr ? 'اقرأ أحدث مقالات BeePro Academy' : 'Read BeePro Academy articles'}</strong>
+                    <span>{isAr ? 'مقالات تعليمية مرتبطة بكورسات المنصة.' : 'Learning articles connected to the platform courses.'}</span>
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -67,6 +126,98 @@ const HeroSection = () => {
   );
 };
 
+const BlogPreviewSection = () => {
+  const { i18n } = useTranslation();
+  const [posts, setPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const isAr = i18n.language === 'ar';
+
+  useEffect(() => {
+    let mounted = true;
+
+    import('../services/api')
+      .then(({ blogService }) => blogService.getPublishedPosts())
+      .then((rows) => {
+        if (mounted) setPosts((rows || []).slice(0, 3));
+      })
+      .catch((error) => {
+        console.warn('Unable to load homepage blog posts:', error);
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const fallbackPosts = [
+    {
+      id: 'fallback-learning-path',
+      title: 'كيف تختار مسارك التعليمي في BeePro Academy',
+      title_en: 'How to Choose Your Learning Path at BeePro Academy',
+      excerpt: 'تعرف على طريقة اختيار الكورس المناسب حسب هدفك ومستواك الحالي.',
+      excerpt_en: 'Learn how to choose the right course based on your goal and current level.'
+    },
+    {
+      id: 'fallback-market-analysis',
+      title: 'لماذا يحتاج المتداول إلى أساس تعليمي قوي؟',
+      title_en: 'Why Traders Need a Strong Learning Foundation',
+      excerpt: 'المعرفة المنظمة تساعدك على قراءة السوق وتقليل القرارات العشوائية.',
+      excerpt_en: 'Structured knowledge helps you read the market and reduce random decisions.'
+    },
+    {
+      id: 'fallback-practice',
+      title: 'كيف تحول الدروس إلى تطبيق عملي؟',
+      title_en: 'How to Turn Lessons into Practical Work',
+      excerpt: 'ابدأ بملاحظات صغيرة، ثم مشروع تطبيقي، ثم مراجعة مستمرة لما تعلمته.',
+      excerpt_en: 'Start with notes, build a practical project, then keep reviewing what you learn.'
+    }
+  ];
+
+  const visiblePosts = posts.length > 0 ? posts : fallbackPosts;
+
+  return (
+    <section className="homepage-blogs-section" id="blogs">
+      <div className="homepage-blogs-container">
+        <div className="homepage-blogs-header">
+          <span>{isAr ? 'مدونة BeePro Academy' : 'BeePro Academy Blog'}</span>
+          <h2>{isAr ? 'أحدث المقالات التعليمية' : 'Latest Learning Articles'}</h2>
+          <p>
+            {isAr
+              ? 'مقالات مرتبطة بكورسات المنصة تظهر للعميل من الصفحة الرئيسية.'
+              : 'Course-aware articles shown directly on the homepage.'}
+          </p>
+        </div>
+
+        <div className="homepage-blogs-grid">
+          {visiblePosts.map((post, index) => (
+            <Link
+              key={post.id}
+              to="/blogs"
+              className="homepage-blog-card"
+              style={{ animationDelay: `${index * 0.08}s` }}
+            >
+              <div className="homepage-blog-card-label">
+                {post.category || (isAr ? 'تعليم' : 'Education')}
+              </div>
+              <h3>{isAr ? post.title || post.title_en : post.title_en || post.title}</h3>
+              <p>{isAr ? post.excerpt || post.excerpt_en : post.excerpt_en || post.excerpt}</p>
+              <span>{isAr ? 'قراءة المقال' : 'Read article'}</span>
+            </Link>
+          ))}
+        </div>
+
+        <Link to="/blogs" className="homepage-blogs-btn">
+          {isLoading
+            ? (isAr ? 'جاري تحميل المقالات...' : 'Loading articles...')
+            : (isAr ? 'عرض صفحة المقالات' : 'Open Blog Page')}
+        </Link>
+      </div>
+    </section>
+  );
+};
 // Animated Statements Section
 const StatementsSection = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -137,7 +288,7 @@ const VisionMissionSection = () => {
 
         <div className="vision-mission-grid">
           <article className="vision-mission-card vision-card">
-            <div className="vm-card-icon" aria-hidden="true">👁️</div>
+            <div className="vm-card-icon" aria-hidden="true"><FiEye /></div>
             <div className="vm-card-labels">
               <h3>{VISION_MISSION_CONTENT.vision.titleEn}</h3>
               <h4>{VISION_MISSION_CONTENT.vision.titleAr}</h4>
@@ -149,7 +300,7 @@ const VisionMissionSection = () => {
           </article>
 
           <article className="vision-mission-card mission-card">
-            <div className="vm-card-icon" aria-hidden="true">🎯</div>
+            <div className="vm-card-icon" aria-hidden="true"><FiTarget /></div>
             <div className="vm-card-labels">
               <h3>{VISION_MISSION_CONTENT.mission.titleEn}</h3>
               <h4>{VISION_MISSION_CONTENT.mission.titleAr}</h4>
@@ -196,19 +347,19 @@ const TeacherSignupSection = ({ onTeachClick }) => {
 const PlatformSection = () => {
   const features = [
     {
-      icon: '📊',
+      icon: FiTrendingUp,
       title: 'Financial Markets Analysis & Risk Management',
       description: 'Master financial markets with comprehensive courses covering technical analysis, fundamental analysis, risk assessment, and portfolio management strategies.',
       link: '/financial-markets'
     },
     {
-      icon: '📈',
+      icon: FiBarChart2,
       title: 'Data Analysis',
       description: 'Transform raw data into actionable insights. Learn statistical analysis, data visualization, Python/R programming, and business intelligence tools.',
       link: '/data-analysis'
     },
     {
-      icon: '🖥️',
+      icon: FiMonitor,
       title: 'IT',
       description: 'Build your IT expertise with courses in cloud computing, network administration, cybersecurity, and enterprise system management.',
       link: '/it'
@@ -233,7 +384,7 @@ const PlatformSection = () => {
               style={{ animationDelay: `${0.1 * (index + 1)}s`, textDecoration: 'none' }}
               onClick={() => trackEvent('course_view', { content_category: feature.title })}
             >
-              <div className="feature-icon">{feature.icon}</div>
+              <div className="feature-icon"><feature.icon /></div>
               <h3>{feature.title}</h3>
               <p>{feature.description}</p>
             </Link>
@@ -296,7 +447,7 @@ const StatsSection = () => {
                 backdropFilter: 'blur(5px)',
                 boxShadow: '0 4px 15px rgba(0,0,0,0.16)'
               }}>
-                <span className="feature-check">✓</span>
+                <span className="feature-check"><FiCheckCircle /></span>
                 {feature}
               </div>
             ))}
@@ -316,7 +467,7 @@ const CategorySections = () => {
       subtitle: 'Build the Future Infrastructure',
       description: 'Explore networking, cybersecurity, and cloud technologies. Become the backbone of modern digital enterprises.',
       backgroundImage: '/assets/it2.jpg',
-      icon: '🖥️',
+      icon: FiMonitor,
       features: ['Cloud Computing', 'Cybersecurity', 'Network Administration', 'System Management'],
       color: '#4ECDC4',
       useVideo: false
@@ -327,7 +478,7 @@ const CategorySections = () => {
       subtitle: 'Turn Data into Decisions',
       description: 'Master statistics, data visualization, and analytical skills. Transform raw data into actionable business insights.',
       backgroundImage: '/assets/data.jpg',
-      icon: '📊',
+      icon: FiBarChart2,
       features: ['Statistical Analysis', 'Data Visualization', 'Python & R', 'Business Intelligence'],
       color: '#45B7D1',
       useVideo: false
@@ -339,7 +490,7 @@ const CategorySections = () => {
       description: 'Understand market data, trading strategies, and investment insights. Build expertise in financial analysis and risk management.',
       backgroundVideo: '/assets/eduvideo.mp4',
       backgroundImage: '/assets/anlysis.jpg',
-      icon: '📈',
+      icon: FiTrendingUp,
       features: ['Technical Analysis', 'Trading Strategies', 'Risk Management', 'Portfolio Management'],
       color: '#96CEB4',
       useVideo: true
@@ -381,7 +532,7 @@ const CategorySections = () => {
           )}
           <div className="category-overlay" />
           <div className="category-content">
-            <div className="category-icon">{category.icon}</div>
+            <div className="category-icon"><category.icon /></div>
             <h2 className="category-title">{category.title}</h2>
             <p className="category-subtitle">{category.subtitle}</p>
             <p className="category-description">{category.description}</p>
@@ -535,11 +686,11 @@ const ContactSection = () => {
           <h3>Or reach us directly</h3>
           <div className="contact-methods">
             <div className="contact-method">
-              <span className="contact-method-icon">📧</span>
+              <span className="contact-method-icon"><FiMail /></span>
               <span>info@beepro-academy.com</span>
             </div>
             <div className="contact-method">
-              <span className="contact-method-icon">💬</span>
+              <span className="contact-method-icon"><FiMessageCircle /></span>
               <span>Live Chat Available</span>
             </div>
           </div>
@@ -547,10 +698,10 @@ const ContactSection = () => {
           <div className="social-media-section">
             <h3>Follow us on social media</h3>
             <div className="social-media-links">
-              <a href="#" className="social-link" title="Facebook"><span>📘</span></a>
-              <a href="#" className="social-link" title="YouTube"><span>📺</span></a>
-              <a href="#" className="social-link" title="Instagram"><span>📷</span></a>
-              <a href="#" className="social-link" title="Snapchat"><span>👻</span></a>
+              <a href="#" className="social-link" title="Community"><span><FiUsers /></span></a>
+              <a href="#" className="social-link" title="Video Lessons"><span><FiPlayCircle /></span></a>
+              <a href="#" className="social-link" title="Learning Updates"><span><FiActivity /></span></a>
+              <a href="#" className="social-link" title="Support"><span><FiMessageCircle /></span></a>
             </div>
           </div>
         </div>
@@ -563,7 +714,7 @@ const ContactSection = () => {
 const ChatbotWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { type: 'bot', text: "Hi! 👋 Welcome to BeePro-Academy!", time: 'Just now' },
+    { type: 'bot', text: "Hi! Welcome to BeePro-Academy!", time: 'Just now' },
     { type: 'bot', text: "I'm here to help you explore our financial education programs. What would you like to know?", time: 'Just now' }
   ]);
   const [inputValue, setInputValue] = useState('');
@@ -586,15 +737,15 @@ const ChatbotWidget = () => {
     const lowerMessage = userMessage.toLowerCase();
     
     if (lowerMessage.includes('course') || lowerMessage.includes('program')) {
-      return "We offer comprehensive courses in:\n\n📈 Technical Analysis\n💼 Trading Strategies\n🎯 Risk Management\n📊 Financial Modeling\n\nEach course includes video lessons, practical exercises, and expert mentorship!";
+      return "We offer comprehensive courses in:\n\n- Technical Analysis\n- Trading Strategies\n- Risk Management\n- Financial Modeling\n\nEach course includes video lessons, practical exercises, and expert mentorship!";
     } else if (lowerMessage.includes('price') || lowerMessage.includes('cost')) {
       return "We have flexible pricing options:\n\n• Basic Plan: $99/month\n• Pro Plan: $199/month\n• Lifetime Access: $999\n\nAll plans include certification and lifetime updates!";
     } else if (lowerMessage.includes('certif')) {
-      return "Our certifications are industry-recognized and include:\n\n🏆 Certified Market Analyst\n🏆 Professional Trader Certificate\n🏆 Risk Management Specialist\n\nThese credentials will boost your finance career!";
+      return "Our certifications are industry-recognized and include:\n\n- Certified Market Analyst\n- Professional Trader Certificate\n- Risk Management Specialist\n\nThese credentials will boost your finance career!";
     } else if (lowerMessage.includes('start') || lowerMessage.includes('begin')) {
       return "Getting started is easy!\n\n1. Click 'Sign Up' to create your account\n2. Choose your learning path\n3. Start with our free introduction course\n4. Progress at your own pace\n\nWould you like me to guide you to the registration?";
     } else if (lowerMessage.includes('support') || lowerMessage.includes('help')) {
-      return "We provide 24/7 support through:\n\n📧 Email: info@beepro-academy.com\n💬 Live chat (you're using it now!)\n👥 Community forums\n\nHow can I assist you today?";
+      return "We provide 24/7 support through:\n\n- Email: info@beepro-academy.com\n- Live chat (you're using it now!)\n- Community forums\n\nHow can I assist you today?";
     } else {
       return "Thanks for your question! Our courses cover everything from basic market analysis to advanced trading strategies. What specific aspect of financial education interests you most?";
     }
@@ -620,10 +771,10 @@ const ChatbotWidget = () => {
   };
 
   const quickReplies = [
-    { text: '📚 Course Info', query: 'Tell me about courses' },
-    { text: '🏆 Certifications', query: 'What certifications do you offer?' },
-    { text: '💰 Pricing', query: 'Show pricing options' },
-    { text: '🚀 Get Started', query: 'How do I get started?' }
+    { icon: FiBookOpen, text: 'Course Info', query: 'Tell me about courses' },
+    { icon: FiAward, text: 'Certifications', query: 'What certifications do you offer?' },
+    { icon: FiTrendingUp, text: 'Pricing', query: 'Show pricing options' },
+    { icon: FiTarget, text: 'Get Started', query: 'How do I get started?' }
   ];
 
   return (
@@ -644,7 +795,7 @@ const ChatbotWidget = () => {
       <div className={`chatbot-window ${isOpen ? 'active' : ''}`}>
         <div className="chat-header">
           <div className="bot-avatar">
-            🤖
+            <FiMessageCircle />
             <div className="online-indicator"></div>
           </div>
           <div className="chat-header-info">
@@ -677,6 +828,7 @@ const ChatbotWidget = () => {
               className="quick-reply" 
               onClick={() => sendMessage(reply.query)}
             >
+              <reply.icon />
               {reply.text}
             </div>
           ))}
@@ -710,6 +862,10 @@ const LandingFooter = () => {
         <div className="footer-grid">
           {/* About BeePro-Academy */}
           <div className="footer-section">
+            <div className="landing-footer-logo">
+              <img src="/assets/platform-logo.jpg" alt="BeePro Academy" />
+              <span>BeePro Academy</span>
+            </div>
             <h3>About BeePro-Academy</h3>
             <p>
               BeePro-Academy is the premier destination for financial markets education. We combine cutting-edge technology with expert instruction to deliver transformative learning experiences.
@@ -724,11 +880,11 @@ const LandingFooter = () => {
           <div className="footer-section">
             <h3>Quick Links</h3>
             <ul className="footer-links">
-              <li><Link to="/courses">📚 Browse Courses</Link></li>
-              <li><Link to="/create-course">✏️ Create Course</Link></li>
-              <li><a href="#instructors">👨‍🏫 Meet Our Experts</a></li>
-              <li><a href="#certification">🏆 Certification Programs</a></li>
-              <li><a href="#contact">📧 Contact Support</a></li>
+              <li><Link to="/courses"><FiBookOpen /> Browse Courses</Link></li>
+              <li><Link to="/teacher/create-course"><FiEdit3 /> Create Course</Link></li>
+              <li><a href="#instructors"><FiUsers /> Meet Our Experts</a></li>
+              <li><a href="#certification"><FiAward /> Certification Programs</a></li>
+              <li><a href="#contact"><FiMail /> Contact Support</a></li>
             </ul>
           </div>
           
@@ -736,10 +892,10 @@ const LandingFooter = () => {
           <div className="footer-section">
             <h3>Resources</h3>
             <ul className="footer-links">
-              <li><a href="#blog">📝 Market Analysis Blog</a></li>
-              <li><a href="#webinars">🎥 Live Webinars</a></li>
-              <li><a href="#tools">🛠️ Trading Tools</a></li>
-              <li><a href="#community">👥 Student Community</a></li>
+              <li><Link to="/blogs"><FiBookOpen /> Market Analysis Blog</Link></li>
+              <li><a href="#webinars"><FiVideo /> Live Webinars</a></li>
+              <li><a href="#tools"><FiTool /> Trading Tools</a></li>
+              <li><a href="#community"><FiUsers /> Student Community</a></li>
             </ul>
           </div>
           
@@ -747,10 +903,10 @@ const LandingFooter = () => {
           <div className="footer-section">
             <h3>Platform Features</h3>
             <div className="footer-features">
-              <div className="footer-feature"><span>✓</span> HD Video Lessons</div>
-              <div className="footer-feature"><span>✓</span> Live Trading Sessions</div>
-              <div className="footer-feature"><span>✓</span> Mobile App Access</div>
-              <div className="footer-feature"><span>✓</span> Lifetime Updates</div>
+              <div className="footer-feature"><span><FiCheckCircle /></span> HD Video Lessons</div>
+              <div className="footer-feature"><span><FiVideo /></span> Live Trading Sessions</div>
+              <div className="footer-feature"><span><FiMonitor /></span> Mobile App Access</div>
+              <div className="footer-feature"><span><FiShield /></span> Lifetime Updates</div>
             </div>
           </div>
         </div>
@@ -759,7 +915,10 @@ const LandingFooter = () => {
         <div className="footer-bottom">
           <div className="footer-bottom-content">
             <div className="footer-brand">
-              <h2>BEEPRO-ACADEMY</h2>
+              <div className="footer-brand-logo">
+                <img src="/assets/platform-logo.jpg" alt="BeePro Academy" />
+                <h2>BEEPRO-ACADEMY</h2>
+              </div>
               <p>© 2024 BeePro-Academy. All rights reserved.</p>
             </div>
             <div className="footer-legal">
@@ -919,7 +1078,7 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
           )}
           {success && (
             <div className="auth-success">
-              <span>✓</span> {success}
+              <FiCheckCircle /> {success}
             </div>
           )}
           
@@ -1165,6 +1324,7 @@ const LandingPage = () => {
     <div className="landing-page">
       <SiteNavbar onAuthClick={openAuthModal} />
       <HeroSection />
+      <BlogPreviewSection />
       <StatementsSection />
       <VisionMissionSection />
       <PlatformSection />
@@ -1185,3 +1345,4 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+

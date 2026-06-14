@@ -104,7 +104,8 @@ const SiteNavbar = ({ onAuthClick }) => {
     <nav className={`site-navbar top-navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="nav-logo">
         <Link to="/" className="nav-logo-link">
-          <h1>BEEPRO-ACADEMY</h1>
+          <img src="/assets/platform-logo.jpg" alt="BeePro Academy" className="nav-logo-img" />
+          <span>BEEPRO-ACADEMY</span>
         </Link>
       </div>
 

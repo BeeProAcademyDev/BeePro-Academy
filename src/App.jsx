@@ -7,6 +7,7 @@ import Footer from './components/layout/Footer'
 import LandingPage from './pages/LandingPage'
 import Home from './pages/Home'
 import Courses from './pages/Courses'
+import Blogs from './pages/Blogs'
 import CourseDetailsDB from './pages/CourseDetailsDB'
 import Dashboard from './pages/Dashboard'
 import PaymentCheckout from './pages/PaymentCheckout'
@@ -20,6 +21,8 @@ import ResetPassword from './pages/auth/ResetPassword'
 import CreateCourse from './pages/teacher/CreateCourse'
 import EditCourse from './pages/teacher/EditCourse'
 import TeacherLiveSession from './pages/teacher/TeacherLiveSession'
+import BlogAdmin from './pages/admin/BlogAdmin'
+import { isAdmin } from './lib/roles'
 
 // Category Pages
 import ProgrammingPage from './pages/categories/ProgrammingPage'
@@ -87,6 +90,31 @@ const TeacherRoute = ({ children }) => {
   return children
 }
 
+// Admin Route (only for admins)
+const AdminRoute = ({ children }) => {
+  const { user, isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    const redirect = `${location.pathname}${location.search}`
+    return <Navigate to={getLandingAuthUrl('login', { redirect })} replace />
+  }
+
+  if (!isAdmin(user?.role, user?.email)) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return children
+}
+
 // Public Route (redirect if authenticated)
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth()
@@ -149,6 +177,15 @@ function App() {
             <CourseDetailsDB />
           </Layout>
         } 
+      />
+
+      <Route
+        path="/blogs"
+        element={
+          <Layout>
+            <Blogs />
+          </Layout>
+        }
       />
       
       <Route
@@ -327,11 +364,22 @@ function App() {
         }
       />
 
+      <Route
+        path="/admin/blogs"
+        element={
+          <AdminRoute>
+            <Layout showFooter={false}>
+              <BlogAdmin />
+            </Layout>
+          </AdminRoute>
+        }
+      />
+
       {/* Admin Routes (Placeholder) */}
       <Route 
         path="/admin/*" 
         element={
-          <ProtectedRoute>
+          <AdminRoute>
             <Layout>
               <div className="min-h-screen pt-6 pb-16">
                 <div className="container-custom">
@@ -361,7 +409,7 @@ function App() {
                 </div>
               </div>
             </Layout>
-          </ProtectedRoute>
+          </AdminRoute>
         } 
       />
 

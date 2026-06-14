@@ -599,6 +599,128 @@ export const courseService = {
   }
 }
 
+// ============ BLOG SERVICES ============
+const mockBlogPosts = mockCourses.slice(0, 3).map((course, index) => ({
+  id: `mock-blog-${course.id}`,
+  title: `كيف تبدأ تعلم ${course.title}`,
+  title_en: `How to Start Learning ${course.titleEn || course.title}`,
+  slug: `start-learning-${course.id}`,
+  excerpt: 'مقال تعليمي مرتبط بالكورس يساعدك على فهم المسار قبل التسجيل.',
+  excerpt_en: 'A course-aware article that helps learners understand the path before enrolling.',
+  content: [
+    `يمنحك كورس ${course.title} نقطة بداية واضحة لفهم المهارات الأساسية وتطبيقها خطوة بخطوة.`,
+    'ابدأ بتحديد هدفك من التعلم، ثم راجع محتوى الكورس والدروس العملية المتاحة.',
+    'أفضل طريقة للاستفادة هي تدوين الملاحظات، تطبيق كل مفهوم، وبناء مشروع صغير يلخص ما تعلمته.'
+  ].join('\n\n'),
+  content_en: [
+    `${course.titleEn || course.title} gives you a clear starting point for understanding and applying the core skills step by step.`,
+    'Start by defining your learning goal, then review the course structure and practical lessons.',
+    'The best way to benefit is to take notes, apply every concept, and build a small project that reflects what you learned.'
+  ].join('\n\n'),
+  category: course.category || 'education',
+  course_id: course.id,
+  cover_image_url: course.thumbnail || course.image || '/assets/hero-background.png',
+  status: 'published',
+  published_at: new Date(Date.now() - index * 86400000).toISOString(),
+  created_at: new Date(Date.now() - index * 86400000).toISOString(),
+  author: { full_name: 'BeePro Academy' }
+}))
+
+export const blogService = {
+  async getPublishedPosts() {
+    if (!isSupabaseAvailable()) {
+      return mockBlogPosts
+    }
+
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select(`
+        *,
+        author:users!author_id(id, full_name, avatar_url),
+        course:courses(id, title, thumbnail_url)
+      `)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  },
+
+  async getAdminPosts() {
+    if (!isSupabaseAvailable()) {
+      return mockBlogPosts
+    }
+
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select(`
+        *,
+        author:users!author_id(id, full_name, avatar_url),
+        course:courses(id, title, thumbnail_url)
+      `)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  },
+
+  async createPost(postData) {
+    if (!isSupabaseAvailable()) {
+      return { ...postData, id: `mock-blog-${Date.now()}`, created_at: new Date().toISOString() }
+    }
+
+    const { id, author, course, ...payload } = postData
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .insert(payload)
+      .select(`
+        *,
+        author:users!author_id(id, full_name, avatar_url),
+        course:courses(id, title, thumbnail_url)
+      `)
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async updatePost(id, postData) {
+    if (!isSupabaseAvailable()) {
+      return { ...postData, id, updated_at: new Date().toISOString() }
+    }
+
+    const { id: postId, author, course, created_at, updated_at, ...payload } = postData
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .update(payload)
+      .eq('id', id)
+      .select(`
+        *,
+        author:users!author_id(id, full_name, avatar_url),
+        course:courses(id, title, thumbnail_url)
+      `)
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async deletePost(id) {
+    if (!isSupabaseAvailable()) {
+      return { success: true }
+    }
+
+    const { error } = await supabase
+      .from('blog_posts')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+    return { success: true }
+  }
+}
+
 // ============ LESSON SERVICES ============
 export const lessonService = {
   // Get lessons for a course
@@ -1105,9 +1227,19 @@ export const adminService = {
   async getAllUsersAdmin() {
     assertSupabaseAvailable()
 
-    const { data, error } = await supabase.rpc('admin_get_all_users')
-    if (error) throw error
-    return data || []
+    try {
+      const { data, error } = await supabase.rpc('admin_get_all_users')
+      if (error) throw error
+      return data || []
+    } catch (e) {
+      // Map common JWT/session expiry errors to a friendlier message so
+      // the UI can suggest re-authentication instead of showing raw RPC errors.
+      const msg = (e?.message || '').toString().toLowerCase()
+      if (msg.includes('jwt') && msg.includes('exp') || msg.includes('expired')) {
+        throw new Error('Session expired. Please sign out and sign in again.')
+      }
+      throw e
+    }
   },
 
   // Update user role (admin only — direct table update fallback)
@@ -2404,6 +2536,7 @@ export default {
   reviews: reviewService,
   users: userService,
   categories: categoryService,
+  blogs: blogService,
   admin: adminService,
   meetings: meetingService,
   notifications: notificationService,
