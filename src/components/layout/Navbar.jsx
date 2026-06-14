@@ -79,15 +79,14 @@ const Navbar = () => {
       }`}
     >
       <div className="container-custom">
-        <div className="flex items-center justify-between h-16 md:h-20">
+        <div className="flex items-center justify-between h-20 md:h-24">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-xl">B</span>
-            </div>
-            <span className="text-xl font-bold gradient-text hidden sm:block">
-              BeePro Academy
-            </span>
+          <Link to="/" className="flex items-center shrink-0" aria-label="BeePro Academy">
+            <img
+              src="/assets/platform-logo.jpg"
+              alt="BeePro Academy"
+              className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 rounded-2xl object-cover shadow-lg"
+            />
           </Link>
 
           {/* Desktop Navigation */}

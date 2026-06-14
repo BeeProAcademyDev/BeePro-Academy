@@ -105,7 +105,6 @@ const SiteNavbar = ({ onAuthClick }) => {
       <div className="nav-logo">
         <Link to="/" className="nav-logo-link">
           <img src="/assets/platform-logo.jpg" alt="BeePro Academy" className="nav-logo-img" />
-          <span>BEEPRO-ACADEMY</span>
         </Link>
       </div>
 
