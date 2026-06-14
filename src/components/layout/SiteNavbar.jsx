@@ -38,7 +38,7 @@ const SiteNavbar = ({ onAuthClick }) => {
   const normalizedRole = resolveUserRole(user)
   const showChatBell = shouldShowStudentChatBell(user)
   const isTeacher = canAccessTeacherFeatures(normalizedRole)
-  const isAdminUser = isAdmin(normalizedRole, user?.email)
+  const isAdminUser = isAdmin(normalizedRole)
 
   const context = getNavbarContext(location.pathname, location.search)
   const navLinks = getNavbarLinks(context, {

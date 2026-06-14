@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { adminService } from '../../services/api'
+import { requireAdmin } from '../../lib/authGuards'
 import {
   FiLoader,
   FiMessageCircle,
@@ -67,10 +68,10 @@ const AdminCRM = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  const normalizedUserRole = (user?.role || '').toString().trim().toLowerCase()
+  const isAdminUser = requireAdmin(user)
 
   const fetchContacts = async () => {
-    if (normalizedUserRole !== 'admin') return
+    if (!isAdminUser) return
 
     setLoading(true)
     setError('')
@@ -89,7 +90,7 @@ const AdminCRM = () => {
 
   useEffect(() => {
     fetchContacts()
-  }, [normalizedUserRole])
+  }, [isAdminUser])
 
   const filteredContacts = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
@@ -122,7 +123,7 @@ const AdminCRM = () => {
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
   }
 
-  if (normalizedUserRole !== 'admin') {
+  if (!isAdminUser) {
     return (
       <div className="text-center py-12">
         <FiUsers className="w-16 h-16 mx-auto mb-4 text-red-400" />

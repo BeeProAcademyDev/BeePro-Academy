@@ -32,7 +32,6 @@ export function getNavbarContext(pathname = '', search = '') {
 
 export function getNavbarLinks(context, { language = 'en', isAdmin = false, isTeacher = false, t = (key) => key } = {}) {
   const landingLinks = [
-    { label: 'Vision', href: '#vision-mission', type: 'hash' },
     { label: 'Financial Markets', href: '/financial-markets', type: 'route' },
     { label: 'Data Analysis', href: '/data-analysis', type: 'route' },
     { label: 'IT', href: '/it', type: 'route' },

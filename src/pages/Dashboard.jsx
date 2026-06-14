@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import CourseCard from '../components/ui/CourseCard'
 import CourseChat from '../components/chat/CourseChat'
 import { courses } from '../data/courses'
-import { courseService, enrollmentService, notificationService, userService, chatService } from '../services/api'
+import { courseService, enrollmentService, notificationService, chatService } from '../services/api'
 import { paymentService, PAYMENT_TYPES } from '../services/paymentAPI'
 import UserManagement from './admin/UserManagement'
 import AdminCRM from './admin/AdminCRM'
@@ -409,16 +409,10 @@ const Dashboard = () => {
       setPaymentSuccess('')
       setPaymentActionLoadingId(submissionId)
 
-      if (isAdmin) {
-        await userService.ensureUserRole(user.id, user.email, 'admin').catch((syncError) => {
-          console.warn('Admin role sync before payment review failed:', syncError)
-        })
-      }
-
       if (action === 'approve') {
-        await paymentService.approvePaymentSubmission({ submissionId, reviewerId: user.id })
+        await paymentService.approvePaymentSubmission({ submissionId })
       } else {
-        await paymentService.rejectPaymentSubmission({ submissionId, reviewerId: user.id })
+        await paymentService.rejectPaymentSubmission({ submissionId })
       }
 
       if (isAdmin && activeTab === 'admin' && adminSubTab === 'payments') {

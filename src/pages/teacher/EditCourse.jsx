@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { courseService, lessonService, meetingService, notificationService } from '../../services/api'
 import { googleCalendarService } from '../../lib/googleCalendar'
 import { generateJitsiRoomName } from '../../lib/jitsi'
+import { requireOwner } from '../../lib/authGuards'
 import './CreateCourse.css'
 
 const EditCourse = () => {
@@ -100,7 +101,7 @@ const EditCourse = () => {
       const course = await courseService.getCourseById(id)
       
       // Check if user is the instructor
-      if (course.instructor_id !== user?.id && user?.role !== 'admin') {
+      if (!requireOwner(user, course.instructor_id)) {
         setError('ليس لديك صلاحية لتعديل هذا الكورس')
         setIsLoading(false)
         return

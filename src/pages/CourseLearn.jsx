@@ -6,6 +6,7 @@ import { courseService, enrollmentService, meetingService } from '../services/ap
 import { paymentService } from '../services/paymentAPI'
 import { getCourseLiveRoomName, getJitsiExternalUrl, getMeetingJoinTarget, normalizeMeetingRecord, pickJoinableMeeting } from '../lib/jitsi'
 import { isStudentUser } from '../lib/roles'
+import { requireInstructor } from '../lib/authGuards'
 import CourseChat from '../components/chat/CourseChat'
 import JitsiMeetingRoom from '../components/jitsi/JitsiMeetingRoom'
 import {
@@ -48,9 +49,7 @@ const CourseLearn = () => {
     return courseMeetings || []
   }
 
-  const isTeacherOrAdmin = useMemo(() => (
-    user?.role === 'teacher' || user?.role === 'instructor' || user?.role === 'admin'
-  ), [user?.role])
+  const isTeacherOrAdmin = useMemo(() => requireInstructor(user), [user])
 
   const isCourseInstructor = course?.instructor_id === user?.id
 

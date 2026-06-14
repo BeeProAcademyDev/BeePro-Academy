@@ -131,11 +131,7 @@ const Register = () => {
       } else {
         const fallback = language === 'ar' ? 'حدث خطأ في إنشاء الحساب' : 'Registration failed'
         const errText = formatErrorMessage(result.error)
-        const message = errText.includes('VITE_ADMIN_EMAILS')
-          ? (language === 'ar'
-            ? 'لا يمكن التسجيل كإداري إلا بالبريد المصرّح به في VITE_ADMIN_EMAILS'
-            : errText)
-          : (errText || fallback)
+        const message = errText || fallback
         setError(message)
       }
     } catch (err) {
@@ -232,7 +228,7 @@ const Register = () => {
                 <label className="label">
                   {language === 'ar' ? 'نوع الحساب' : 'Account Type'}
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setAccountType('student')}
@@ -255,30 +251,12 @@ const Register = () => {
                   >
                     {language === 'ar' ? 'مدرس' : 'Teacher'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setAccountType('admin')}
-                    className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
-                      accountType === 'admin'
-                        ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20'
-                        : 'border-secondary-200 dark:border-dark-border'
-                    }`}
-                  >
-                    {language === 'ar' ? 'إداري' : 'Admin'}
-                  </button>
                 </div>
                 {accountType === 'teacher' && (
                   <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
                     {language === 'ar'
                       ? 'سيتم مراجعة طلبك من قبل الإدارة قبل تفعيل صلاحيات المدرس.'
                       : 'Your application will be reviewed by an admin before you can create courses.'}
-                  </p>
-                )}
-                {accountType === 'admin' && (
-                  <p className="text-sm text-secondary-500 mt-2">
-                    {language === 'ar'
-                      ? 'التسجيل كإداري متاح فقط للبريد المضاف في VITE_ADMIN_EMAILS.'
-                      : 'Admin registration is only available for emails listed in VITE_ADMIN_EMAILS.'}
                   </p>
                 )}
               </div>

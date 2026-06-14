@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { authService, userService } from '../services/api'
-import { resolveUserRole, isPendingInstructor, isAdminEmail, resolveAppRole } from '../lib/roles'
+import { resolveUserRole, isPendingInstructor, resolveAppRole } from '../lib/roles'
 import { formatErrorMessage } from '../lib/supabaseErrors'
 import supabase from '../lib/supabase'
 
@@ -37,24 +37,7 @@ export const AuthProvider = ({ children }) => {
       email: authEmail || profile?.email || '',
       full_name: profile?.full_name || authUser?.full_name || authUser?.user_metadata?.full_name,
       avatar_url: profile?.avatar_url || authUser?.avatar_url || authUser?.user_metadata?.avatar_url,
-      role: resolveAppRole(profile, authUser)
-    }
-  }
-
-  const syncAdminRoleIfNeeded = async (userData) => {
-    if (!userData?.id) return userData
-
-    const email = (userData.email || '').toString().trim().toLowerCase()
-    if (!isAdminEmail(email)) {
-      return userData
-    }
-
-    try {
-      const syncedProfile = await userService.ensureUserRole(userData.id, email, 'admin')
-      return applyRoleFallback(mergeAuthProfile(userData, { ...syncedProfile, role: 'admin' }))
-    } catch (err) {
-      console.warn('Unable to sync admin role in users table:', err)
-      return applyRoleFallback({ ...userData, role: 'admin' })
+      role: resolveAppRole(profile)
     }
   }
 
@@ -65,7 +48,7 @@ export const AuthProvider = ({ children }) => {
       email: authUser.email,
       full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
       avatar_url: authUser.user_metadata?.avatar_url || null,
-      role: authUser.user_metadata?.role
+      role: 'student'
     })
   }
 
@@ -127,11 +110,24 @@ export const AuthProvider = ({ children }) => {
       })
 
       const mergedUser = mergeAuthProfile(currentUser, profile)
-      const syncedUser = await syncAdminRoleIfNeeded(applyRoleFallback(mergedUser))
-      setUser(syncedUser)
+      setUser(applyRoleFallback(mergedUser))
     } catch (err) {
       console.error('Error checking user:', err)
       try {
+        const lower = formatErrorMessage(err).toLowerCase()
+        if (lower.includes('jwt expired') || lower.includes('token expired') || lower.includes('session expired')) {
+          try {
+            await authService.signOut()
+          } catch (sErr) {
+            console.warn('Error signing out after expired JWT:', sErr)
+          }
+          // Clear local state and prompt user to re-authenticate
+          setUser(null)
+          setSession(null)
+          try { alert('Session expired. Please sign in again.') } catch {} // graceful in non-browser env
+          return
+        }
+
         const { data: { session: activeSession } } = await supabase.auth.getSession()
         setSession(activeSession)
         if (activeSession?.user) {
@@ -156,13 +152,10 @@ export const AuthProvider = ({ children }) => {
         avatar_url: authUser.user_metadata?.avatar_url
       })
       const mergedUser = mergeAuthProfile(authUser, profile)
-      const syncedUser = await syncAdminRoleIfNeeded(applyRoleFallback(mergedUser))
-      setUser(syncedUser)
+      setUser(applyRoleFallback(mergedUser))
     } catch (err) {
       console.error('Error fetching/creating profile:', err)
-      // Still allow login even if profile fetch fails
-      const syncedUser = await syncAdminRoleIfNeeded(applyRoleFallback(authUser))
-      setUser(syncedUser)
+      setUser(buildSessionUser(authUser))
     }
   }
 
@@ -184,8 +177,7 @@ export const AuthProvider = ({ children }) => {
           avatar_url: authUser.user_metadata?.avatar_url
         })
         const mergedUser = mergeAuthProfile(authUser, profile)
-        const syncedUser = await syncAdminRoleIfNeeded(applyRoleFallback(mergedUser))
-        setUser(syncedUser)
+        setUser(applyRoleFallback(mergedUser))
       }
       
       return { success: true, user: authUser }
@@ -219,8 +211,7 @@ export const AuthProvider = ({ children }) => {
           phone,
           role: resolvedRole
         })
-        const syncedUser = await syncAdminRoleIfNeeded(withRoleFallback)
-        setUser(syncedUser)
+        setUser(withRoleFallback)
       }
       
       return {

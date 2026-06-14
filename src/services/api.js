@@ -37,7 +37,7 @@ import {
   mapAuthSignupError,
   mapSignupProfileError
 } from '../lib/supabaseErrors'
-import { resolveSignupRole, isAdminEmail, normalizeDbRole, normalizeRole } from '../lib/roles'
+import { resolveSignupRole, normalizeDbRole, normalizeRole } from '../lib/roles'
 import { courses as mockCourses, categories as mockCategories } from '../data/courses'
 
 // Check if Supabase is available
@@ -178,11 +178,8 @@ export const authService = {
   async signUp({ email, password, fullName, phone = '', role = 'student' }) {
     let resolvedRole
     try {
-      resolvedRole = resolveSignupRole(role, email)
+      resolvedRole = resolveSignupRole(role)
     } catch (roleError) {
-      if (roleError.message === 'ADMIN_EMAIL_NOT_ALLOWED') {
-        throw new Error('Only configured admin emails can register as admin. Add your email to VITE_ADMIN_EMAILS.')
-      }
       throw roleError
     }
 
@@ -226,13 +223,6 @@ export const authService = {
           resolvedRole
         })
 
-        if (resolvedRole === 'admin') {
-          const { data: syncData, error: syncError } = await supabase.rpc('sync_admin_role_if_allowed')
-          if (syncError) throw clarifySupabaseConnectionError(syncError)
-          if (syncData?.success === false) {
-            throw new Error(syncData.error || 'Admin email is not on server allowlist.')
-          }
-        }
       } else if (error) {
         throw mapAuthSignupError(clarifySupabaseConnectionError(error))
       }
@@ -261,14 +251,6 @@ export const authService = {
       })
 
       if (error) throw mapAuthLoginError(clarifySupabaseConnectionError(error))
-
-      if (data?.user && isAdminEmail(normalizedEmail)) {
-        try {
-          await supabase.rpc('sync_admin_role_if_allowed')
-        } catch (syncError) {
-          console.warn('[signIn] Admin role sync failed:', syncError?.message || syncError)
-        }
-      }
 
       return data
     } catch (e) {
@@ -311,7 +293,7 @@ export const authService = {
 
       if (profileError) throw clarifySupabaseConnectionError(profileError)
 
-      const appRole = (profile?.role || user.user_metadata?.role || 'student').toString().trim().toLowerCase()
+      const appRole = (profile?.role || 'student').toString().trim().toLowerCase()
       const safeRole = ['authenticated', 'anon', 'service_role'].includes(appRole) ? 'student' : appRole
 
       return {
@@ -1065,17 +1047,6 @@ export const userService = {
         }
       }
 
-      const authEmail = (userData.email || profile.email || '').toString().trim().toLowerCase()
-      if (isAdminEmail(authEmail) && profile.role !== 'admin') {
-        try {
-          const synced = await userService.ensureUserRole(userId, authEmail, 'admin')
-          if (synced?.role === 'admin') {
-            profile = { ...profile, ...synced, email: userData.email || synced.email || profile.email }
-          }
-        } catch (syncError) {
-          console.warn('[getOrCreateProfile] Admin role sync failed:', syncError?.message || syncError)
-        }
-      }
     }
 
     return profile
@@ -1100,45 +1071,25 @@ export const userService = {
     return data
   },
 
-  // Promote caller to admin only if email is on server allowlist
+  // Return the database profile only. Role changes are never synchronized from
+  // client input; admins must be assigned by database-authorized RPCs.
   async ensureUserRole(userId, email, role) {
     if (!isSupabaseAvailable()) {
-      return { id: userId, email, role }
+      return { id: userId, email, role: role === 'admin' ? 'student' : role }
     }
 
     if (!userId) {
       throw new Error('Missing required user role synchronization data')
     }
 
-    if (role !== 'admin') {
-      const { data: profile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()
-      return profile || { id: userId, email, role }
-    }
-
-    const { data: syncData, error: syncError } = await supabase.rpc('sync_admin_role_if_allowed')
-    if (syncError) throw syncError
-
-    if (syncData?.success === false) {
-      const { data: profile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()
-      return profile || { id: userId, email, role: 'student' }
-    }
-
     const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('*')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
     if (profileError) throw profileError
-    return profile
+    return profile || { id: userId, email, role: 'student' }
   },
 
   // Upload avatar
@@ -1244,18 +1195,7 @@ export const adminService = {
 
   // Update user role (admin only — direct table update fallback)
   async updateUserRole(userId, role) {
-    assertSupabaseAvailable()
-
-    const normalizedRole = normalizeDbRole(role)
-    const { data, error } = await supabase
-      .from('users')
-      .update({ role: normalizedRole })
-      .eq('id', userId)
-      .select()
-      .single()
-
-    if (error) throw error
-    return assertRoleUpdateResult(data, normalizedRole)
+    return this.updateUserRoleAdmin(userId, role)
   },
 
   async updateUserRoleAdmin(targetUserId, newRole) {

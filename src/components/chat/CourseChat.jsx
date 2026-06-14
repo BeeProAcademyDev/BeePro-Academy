@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { FiMessageCircle, FiSend, FiUser, FiWifi, FiWifiOff } from 'react-icons/fi'
 import { chatService } from '../../services/api'
+import { requireInstructor } from '../../lib/authGuards'
 import supabase from '../../lib/supabase'
 import './CourseChat.css'
 
@@ -27,10 +28,7 @@ const CourseChat = ({
   const messageIdsRef = useRef(new Set())
 
   const isAr = language === 'ar'
-  const isInstructor = user?.id === instructorId
-    || user?.role === 'teacher'
-    || user?.role === 'instructor'
-    || user?.role === 'admin'
+  const isInstructor = user?.id === instructorId || requireInstructor(user)
 
   useEffect(() => {
     activeConversationRef.current = activeConversation

@@ -22,7 +22,7 @@ import CreateCourse from './pages/teacher/CreateCourse'
 import EditCourse from './pages/teacher/EditCourse'
 import TeacherLiveSession from './pages/teacher/TeacherLiveSession'
 import BlogAdmin from './pages/admin/BlogAdmin'
-import { isAdmin } from './lib/roles'
+import { requireAdmin, requireInstructor } from './lib/authGuards'
 
 // Category Pages
 import ProgrammingPage from './pages/categories/ProgrammingPage'
@@ -62,8 +62,6 @@ const ProtectedRoute = ({ children }) => {
 const TeacherRoute = ({ children }) => {
   const { user, isAuthenticated, isLoading } = useAuth()
   const location = useLocation()
-  const normalizedRole = (user?.role || '').toString().trim().toLowerCase()
-  
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -78,12 +76,11 @@ const TeacherRoute = ({ children }) => {
   }
   
   // Pending instructors must wait for admin approval
-  if (normalizedRole === 'pending_instructor') {
+  if ((user?.role || '').toString().trim().toLowerCase() === 'pending_instructor') {
     return <Navigate to="/dashboard" replace />
   }
 
-  // Check if user is teacher/instructor or admin
-  if (normalizedRole !== 'teacher' && normalizedRole !== 'instructor' && normalizedRole !== 'admin') {
+  if (!requireInstructor(user)) {
     return <Navigate to="/dashboard" replace />
   }
   
@@ -108,7 +105,7 @@ const AdminRoute = ({ children }) => {
     return <Navigate to={getLandingAuthUrl('login', { redirect })} replace />
   }
 
-  if (!isAdmin(user?.role, user?.email)) {
+  if (!requireAdmin(user)) {
     return <Navigate to="/dashboard" replace />
   }
 

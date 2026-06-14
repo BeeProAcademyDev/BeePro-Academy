@@ -46,33 +46,12 @@ const VISION_MISSION_CONTENT = {
 // Hero Section Component
 const HeroSection = () => {
   const videoRef = useRef(null);
-  const { i18n } = useTranslation();
-  const [latestPosts, setLatestPosts] = useState([]);
-
-  const isAr = i18n.language === 'ar';
 
   useEffect(() => {
     // Set video playback speed to 0.5 (slow motion)
     if (videoRef.current) {
       videoRef.current.playbackRate = 0.5;
     }
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-
-    import('../services/api')
-      .then(({ blogService }) => blogService.getPublishedPosts())
-      .then((posts) => {
-        if (mounted) setLatestPosts((posts || []).slice(0, 3));
-      })
-      .catch((error) => {
-        console.warn('Unable to load landing blog posts:', error);
-      });
-
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   return (
@@ -100,122 +79,10 @@ const HeroSection = () => {
                 {[...Array(10)].map((_, i) => <span key={i}></span>)}
               </div>
             </div>
-            <div className="hero-blog-panel">
-              <div className="hero-blog-header">
-                <span>{isAr ? 'مدونة المنصة' : 'Platform Blogs'}</span>
-                <Link to="/blogs">{isAr ? 'عرض الكل' : 'View all'}</Link>
-              </div>
-              <div className="hero-blog-list">
-                {latestPosts.length > 0 ? latestPosts.map((post) => (
-                  <Link key={post.id} to="/blogs" className="hero-blog-item">
-                    <strong>{isAr ? post.title || post.title_en : post.title_en || post.title}</strong>
-                    <span>{isAr ? post.excerpt || post.excerpt_en : post.excerpt_en || post.excerpt}</span>
-                  </Link>
-                )) : (
-                  <Link to="/blogs" className="hero-blog-item hero-blog-item-empty">
-                    <strong>{isAr ? 'اقرأ أحدث مقالات BeePro Academy' : 'Read BeePro Academy articles'}</strong>
-                    <span>{isAr ? 'مقالات تعليمية مرتبطة بكورسات المنصة.' : 'Learning articles connected to the platform courses.'}</span>
-                  </Link>
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </section>
     </div>
-  );
-};
-
-const BlogPreviewSection = () => {
-  const { i18n } = useTranslation();
-  const [posts, setPosts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const isAr = i18n.language === 'ar';
-
-  useEffect(() => {
-    let mounted = true;
-
-    import('../services/api')
-      .then(({ blogService }) => blogService.getPublishedPosts())
-      .then((rows) => {
-        if (mounted) setPosts((rows || []).slice(0, 3));
-      })
-      .catch((error) => {
-        console.warn('Unable to load homepage blog posts:', error);
-      })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const fallbackPosts = [
-    {
-      id: 'fallback-learning-path',
-      title: 'كيف تختار مسارك التعليمي في BeePro Academy',
-      title_en: 'How to Choose Your Learning Path at BeePro Academy',
-      excerpt: 'تعرف على طريقة اختيار الكورس المناسب حسب هدفك ومستواك الحالي.',
-      excerpt_en: 'Learn how to choose the right course based on your goal and current level.'
-    },
-    {
-      id: 'fallback-market-analysis',
-      title: 'لماذا يحتاج المتداول إلى أساس تعليمي قوي؟',
-      title_en: 'Why Traders Need a Strong Learning Foundation',
-      excerpt: 'المعرفة المنظمة تساعدك على قراءة السوق وتقليل القرارات العشوائية.',
-      excerpt_en: 'Structured knowledge helps you read the market and reduce random decisions.'
-    },
-    {
-      id: 'fallback-practice',
-      title: 'كيف تحول الدروس إلى تطبيق عملي؟',
-      title_en: 'How to Turn Lessons into Practical Work',
-      excerpt: 'ابدأ بملاحظات صغيرة، ثم مشروع تطبيقي، ثم مراجعة مستمرة لما تعلمته.',
-      excerpt_en: 'Start with notes, build a practical project, then keep reviewing what you learn.'
-    }
-  ];
-
-  const visiblePosts = posts.length > 0 ? posts : fallbackPosts;
-
-  return (
-    <section className="homepage-blogs-section" id="blogs">
-      <div className="homepage-blogs-container">
-        <div className="homepage-blogs-header">
-          <span>{isAr ? 'مدونة BeePro Academy' : 'BeePro Academy Blog'}</span>
-          <h2>{isAr ? 'أحدث المقالات التعليمية' : 'Latest Learning Articles'}</h2>
-          <p>
-            {isAr
-              ? 'مقالات مرتبطة بكورسات المنصة تظهر للعميل من الصفحة الرئيسية.'
-              : 'Course-aware articles shown directly on the homepage.'}
-          </p>
-        </div>
-
-        <div className="homepage-blogs-grid">
-          {visiblePosts.map((post, index) => (
-            <Link
-              key={post.id}
-              to="/blogs"
-              className="homepage-blog-card"
-              style={{ animationDelay: `${index * 0.08}s` }}
-            >
-              <div className="homepage-blog-card-label">
-                {post.category || (isAr ? 'تعليم' : 'Education')}
-              </div>
-              <h3>{isAr ? post.title || post.title_en : post.title_en || post.title}</h3>
-              <p>{isAr ? post.excerpt || post.excerpt_en : post.excerpt_en || post.excerpt}</p>
-              <span>{isAr ? 'قراءة المقال' : 'Read article'}</span>
-            </Link>
-          ))}
-        </div>
-
-        <Link to="/blogs" className="homepage-blogs-btn">
-          {isLoading
-            ? (isAr ? 'جاري تحميل المقالات...' : 'Loading articles...')
-            : (isAr ? 'عرض صفحة المقالات' : 'Open Blog Page')}
-        </Link>
-      </div>
-    </section>
   );
 };
 // Animated Statements Section
@@ -1039,9 +906,7 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
         setTimeout(() => setActiveTab('login'), 2500);
       } else {
         const errText = formatErrorMessage(result.error);
-        const message = errText.includes('VITE_ADMIN_EMAILS')
-          ? 'Admin registration is only available for authorized emails in VITE_ADMIN_EMAILS.'
-          : (errText || 'Registration failed. Please try again.');
+        const message = errText || 'Registration failed. Please try again.';
         setError(message);
       }
     } catch (err) {
@@ -1199,25 +1064,10 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
                     />
                     <label htmlFor="account-teacher">Teacher</label>
                   </div>
-                  <div className="type-option">
-                    <input
-                      type="radio"
-                      id="account-admin"
-                      name="accountType"
-                      checked={accountType === 'admin'}
-                      onChange={() => setAccountType('admin')}
-                    />
-                    <label htmlFor="account-admin">Admin</label>
-                  </div>
                 </div>
                 {accountType === 'teacher' && (
                   <p style={{ marginTop: '10px', fontSize: '0.85rem', color: '#b45309' }}>
                     Teacher accounts require admin approval before you can create courses.
-                  </p>
-                )}
-                {accountType === 'admin' && (
-                  <p style={{ marginTop: '10px', fontSize: '0.85rem', color: '#64748b' }}>
-                    Admin signup is limited to emails configured in VITE_ADMIN_EMAILS.
                   </p>
                 )}
               </div>
@@ -1324,7 +1174,6 @@ const LandingPage = () => {
     <div className="landing-page">
       <SiteNavbar onAuthClick={openAuthModal} />
       <HeroSection />
-      <BlogPreviewSection />
       <StatementsSection />
       <VisionMissionSection />
       <PlatformSection />

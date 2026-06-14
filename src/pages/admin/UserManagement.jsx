@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
-import { adminService, userService } from '../../services/api'
+import { adminService } from '../../services/api'
 import { getRoleLabel as getSharedRoleLabel, normalizeDbRole } from '../../lib/roles'
+import { requireAdmin } from '../../lib/authGuards'
 import { 
   FiUsers, 
   FiSearch, 
@@ -21,7 +22,7 @@ import {
 const UserManagement = () => {
   const { user } = useAuth()
   const { language } = useLanguage()
-  const normalizedUserRole = (user?.role || '').toString().trim().toLowerCase()
+  const isAdminUser = requireAdmin(user)
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -30,35 +31,10 @@ const UserManagement = () => {
   const [showUserDetails, setShowUserDetails] = useState(false)
   const [actionLoading, setActionLoading] = useState(null)
 
-  const configuredAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS || 'admin@beepro.academy')
-    .split(',')
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean)
-
-  const isConfiguredAdminEmail = configuredAdminEmails.includes(
-    (user?.email || '').toString().trim().toLowerCase()
-  )
-
-  const ensureAdminRoleInDatabase = async () => {
-    if (!user?.id || !isConfiguredAdminEmail) return
-
-    try {
-      await userService.ensureUserRole(user.id, user.email, 'admin')
-    } catch (syncError) {
-      console.warn('Admin role sync before user fetch failed:', syncError)
-    }
-  }
-
   const getAccessDeniedHint = () => {
-    if (isConfiguredAdminEmail) {
-      return language === 'ar'
-        ? 'حدث تعارض بين صلاحيات قاعدة البيانات وواجهة التطبيق. نفّذ SQL لترقية role في جدول users إلى admin ثم أعد تسجيل الدخول.'
-        : 'Database role is out of sync. Run SQL to set your users.role to admin, then sign out/in.'
-    }
-
     return language === 'ar'
-      ? 'أضف بريدك إلى VITE_ADMIN_EMAILS في ملف .env ثم أعد تشغيل التطبيق وسجل الدخول مرة أخرى.'
-      : 'Add your email to VITE_ADMIN_EMAILS in .env, restart the app, then sign in again.'
+      ? 'صلاحيات المدير يجب أن تكون محفوظة في جدول users داخل قاعدة البيانات. لا يمكن منحها من الواجهة.'
+      : 'Admin access must be stored in the database users.role column. It cannot be granted by the frontend.'
   }
 
   const isAccessDeniedError = (error) => {
@@ -68,12 +44,10 @@ const UserManagement = () => {
 
   // Fetch all users (admin only)
   const fetchUsers = async () => {
-    if (!user?.id || normalizedUserRole !== 'admin') return
+    if (!user?.id || !isAdminUser) return
     
     setLoading(true)
     try {
-      await ensureAdminRoleInDatabase()
-
       const data = await adminService.getAllUsersAdmin()
       setUsers(data || [])
     } catch (error) {
@@ -150,8 +124,6 @@ const UserManagement = () => {
   }
 
   const applyRoleChange = async (targetUserId, newRole) => {
-    await ensureAdminRoleInDatabase()
-
     try {
       await adminService.updateUserRoleAdmin(targetUserId, newRole)
       return
@@ -170,14 +142,13 @@ const UserManagement = () => {
       return
     }
 
-    if (normalizedUserRole !== 'admin') {
+    if (!isAdminUser) {
       alert(language === 'ar' ? 'صلاحيات المدير مطلوبة' : 'Admin access is required')
       return
     }
 
     setActionLoading(targetUserId)
     try {
-      await ensureAdminRoleInDatabase()
       await adminService.approveInstructor(targetUserId)
       showRoleUpdateSuccess('instructor')
     } catch (error) {
@@ -193,11 +164,10 @@ const UserManagement = () => {
   }
 
   const rejectInstructor = async (targetUserId) => {
-    if (!user?.id || normalizedUserRole !== 'admin') return
+    if (!user?.id || !isAdminUser) return
 
     setActionLoading(targetUserId)
     try {
-      await ensureAdminRoleInDatabase()
       await adminService.rejectInstructor(targetUserId)
       showRoleUpdateSuccess('student')
     } catch (error) {
@@ -214,7 +184,7 @@ const UserManagement = () => {
 
   // Update user role
   const updateUserRole = async (targetUserId, newRole) => {
-    if (!user?.id || normalizedUserRole !== 'admin') return
+    if (!user?.id || !isAdminUser) return
 
     setActionLoading(targetUserId)
     try {
@@ -229,7 +199,7 @@ const UserManagement = () => {
 
   // Get user details
   const getUserDetails = async (targetUserId) => {
-    if (!user?.id || normalizedUserRole !== 'admin') return
+    if (!user?.id || !isAdminUser) return
 
     const selectedFromList = users.find((listUser) => listUser.id === targetUserId)
 
@@ -292,7 +262,7 @@ const UserManagement = () => {
     fetchUsers()
   }, [user])
 
-  if (normalizedUserRole !== 'admin') {
+  if (!isAdminUser) {
     return (
       <div className="text-center py-12">
         <FiUsers className="w-16 h-16 mx-auto mb-4 text-red-400" />

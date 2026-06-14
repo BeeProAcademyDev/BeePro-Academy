@@ -108,7 +108,7 @@ const isRpcSignatureMismatch = (error) => {
   )
 }
 
-const callPaymentReviewRpc = async (functionName, { submissionId, reviewerId, reviewNotes = null }) => {
+const callPaymentReviewRpc = async (functionName, { submissionId, reviewNotes = null }) => {
   const { error: modernError } = await supabase.rpc(functionName, {
     submission_id: submissionId,
     review_notes: reviewNotes
@@ -118,18 +118,13 @@ const callPaymentReviewRpc = async (functionName, { submissionId, reviewerId, re
     return { ok: true, error: null }
   }
 
-  if (reviewerId && isRpcSignatureMismatch(modernError)) {
-    const { error: legacyError } = await supabase.rpc(functionName, {
-      submission_id: submissionId,
-      reviewer_id: reviewerId,
-      review_notes: reviewNotes
-    })
-
-    if (!legacyError) {
-      return { ok: true, error: null }
+  if (isRpcSignatureMismatch(modernError)) {
+    return {
+      ok: false,
+      error: new Error(
+        'Secure payment review RPC is missing. Apply the latest Supabase migrations; legacy reviewer_id RPCs are intentionally blocked.'
+      )
     }
-
-    return { ok: false, error: legacyError }
   }
 
   return { ok: false, error: modernError }
@@ -512,14 +507,13 @@ export const paymentService = {
     return data
   },
 
-  async approvePaymentSubmission({ submissionId, reviewerId, reviewNotes = null }) {
+  async approvePaymentSubmission({ submissionId, reviewNotes = null }) {
     if (!isSupabaseAvailable()) {
       return true
     }
 
     const rpcResult = await callPaymentReviewRpc('approve_payment_submission', {
       submissionId,
-      reviewerId,
       reviewNotes
     })
 
@@ -530,14 +524,13 @@ export const paymentService = {
     throw new Error(formatPaymentReviewError(rpcResult.error, 'approve'))
   },
 
-  async rejectPaymentSubmission({ submissionId, reviewerId, reviewNotes = null }) {
+  async rejectPaymentSubmission({ submissionId, reviewNotes = null }) {
     if (!isSupabaseAvailable()) {
       return true
     }
 
     const rpcResult = await callPaymentReviewRpc('reject_payment_submission', {
       submissionId,
-      reviewerId,
       reviewNotes
     })
 

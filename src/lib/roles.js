@@ -6,44 +6,20 @@ export const ROLES = {
   ADMIN: 'admin'
 }
 
-export function getConfiguredAdminEmails() {
-  return (import.meta.env.VITE_ADMIN_EMAILS || 'admin@beepro.academy')
-    .split(',')
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean)
-}
-
-export function isAdminEmail(email) {
-  const normalized = (email || '').toString().trim().toLowerCase()
-  return getConfiguredAdminEmails().includes(normalized)
-}
-
 /**
- * Maps UI signup choice to the role stored in the database.
- * - student  → student (immediate access)
- * - instructor → pending_instructor (requires admin approval)
- * - admin → admin only if email is in VITE_ADMIN_EMAILS
+ * Maps UI signup choice to a non-privileged account type.
+ * Admin role assignment is never accepted from the client.
  */
 export function normalizeSignupAccountType(selectedRole) {
   const choice = (selectedRole || ROLES.STUDENT).toString().trim().toLowerCase()
   if (choice === ROLES.INSTRUCTOR || choice === ROLES.TEACHER || choice === 'academic') {
     return ROLES.TEACHER
   }
-  if (choice === ROLES.ADMIN) return ROLES.ADMIN
   return ROLES.STUDENT
 }
 
-export function resolveSignupRole(selectedRole, email) {
+export function resolveSignupRole(selectedRole) {
   const choice = (selectedRole || ROLES.STUDENT).toString().trim().toLowerCase()
-
-  if (choice === ROLES.ADMIN) {
-    if (!isAdminEmail(email)) {
-      throw new Error(
-        'ADMIN_EMAIL_NOT_ALLOWED'
-      )
-    }
-    return ROLES.ADMIN
-  }
 
   if (choice === ROLES.INSTRUCTOR || choice === ROLES.TEACHER || choice === 'academic') {
     return ROLES.PENDING_INSTRUCTOR
@@ -67,13 +43,10 @@ export function normalizeDbRole(role) {
   return normalized || ROLES.STUDENT
 }
 
-/** App role from DB profile / signup metadata — never Supabase JWT role ("authenticated"). */
-export function resolveAppRole(profile, authUser) {
+/** App role from DB profile only. Auth/JWT metadata is explicitly untrusted. */
+export function resolveAppRole(profile) {
   const fromProfile = normalizeRole(profile?.role)
   if (fromProfile) return fromProfile
-
-  const fromMetadata = normalizeRole(authUser?.user_metadata?.role)
-  if (fromMetadata) return fromMetadata
 
   return ROLES.STUDENT
 }
@@ -87,9 +60,9 @@ export function isApprovedInstructor(role) {
   return normalized === ROLES.INSTRUCTOR || normalized === ROLES.TEACHER
 }
 
-export function isAdmin(role, email) {
+export function isAdmin(role) {
   const normalized = normalizeRole(role)
-  return normalized === ROLES.ADMIN || isAdminEmail(email)
+  return normalized === ROLES.ADMIN
 }
 
 export function canAccessTeacherFeatures(role) {
@@ -114,9 +87,8 @@ export function shouldShowStudentChatBell(user) {
 
 export function resolveUserRole(user) {
   if (!user) return ROLES.STUDENT
-  const email = (user.email || '').toString().trim().toLowerCase()
   const role = normalizeRole(user.role)
-  if (isAdmin(role, email)) return ROLES.ADMIN
+  if (isAdmin(role)) return ROLES.ADMIN
   if (canAccessTeacherFeatures(role)) return role || ROLES.TEACHER
   if (isPendingInstructor(role)) return ROLES.PENDING_INSTRUCTOR
   return role || ROLES.STUDENT
@@ -146,8 +118,6 @@ export function getRoleLabel(role, language = 'ar') {
 
 export default {
   ROLES,
-  getConfiguredAdminEmails,
-  isAdminEmail,
   normalizeSignupAccountType,
   resolveSignupRole,
   normalizeRole,

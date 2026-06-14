@@ -5,7 +5,7 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 70px;
+  height: 82px;
   background: rgba(0, 4, 40, 0.95);
   backdrop-filter: blur(20px);
   display: flex;
@@ -19,7 +19,7 @@
 
 .site-navbar.scrolled {
   background: rgba(0, 4, 40, 0.98);
-  height: 60px;
+  height: 72px;
 }
 
 .site-navbar .nav-logo {
@@ -34,9 +34,9 @@
 }
 
 .site-navbar .nav-logo-img {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
   object-fit: cover;
   box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.22), 0 8px 20px rgba(0, 0, 0, 0.22);
 }
@@ -321,14 +321,14 @@
 }
 
 .site-main-offset {
-  padding-top: 70px;
+  padding-top: 82px;
 }
 
 @media (max-width: 1024px) {
   .site-navbar .nav-links {
     display: none;
     position: absolute;
-    top: 70px;
+    top: 82px;
     left: 0;
     width: 100%;
     background: rgba(0, 4, 40, 0.98);
@@ -396,7 +396,7 @@
 
 @media (max-width: 480px) {
   .site-navbar {
-    height: 60px;
+    height: 68px;
     padding: 0 15px;
   }
 
@@ -409,8 +409,9 @@
   }
 
   .site-navbar .nav-logo-img {
-    width: 38px;
-    height: 38px;
+    width: 54px;
+    height: 54px;
+    border-radius: 12px;
   }
 
   .site-navbar .nav-actions {
@@ -424,6 +425,6 @@
   }
 
   .site-main-offset {
-    padding-top: 60px;
+    padding-top: 68px;
   }
 }
