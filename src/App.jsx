@@ -25,7 +25,6 @@ import BlogAdmin from './pages/admin/BlogAdmin'
 import { requireAdmin, requireInstructor } from './lib/authGuards'
 
 // Category Pages
-import ProgrammingPage from './pages/categories/ProgrammingPage'
 import ITPage from './pages/categories/ITPage'
 import DataAnalysisPage from './pages/categories/DataAnalysisPage'
 import FinancialMarketsPage from './pages/categories/FinancialMarketsPage'
@@ -195,7 +194,7 @@ function App() {
       />
       
       {/* Category Pages */}
-      <Route path="/programming" element={<Layout showFooter={false}><ProgrammingPage /></Layout>} />
+      <Route path="/programming" element={<Navigate to="/it" replace />} />
       <Route path="/it" element={<Layout showFooter={false}><ITPage /></Layout>} />
       <Route path="/data-analysis" element={<Layout showFooter={false}><DataAnalysisPage /></Layout>} />
       <Route path="/financial-markets" element={<Layout showFooter={false}><FinancialMarketsPage /></Layout>} />

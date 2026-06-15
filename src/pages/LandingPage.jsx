@@ -341,6 +341,7 @@ const CategorySections = () => {
     },
     {
       id: 'data',
+      courseCategory: 'data_analysis',
       title: 'Data Analysis',
       subtitle: 'Turn Data into Decisions',
       description: 'Master statistics, data visualization, and analytical skills. Transform raw data into actionable business insights.',
@@ -352,6 +353,7 @@ const CategorySections = () => {
     },
     {
       id: 'finance',
+      courseCategory: 'financial_markets',
       title: 'Financial Markets Analysis',
       subtitle: 'Navigate the Markets',
       description: 'Understand market data, trading strategies, and investment insights. Build expertise in financial analysis and risk management.',
@@ -411,7 +413,7 @@ const CategorySections = () => {
               ))}
             </div>
             <div className="category-buttons">
-              <a href={`/courses?category=${category.id}`} className="category-btn primary">
+              <a href={`/courses?category=${category.courseCategory || category.id}`} className="category-btn primary">
                 View Courses
               </a>
               <a href={`#${category.id}-details`} className="category-btn secondary">

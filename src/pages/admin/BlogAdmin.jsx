@@ -121,7 +121,7 @@ const BlogAdmin = () => {
       'Choosing the right learning path starts with understanding the practical outcome you want. BeePro Academy connects course content with applied practice so every lesson becomes a usable step.',
       primary
         ? `${primary.title} gives learners a structured way into the core skills, with a path that suits the ${primary.level || 'learner'} level and clarifies what they will build over time.`
-        : `The platform includes courses such as ${titles || 'financial markets, programming, and IT'}, helping learners turn curiosity into a clear plan.`,
+        : `The platform includes courses such as ${titles || 'financial markets, data analysis, and IT'}, helping learners turn curiosity into a clear plan.`,
       'Before enrolling, define the problem you want to solve: a professional skill, a market you want to understand, or a practical project you want to build.',
       'Start with fundamentals, move into practice, then document what you learned in a small project or applied summary. This makes learning deeper and easier to retain.'
     ].join('\n\n')

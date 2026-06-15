@@ -21,7 +21,7 @@ const CreateCourse = () => {
   const [courseData, setCourseData] = useState({
     title: '',
     description: '',
-    category: 'programming',
+    category: 'financial_markets',
     level: 'beginner',
     price: 0,
     thumbnail_url: '',
@@ -55,9 +55,9 @@ const CreateCourse = () => {
   const [uploadedFiles, setUploadedFiles] = useState([])
 
   const categories = [
-    { value: 'programming', label: 'البرمجة', labelEn: 'Programming' },
-    { value: 'it', label: 'تكنولوجيا المعلومات', labelEn: 'IT' },
-    { value: 'financial_markets', label: 'الأسواق المالية', labelEn: 'Financial Markets' }
+    { value: 'financial_markets', label: 'الأسواق المالية', labelEn: 'Financial Markets' },
+    { value: 'data_analysis', label: 'تحليل البيانات', labelEn: 'Data Analysis' },
+    { value: 'it', label: 'تكنولوجيا المعلومات', labelEn: 'IT' }
   ]
 
   const levels = [

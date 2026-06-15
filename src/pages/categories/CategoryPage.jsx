@@ -21,12 +21,7 @@ const CategoryPage = ({
   const [dbCourses, setDbCourses] = useState([]);
 
   const defaultCourses = [
-    { id: 1, title: 'Beginner Course', level: 'Beginner', duration: '4 weeks', price: '$49', image: backgroundImage },
-    { id: 2, title: 'Intermediate Course', level: 'Intermediate', duration: '6 weeks', price: '$79', image: backgroundImage },
-    { id: 3, title: 'Advanced Course', level: 'Advanced', duration: '8 weeks', price: '$99', image: backgroundImage },
-    { id: 4, title: 'Professional Masterclass', level: 'Expert', duration: '12 weeks', price: '$149', image: backgroundImage },
-    { id: 5, title: 'Complete Bootcamp', level: 'All Levels', duration: '16 weeks', price: '$199', image: backgroundImage },
-    { id: 6, title: 'Certification Program', level: 'Professional', duration: '10 weeks', price: '$129', image: backgroundImage },
+    { id: categoryKey || 'category-course', title, level: 'All Levels', duration: 'Self-paced', price: '$0', image: backgroundImage },
   ];
 
   useEffect(() => {

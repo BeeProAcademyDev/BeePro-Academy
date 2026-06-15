@@ -5,8 +5,7 @@ import CourseCard from '../components/ui/CourseCard'
 import Button from '../components/ui/Button'
 import { courses, categories, stats, testimonials } from '../data/courses'
 import { 
-  FiCode, 
-  FiPenTool, 
+  FiBarChart2,
   FiServer, 
   FiTrendingUp,
   FiAward,
@@ -29,10 +28,9 @@ const Home = () => {
   const popularCourses = courses.filter(course => course.isPopular).slice(0, 4)
 
   const categoryIcons = {
-    programming: FiCode,
-    design: FiPenTool,
+    financial_markets: FiTrendingUp,
+    data_analysis: FiBarChart2,
     it: FiServer,
-    finance: FiTrendingUp
   }
 
   const features = [

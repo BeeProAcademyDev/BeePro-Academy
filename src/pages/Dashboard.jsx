@@ -49,6 +49,9 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('courses')
   const [myCourses, setMyCourses] = useState([])
   const [isLoadingCourses, setIsLoadingCourses] = useState(false)
+  const [courseActionError, setCourseActionError] = useState('')
+  const [courseActionSuccess, setCourseActionSuccess] = useState('')
+  const [courseActionLoadingId, setCourseActionLoadingId] = useState(null)
   const [adminSubTab, setAdminSubTab] = useState('users')
 
   useEffect(() => {
@@ -243,24 +246,31 @@ const Dashboard = () => {
     return plainValueMap[paymentType] || { value: raw }
   }
 
-  // Fetch teacher's courses
+  // Fetch teacher/admin courses
   useEffect(() => {
     const fetchMyCourses = async () => {
       if (!isTeacher || !user?.id) return
       
       setIsLoadingCourses(true)
+      setCourseActionError('')
       try {
-        const data = await courseService.getInstructorCourses(user.id)
-        setMyCourses(data || [])
+        if (isAdmin) {
+          const { data } = await courseService.getCourses({ limit: 1000 })
+          setMyCourses(data || [])
+        } else {
+          const data = await courseService.getInstructorCourses(user.id)
+          setMyCourses(data || [])
+        }
       } catch (error) {
         console.error('Error fetching my courses:', error)
+        setCourseActionError(language === 'ar' ? 'فشل تحميل الكورسات' : 'Failed to load courses')
       } finally {
         setIsLoadingCourses(false)
       }
     }
     
     fetchMyCourses()
-  }, [isTeacher, user?.id])
+  }, [isTeacher, isAdmin, user?.id, language])
 
   useEffect(() => {
     if (myCourses.length > 0 && !teacherChatCourseId) {
@@ -447,6 +457,34 @@ const Dashboard = () => {
       window.open(resolvedUrl, '_blank', 'noopener,noreferrer')
     } catch (error) {
       setPaymentError(error.message || 'Failed to open receipt')
+    }
+  }
+
+  const handleDeleteCourse = async (course) => {
+    if (!course?.id || !isAdmin) {
+      setCourseActionError(language === 'ar' ? 'هذا الإجراء متاح للأدمن فقط' : 'Only admins can delete courses')
+      return
+    }
+
+    const confirmed = window.confirm(
+      language === 'ar'
+        ? `هل تريد حذف كورس "${course.title}" نهائيا؟`
+        : `Delete course "${course.title}" permanently?`
+    )
+
+    if (!confirmed) return
+
+    try {
+      setCourseActionError('')
+      setCourseActionSuccess('')
+      setCourseActionLoadingId(course.id)
+      await courseService.deleteCourse(course.id)
+      setMyCourses((prev) => prev.filter((item) => item.id !== course.id))
+      setCourseActionSuccess(language === 'ar' ? 'تم حذف الكورس بنجاح' : 'Course deleted successfully')
+    } catch (error) {
+      setCourseActionError(error.message || (language === 'ar' ? 'فشل حذف الكورس' : 'Failed to delete course'))
+    } finally {
+      setCourseActionLoadingId(null)
     }
   }
 
@@ -1056,7 +1094,12 @@ const Dashboard = () => {
                   <div className="card card-body bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                     <FiBook className="w-10 h-10 mb-3" />
                     <div className="text-3xl font-bold">{myCourses.length}</div>
-                    <div className="text-white/80">{language === 'ar' ? 'كورساتي' : 'My Courses'}</div>
+                    <div className="text-white/80">
+                      {isAdmin
+                        ? (language === 'ar' ? 'كل الكورسات' : 'All Courses')
+                        : (language === 'ar' ? 'كورساتي' : 'My Courses')
+                      }
+                    </div>
                   </div>
                   <div className="card card-body bg-gradient-to-br from-green-500 to-teal-600 text-white">
                     <FiUser className="w-10 h-10 mb-3" />
@@ -1068,8 +1111,23 @@ const Dashboard = () => {
                 {/* My Courses Section */}
                 <div className="card card-body mb-8">
                   <h3 className="text-lg font-bold mb-4">
-                    {language === 'ar' ? 'كورساتي' : 'My Courses'}
+                    {isAdmin
+                      ? (language === 'ar' ? 'كل كورسات المنصة' : 'All Platform Courses')
+                      : (language === 'ar' ? 'كورساتي' : 'My Courses')
+                    }
                   </h3>
+
+                  {courseActionError && (
+                    <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-200">
+                      {courseActionError}
+                    </div>
+                  )}
+
+                  {courseActionSuccess && (
+                    <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-200">
+                      {courseActionSuccess}
+                    </div>
+                  )}
                   
                   {isLoadingCourses ? (
                     <div className="flex items-center justify-center py-8">
@@ -1112,6 +1170,21 @@ const Dashboard = () => {
                             >
                               <FiEdit className="w-4 h-4" />
                             </Link>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCourse(course)}
+                                disabled={courseActionLoadingId === course.id}
+                                className="btn btn-sm bg-red-500 text-white hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                                title={language === 'ar' ? 'حذف الكورس' : 'Delete course'}
+                              >
+                                {courseActionLoadingId === course.id ? (
+                                  <FiLoader className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <FiTrash2 className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}

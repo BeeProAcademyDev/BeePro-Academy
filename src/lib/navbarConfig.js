@@ -18,7 +18,6 @@ export function getNavbarContext(pathname = '', search = '') {
     '/financial-markets',
     '/data-analysis',
     '/it',
-    '/programming',
     '/blogs',
     '/about',
     '/contact',

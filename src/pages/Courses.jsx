@@ -16,11 +16,15 @@ import {
   FiBookOpen
 } from 'react-icons/fi'
 
+const PUBLIC_COURSE_CATEGORIES = new Set(['financial_markets', 'data_analysis', 'it'])
+
 const normalizeCategoryId = (category) => {
-  if (!category) return 'programming'
+  if (!category) return ''
 
   const map = {
-    financial_markets: 'finance'
+    finance: 'financial_markets',
+    financial: 'financial_markets',
+    data: 'data_analysis'
   }
 
   return map[category] || category
@@ -34,7 +38,7 @@ const Courses = () => {
   const [courses, setCourses] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all')
+  const [selectedCategory, setSelectedCategory] = useState(normalizeCategoryId(searchParams.get('category')) || 'all')
   const [selectedLevel, setSelectedLevel] = useState('all')
   const [sortBy, setSortBy] = useState('newest')
   const [viewMode, setViewMode] = useState('grid')
@@ -47,7 +51,9 @@ const Courses = () => {
       try {
         const { data } = await courseService.getCourses()
         const dbCourses = data || []
-        const formattedDbCourses = dbCourses.map(course => ({
+        const formattedDbCourses = dbCourses
+          .filter((course) => course.is_published !== false)
+          .map(course => ({
           id: course.id,
           title: course.title,
           titleEn: course.title_en || course.title,
@@ -69,7 +75,7 @@ const Courses = () => {
           instructorAvatar: course.instructor?.avatar_url || '/assets/abdullah1.jpg',
           tags: [],
           createdAt: course.created_at
-        }))
+        })).filter((course) => PUBLIC_COURSE_CATEGORIES.has(course.category))
         setCourses([...formattedDbCourses, ...mockCourses])
       } catch (error) {
         console.error('Error fetching courses:', error)
@@ -140,11 +146,12 @@ const Courses = () => {
   }, [courses, searchQuery, selectedCategory, selectedLevel, sortBy])
 
   const handleCategoryChange = (category) => {
-    setSelectedCategory(category)
-    if (category === 'all') {
+    const normalizedCategory = normalizeCategoryId(category) || 'all'
+    setSelectedCategory(normalizedCategory)
+    if (normalizedCategory === 'all') {
       searchParams.delete('category')
     } else {
-      searchParams.set('category', category)
+      searchParams.set('category', normalizedCategory)
     }
     setSearchParams(searchParams)
   }
@@ -168,8 +175,8 @@ const Courses = () => {
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">{t('courses.title')}</h1>
             <p className="text-xl text-white font-semibold">
               {language === 'ar'
-                ? 'اكتشف دوراتنا المتميزة في الأسواق المالية والبرمجة وتقنية المعلومات'
-                : 'Discover our premium courses in Financial Markets, Programming, and IT'
+                ? 'اكتشف دوراتنا في الأسواق المالية وتحليل البيانات وتكنولوجيا المعلومات'
+                : 'Discover our courses in Financial Markets, Data Analysis, and IT'
               }
             </p>
           </div>

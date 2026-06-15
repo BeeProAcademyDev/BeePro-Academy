@@ -26,10 +26,9 @@ const Footer = () => {
   ]
 
   const categories = [
-    { to: '/courses?category=programming', label: t('home.categories.programming') },
-    { to: '/courses?category=design', label: t('home.categories.design') },
-    { to: '/courses?category=it', label: t('home.categories.it') },
-    { to: '/courses?category=finance', label: t('home.categories.finance') },
+    { to: '/courses?category=financial_markets', label: language === 'ar' ? 'الأسواق المالية' : 'Financial Markets' },
+    { to: '/courses?category=data_analysis', label: language === 'ar' ? 'تحليل البيانات' : 'Data Analysis' },
+    { to: '/courses?category=it', label: language === 'ar' ? 'تكنولوجيا المعلومات' : 'IT' },
   ]
 
   const socialLinks = [

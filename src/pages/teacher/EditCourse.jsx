@@ -24,7 +24,7 @@ const EditCourse = () => {
   const [courseData, setCourseData] = useState({
     title: '',
     description: '',
-    category: 'programming',
+    category: 'financial_markets',
     level: 'beginner',
     price: 0,
     thumbnail_url: '',
@@ -61,9 +61,9 @@ const EditCourse = () => {
   const [uploadedFiles, setUploadedFiles] = useState([])
 
   const categories = [
-    { value: 'programming', label: 'البرمجة', labelEn: 'Programming' },
-    { value: 'it', label: 'تكنولوجيا المعلومات', labelEn: 'IT' },
-    { value: 'financial_markets', label: 'الأسواق المالية', labelEn: 'Financial Markets' }
+    { value: 'financial_markets', label: 'الأسواق المالية', labelEn: 'Financial Markets' },
+    { value: 'data_analysis', label: 'تحليل البيانات', labelEn: 'Data Analysis' },
+    { value: 'it', label: 'تكنولوجيا المعلومات', labelEn: 'IT' }
   ]
 
   const levels = [
@@ -111,7 +111,7 @@ const EditCourse = () => {
       setCourseData({
         title: course.title || '',
         description: course.description || '',
-        category: course.category || 'programming',
+        category: categories.some((cat) => cat.value === course.category) ? course.category : 'financial_markets',
         level: course.level || 'beginner',
         price: course.price || 0,
         thumbnail_url: course.thumbnail_url || '',
