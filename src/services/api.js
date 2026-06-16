@@ -1,5 +1,5 @@
 import supabase from '../lib/supabase'
-import { isExternalGoogleMeet, getJitsiExternalUrl, normalizeMeetingRecord, resolveJitsiRoomName } from '../lib/jitsi'
+import { getMeetingJoinTarget, isExternalGoogleMeet, getJitsiExternalUrl, normalizeMeetingRecord, resolveJitsiRoomName } from '../lib/jitsi'
 
 function hasText(value) {
   return typeof value === 'string' && value.trim().length > 0
@@ -2025,6 +2025,10 @@ export const meetingService = {
       }
     }
 
+    if (meetingData.platform === 'google_meet' || isExternalGoogleMeet(data)) {
+      return normalizeMeetingRecord(data)
+    }
+
     return ensureMeetingJoinFields(data, meetingData.jitsi_room_name)
   },
 
@@ -2420,20 +2424,26 @@ export const notificationService = {
       const liveMeetings = (meetings || []).filter((meeting) => meeting.status === 'live')
 
       for (const meeting of liveMeetings) {
-        const roomName = resolveJitsiRoomName(meeting, courseId)
-        const jitsiUrl = roomName ? getJitsiExternalUrl(roomName) : ''
+        const joinTarget = getMeetingJoinTarget(meeting, courseId)
         const sessionLabel = meeting.title || 'Live session'
         const learnUrl = meeting.id
           ? `/courses/${courseId}/learn?session=${meeting.id}`
           : `/courses/${courseId}/learn?session=live`
+
+        const platformLabel = joinTarget?.type === 'external' ? 'Google Meet' : 'Jitsi'
+        const shareUrl = joinTarget?.type === 'external'
+          ? joinTarget.url
+          : joinTarget?.type === 'jitsi'
+            ? getJitsiExternalUrl(joinTarget.roomName)
+            : ''
 
         invites.push({
           id: `live-meeting-${meeting.id}`,
           user_id: queryUserId,
           course_id: courseId,
           title: `Live session invitation: ${sessionLabel}`,
-          message: jitsiUrl
-            ? `You are invited to a live session in "${courseTitle}".\n\nTap "Join session" to enter.\n\nJitsi link:\n${jitsiUrl}`
+          message: shareUrl
+            ? `You are invited to a live session in "${courseTitle}".\n\nTap "Join session" to enter.\n\n${platformLabel} link:\n${shareUrl}`
             : `You are invited to a live session in "${courseTitle}". Tap "Join session" to enter.`,
           type: 'meeting',
           action_url: learnUrl,

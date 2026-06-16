@@ -42,8 +42,10 @@ function hasText(value) {
 }
 
 export function isExternalGoogleMeet(meeting) {
-  if (!meeting?.meet_link || !hasText(meeting.meet_link)) return false
+  if (!meeting) return false
   if (meeting.platform === 'jitsi') return false
+  if (!hasText(meeting.meet_link)) return false
+  if (meeting.platform === 'google_meet') return true
   if (hasText(meeting.jitsi_room_name)) return false
   return true
 }
@@ -73,7 +75,12 @@ export function normalizeMeetingRecord(meeting) {
   if (!meeting) return meeting
 
   if (isExternalGoogleMeet(meeting)) {
-    return meeting
+    return {
+      ...meeting,
+      platform: 'google_meet',
+      meet_link: meeting.meet_link.trim(),
+      jitsi_room_name: null
+    }
   }
 
   const roomName = resolveJitsiRoomName(meeting)
@@ -122,6 +129,8 @@ export function pickJoinableMeeting(meetings = [], courseId = null) {
   const liveFirst = [...joinable].sort((a, b) => {
     if (a.status === 'live' && b.status !== 'live') return -1
     if (b.status === 'live' && a.status !== 'live') return 1
+    if (isExternalGoogleMeet(a) && !isExternalGoogleMeet(b)) return -1
+    if (isExternalGoogleMeet(b) && !isExternalGoogleMeet(a)) return 1
     return new Date(b.scheduled_at || 0) - new Date(a.scheduled_at || 0)
   })
 

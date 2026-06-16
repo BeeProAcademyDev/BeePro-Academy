@@ -5,10 +5,23 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { notificationService } from '../../services/api'
 import supabase from '../../lib/supabase'
+import { isValidGoogleMeetLink } from '../../lib/meetLinks'
 
-const extractJitsiUrl = (message = '') => {
-  const match = message.match(/https:\/\/[^\s]+/i)
-  return match?.[0] || null
+const extractMeetingUrl = (message = '') => {
+  const match = message.match(/https:\/\/[^\s]+/gi)
+  if (!match?.length) return null
+
+  const googleMeet = match.find((url) => isValidGoogleMeetLink(url))
+  if (googleMeet) return googleMeet
+
+  return match[0]
+}
+
+const getMeetingLinkLabel = (url, isAr) => {
+  if (url && isValidGoogleMeetLink(url)) {
+    return isAr ? 'رابط Google Meet' : 'Google Meet link'
+  }
+  return isAr ? 'رابط Jitsi' : 'Jitsi link'
 }
 
 const getJoinPath = (notification) => {
@@ -171,31 +184,46 @@ const StudentNotificationsBell = () => {
 
   const handleJoin = async (notification) => {
     const joinPath = getJoinPath(notification)
-    if (!joinPath) return
+    const meetingUrl = extractMeetingUrl(notification.message)
+    const isGoogleMeet = meetingUrl && isValidGoogleMeetLink(meetingUrl)
 
-    const isSynthetic = String(notification.id || '').startsWith('live-meeting-')
+    const markRead = async () => {
+      const isSynthetic = String(notification.id || '').startsWith('live-meeting-')
 
-    if (!isSynthetic) {
-      try {
-        await notificationService.markAsRead(notification.id)
+      if (!isSynthetic) {
+        try {
+          await notificationService.markAsRead(notification.id)
+          setNotifications((prev) =>
+            prev.map((item) =>
+              item.id === notification.id ? { ...item, is_read: true } : item
+            )
+          )
+          setUnreadCount((prev) => Math.max(0, prev - (notification.is_read ? 0 : 1)))
+        } catch (err) {
+          console.error('Failed to mark notification as read:', err)
+        }
+      } else {
+        knownIdsRef.current.add(notification.id)
         setNotifications((prev) =>
           prev.map((item) =>
             item.id === notification.id ? { ...item, is_read: true } : item
           )
         )
-        setUnreadCount((prev) => Math.max(0, prev - (notification.is_read ? 0 : 1)))
-      } catch (err) {
-        console.error('Failed to mark notification as read:', err)
+        setUnreadCount((prev) => Math.max(0, prev - 1))
       }
-    } else {
-      knownIdsRef.current.add(notification.id)
-      setNotifications((prev) =>
-        prev.map((item) =>
-          item.id === notification.id ? { ...item, is_read: true } : item
-        )
-      )
-      setUnreadCount((prev) => Math.max(0, prev - 1))
     }
+
+    if (isGoogleMeet) {
+      await markRead()
+      setRecentAlert(null)
+      setOpen(false)
+      window.open(meetingUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+
+    if (!joinPath) return
+
+    await markRead()
 
     setRecentAlert(null)
     setOpen(false)
@@ -203,9 +231,6 @@ const StudentNotificationsBell = () => {
   }
 
   if (!isAuthenticated || !user?.id) {
-    // #region agent log
-    fetch('http://127.0.0.1:7427/ingest/558f5932-6500-4722-9bbf-9e5e1306baf3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'45e2a3'},body:JSON.stringify({sessionId:'45e2a3',location:'StudentNotificationsBell.jsx:visibility',message:'notifications bell hidden',data:{isAuthenticated,hasUserId:!!user?.id},hypothesisId:'G',timestamp:Date.now(),runId:'pre-fix'})}).catch(()=>{});
-    // #endregion
     return null
   }
 
@@ -267,7 +292,9 @@ const StudentNotificationsBell = () => {
                 onClick={() => handleJoin(recentAlert)}
               >
                 <FiVideo className="w-4 h-4" />
-                {isAr ? 'دخول الجلسة الآن' : 'Join session now'}
+                {extractMeetingUrl(recentAlert.message) && isValidGoogleMeetLink(extractMeetingUrl(recentAlert.message))
+                  ? (isAr ? 'فتح Google Meet' : 'Open Google Meet')
+                  : (isAr ? 'دخول الجلسة الآن' : 'Join session now')}
               </button>
             )}
           </div>
@@ -301,8 +328,9 @@ const StudentNotificationsBell = () => {
             ) : (
               notifications.map((notification) => {
                 const joinPath = getJoinPath(notification)
-                const jitsiUrl = extractJitsiUrl(notification.message)
+                const meetingUrl = extractMeetingUrl(notification.message)
                 const isLiveNow = notification._source === 'live_meeting'
+                const isGoogleMeet = meetingUrl && isValidGoogleMeetLink(meetingUrl)
 
                 return (
                   <div
@@ -330,12 +358,14 @@ const StudentNotificationsBell = () => {
                           onClick={() => handleJoin(notification)}
                         >
                           <FiVideo className="w-4 h-4" />
-                          {isAr ? 'دخول الجلسة' : 'Join session'}
+                          {isGoogleMeet
+                            ? (isAr ? 'فتح Google Meet' : 'Open Google Meet')
+                            : (isAr ? 'دخول الجلسة' : 'Join session')}
                         </button>
                       )}
-                      {jitsiUrl && (
+                      {meetingUrl && (
                         <a
-                          href={jitsiUrl}
+                          href={meetingUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-outline btn-sm inline-flex items-center gap-1"
@@ -345,7 +375,7 @@ const StudentNotificationsBell = () => {
                             }
                           }}
                         >
-                          {isAr ? 'رابط Jitsi' : 'Jitsi link'}
+                          {getMeetingLinkLabel(meetingUrl, isAr)}
                         </a>
                       )}
                     </div>
