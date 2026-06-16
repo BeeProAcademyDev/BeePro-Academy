@@ -731,7 +731,7 @@ const LandingFooter = () => {
           {/* About BeePro-Academy */}
           <div className="footer-section">
             <div className="landing-footer-logo">
-              <img src="/assets/platform-logo.jpg" alt="BeePro Academy" />
+              <img src="/assets/platform-logo.png" alt="BeePro Academy" />
               <span>BeePro Academy</span>
             </div>
             <h3>About BeePro-Academy</h3>
@@ -784,7 +784,7 @@ const LandingFooter = () => {
           <div className="footer-bottom-content">
             <div className="footer-brand">
               <div className="footer-brand-logo">
-                <img src="/assets/platform-logo.jpg" alt="BeePro Academy" />
+                <img src="/assets/platform-logo.png" alt="BeePro Academy" />
                 <h2>BEEPRO-ACADEMY</h2>
               </div>
               <p>© 2024 BeePro-Academy. All rights reserved.</p>
@@ -798,7 +798,7 @@ const LandingFooter = () => {
           
           <div className="footer-credits">
             <p>Powered by Advanced Financial Education Technology</p>
-            <p>Platform Administrators: Abdullah Kofiyh & Abdullah Babrouk | Lead Instructor: Mohammed</p>
+            <p>Platform Administrators: Abdullah Kofiyh & Abdullah Babrouk | Lead Instructor: Ahmed Mohamed</p>
           </div>
         </div>
       </div>

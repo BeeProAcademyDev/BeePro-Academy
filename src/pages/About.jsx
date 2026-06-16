@@ -9,7 +9,7 @@ const About = () => {
 
   const teamMembers = [
     {
-      name: 'Mohammed',
+      name: 'Ahmed Mohamed',
       title: language === 'ar'
         ? 'محلل أسهم وعملات رقمية مستقل / مدير محافظ'
         : 'Independent Stock & Crypto Analyst / Portfolio Manager',
@@ -23,7 +23,7 @@ const About = () => {
     {
       name: 'Abdullah Kofiyh',
       title: language === 'ar' ? 'الرئيس التنفيذي ومدير المنصة' : 'CEO & Platform Administrator',
-      badge: language === 'ar' ? 'قائد شاب - 30 عام' : 'Young Leader - 30 years',
+      badge: language === 'ar' ? 'الرئيس التنفيذي' : 'CEO',
       avatar: '/assets/abdullah1.jpg',
       isImage: true,
       about: language === 'ar'
@@ -33,7 +33,7 @@ const About = () => {
     {
       name: 'Abdullah Babrouk',
       title: language === 'ar' ? 'مدير التسويق والعلاقات العامة' : 'Chief Marketing & Public Relations Officer',
-      badge: language === 'ar' ? 'قائد تسويق شاب - 30 عام' : 'Young Marketing Leader - 30 years',
+      badge: language === 'ar' ? 'مدير التسويق' : 'Marketing Director',
       avatar: '/assets/abdullah2.jpg',
       isImage: true,
       about: language === 'ar'

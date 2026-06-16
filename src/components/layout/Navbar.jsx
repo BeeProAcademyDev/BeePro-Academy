@@ -83,9 +83,9 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center shrink-0" aria-label="BeePro Academy">
             <img
-              src="/assets/platform-logo.jpg"
+              src="/assets/platform-logo.png"
               alt="BeePro Academy"
-              className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 rounded-2xl object-cover shadow-lg"
+              className="h-12 sm:h-14 md:h-[4.25rem] w-auto max-w-[220px] sm:max-w-[260px] md:max-w-[320px] object-contain object-left"
             />
           </Link>
 

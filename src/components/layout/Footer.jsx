@@ -48,9 +48,9 @@ const Footer = () => {
           <div className="lg:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
               <img
-                src="/assets/platform-logo.jpg"
+                src="/assets/platform-logo.png"
                 alt="BeePro Academy"
-                className="w-10 h-10 rounded-xl object-cover"
+                className="h-10 w-auto max-w-[180px] object-contain object-left"
               />
               <span className="text-xl font-bold text-white">
                 BeePro Academy

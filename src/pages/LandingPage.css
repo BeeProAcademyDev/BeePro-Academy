@@ -2587,11 +2587,14 @@ html {
 
 .landing-footer-logo img,
 .footer-brand-logo img {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  object-fit: cover;
-  box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.25), 0 10px 25px rgba(0, 0, 0, 0.25);
+  width: auto;
+  height: 52px;
+  max-width: 220px;
+  object-fit: contain;
+  object-position: left center;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 .landing-footer-logo span {

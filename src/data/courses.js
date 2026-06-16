@@ -41,7 +41,7 @@ export const courses = [
       id: '2',
       name: 'BeePro Academy',
       nameEn: 'BeePro Academy',
-      avatar: '/assets/platform-logo.jpg',
+      avatar: '/assets/platform-logo.png',
       title: 'Data Mentor',
       titleEn: 'Data Mentor'
     },

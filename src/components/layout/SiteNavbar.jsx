@@ -104,7 +104,7 @@ const SiteNavbar = ({ onAuthClick, hideTeacherSignup = false }) => {
     <nav className={`site-navbar top-navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="nav-logo">
         <Link to="/" className="nav-logo-link">
-          <img src="/assets/platform-logo.jpg" alt="BeePro Academy" className="nav-logo-img" />
+          <img src="/assets/platform-logo.png" alt="BeePro Academy" className="nav-logo-img" />
         </Link>
       </div>
 

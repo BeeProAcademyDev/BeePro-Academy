@@ -24,28 +24,46 @@
 
 .site-navbar .nav-logo {
   flex-shrink: 0;
+  min-width: 0;
+  max-width: min(340px, 42vw);
 }
 
 .site-navbar .nav-logo-link {
   text-decoration: none;
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  max-width: 100%;
 }
 
 .site-navbar .nav-logo-img {
-  width: 112px;
-  height: 112px;
-  border-radius: 18px;
-  object-fit: cover;
-  box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.24), 0 10px 24px rgba(0, 0, 0, 0.26);
-  transition: width 0.3s ease, height 0.3s ease, border-radius 0.3s ease;
+  display: block;
+  height: 62px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  transition: height 0.3s ease;
 }
 
 .site-navbar.scrolled .nav-logo-img {
-  width: 92px;
-  height: 92px;
-  border-radius: 16px;
+  height: 54px;
+}
+
+@media (min-width: 1200px) {
+  .site-navbar .nav-logo {
+    max-width: 360px;
+  }
+
+  .site-navbar .nav-logo-img {
+    height: 72px;
+  }
+
+  .site-navbar.scrolled .nav-logo-img {
+    height: 60px;
+  }
 }
 
 .site-navbar .nav-logo span,
@@ -397,16 +415,16 @@
     height: 90px;
   }
 
+  .site-navbar .nav-logo {
+    max-width: min(280px, 58vw);
+  }
+
   .site-navbar .nav-logo-img {
-    width: 92px;
-    height: 92px;
-    border-radius: 16px;
+    height: 48px;
   }
 
   .site-navbar.scrolled .nav-logo-img {
-    width: 82px;
-    height: 82px;
-    border-radius: 15px;
+    height: 44px;
   }
 
   .site-navbar .nav-links {
@@ -456,16 +474,16 @@
     display: none;
   }
 
+  .site-navbar .nav-logo {
+    max-width: min(240px, 62vw);
+  }
+
   .site-navbar .nav-logo-img {
-    width: 82px;
-    height: 82px;
-    border-radius: 14px;
+    height: 42px;
   }
 
   .site-navbar.scrolled .nav-logo-img {
-    width: 76px;
-    height: 76px;
-    border-radius: 13px;
+    height: 38px;
   }
 
   .site-navbar .nav-mobile-toggle {
@@ -508,15 +526,16 @@
     height: 74px;
   }
 
+  .site-navbar .nav-logo {
+    max-width: min(210px, 68vw);
+  }
+
   .site-navbar .nav-logo-img {
-    width: 70px;
-    height: 70px;
-    border-radius: 12px;
+    height: 36px;
   }
 
   .site-navbar.scrolled .nav-logo-img {
-    width: 66px;
-    height: 66px;
+    height: 34px;
   }
 
   .site-navbar .nav-links,

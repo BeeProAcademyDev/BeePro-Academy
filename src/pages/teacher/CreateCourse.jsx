@@ -382,9 +382,11 @@ const CreateCourse = () => {
     setError(null)
 
     try {
+      const { google_meet_link: _meetLinkField, ...coursePayload } = courseData
+
       // Create course (set as published so it appears in marketplace)
       const course = await courseService.createCourse({
-        ...courseData,
+        ...coursePayload,
         instructor_id: user?.id,
         is_published: true
       })
