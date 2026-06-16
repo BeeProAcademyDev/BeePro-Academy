@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { trackEvent } from '../lib/analytics';
-import { normalizeSignupAccountType } from '../lib/roles';
 import { formatErrorMessage } from '../lib/supabaseErrors';
 import SiteNavbar from '../components/layout/SiteNavbar';
 import {
@@ -808,11 +807,10 @@ const LandingFooter = () => {
 };
 
 // Auth Modal Component
-const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType = 'student', redirectTo = '/dashboard' }) => {
+const AuthModal = ({ isOpen, onClose, initialTab = 'login', redirectTo = '/dashboard' }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [accountType, setAccountType] = useState('student');
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({ name: '', phone: '', email: '', password: '', confirmPassword: '' });
   const [isLoading, setIsLoading] = useState(false);
@@ -824,14 +822,13 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       setActiveTab(initialTab);
-      setAccountType(normalizeSignupAccountType(initialAccountType));
       setError('');
       setSuccess('');
     } else {
       document.body.style.overflow = '';
     }
     return () => { document.body.style.overflow = ''; };
-  }, [isOpen, initialTab, initialAccountType]);
+  }, [isOpen, initialTab]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -883,7 +880,7 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
         password: registerData.password,
         fullName: registerData.name,
         phone: registerData.phone,
-        role: accountType
+        role: 'student'
       });
       
       if (result.success) {
@@ -899,7 +896,7 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
               : 'Instructor application submitted. An admin must approve your account before you can teach.'
           );
         } else {
-          trackEvent('sign_up', { method: 'email', account_type: accountType });
+          trackEvent('sign_up', { method: 'email', account_type: 'student' });
           setSuccess(
             emailNotice || 'Account created! Please check your email for verification or login now.'
           );
@@ -1043,36 +1040,6 @@ const AuthModal = ({ isOpen, onClose, initialTab = 'login', initialAccountType =
                   required
                 />
               </div>
-              <div className="form-group account-type">
-                <label>Account Type</label>
-                <div className="type-options">
-                  <div className="type-option">
-                    <input
-                      type="radio"
-                      id="account-student"
-                      name="accountType"
-                      checked={accountType === 'student'}
-                      onChange={() => setAccountType('student')}
-                    />
-                    <label htmlFor="account-student">Student</label>
-                  </div>
-                  <div className="type-option">
-                    <input
-                      type="radio"
-                      id="account-teacher"
-                      name="accountType"
-                      checked={accountType === 'teacher'}
-                      onChange={() => setAccountType('teacher')}
-                    />
-                    <label htmlFor="account-teacher">Teacher</label>
-                  </div>
-                </div>
-                {accountType === 'teacher' && (
-                  <p style={{ marginTop: '10px', fontSize: '0.85rem', color: '#b45309' }}>
-                    Teacher accounts require admin approval before you can create courses.
-                  </p>
-                )}
-              </div>
               <div className="form-group">
                 <label htmlFor="register-email">Email Address</label>
                 <input
@@ -1139,8 +1106,7 @@ const LandingPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [authModal, setAuthModal] = useState({
     isOpen: false,
-    tab: 'login',
-    accountType: 'student'
+    tab: 'login'
   });
 
   const rawRedirect = searchParams.get('redirect') || '/dashboard';
@@ -1151,21 +1117,19 @@ const LandingPage = () => {
   useEffect(() => {
     const authTab = searchParams.get('auth');
     if (authTab === 'login' || authTab === 'register') {
-      const role = searchParams.get('role');
       setAuthModal({
         isOpen: true,
-        tab: authTab,
-        accountType: role === 'teacher' ? 'teacher' : 'student'
+        tab: authTab
       });
     }
   }, [searchParams]);
 
-  const openAuthModal = (tab, accountType = 'student') => {
-    setAuthModal({ isOpen: true, tab, accountType });
+  const openAuthModal = (tab) => {
+    setAuthModal({ isOpen: true, tab });
   };
 
   const closeAuthModal = () => {
-    setAuthModal({ isOpen: false, tab: 'login', accountType: 'student' });
+    setAuthModal({ isOpen: false, tab: 'login' });
     const next = new URLSearchParams(searchParams);
     next.delete('auth');
     next.delete('role');
@@ -1174,7 +1138,7 @@ const LandingPage = () => {
 
   return (
     <div className="landing-page">
-      <SiteNavbar onAuthClick={openAuthModal} />
+      <SiteNavbar onAuthClick={openAuthModal} hideTeacherSignup />
       <HeroSection />
       <StatementsSection />
       <VisionMissionSection />
@@ -1188,7 +1152,6 @@ const LandingPage = () => {
         isOpen={authModal.isOpen}
         onClose={closeAuthModal}
         initialTab={authModal.tab}
-        initialAccountType={authModal.accountType}
         redirectTo={redirectTo}
       />
     </div>

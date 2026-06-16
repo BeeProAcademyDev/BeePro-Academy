@@ -11,9 +11,12 @@ import {
   generateJitsiRoomName,
   getCourseLiveRoomName,
   getJitsiExternalUrl,
+  isExternalGoogleMeet,
   isJitsiMeeting,
   resolveJitsiRoomName
 } from '../../lib/jitsi'
+import { googleCalendarService } from '../../lib/googleCalendar'
+import { isValidGoogleMeetLink, normalizeGoogleMeetLink } from '../../lib/meetLinks'
 import JitsiMeetingRoom from '../../components/jitsi/JitsiMeetingRoom'
 import {
   FiArrowLeft,
@@ -31,7 +34,8 @@ const defaultForm = {
   title: '',
   description: '',
   scheduled_at: '',
-  duration_minutes: 60
+  duration_minutes: 60,
+  manual_meet_link: ''
 }
 
 const TeacherLiveSession = () => {
@@ -54,25 +58,46 @@ const TeacherLiveSession = () => {
   const [success, setSuccess] = useState('')
   const [copyFeedback, setCopyFeedback] = useState('')
   const [activeSession, setActiveSession] = useState(null)
+  const [sessionPlatform, setSessionPlatform] = useState('jitsi')
+  const [googleMeetLinkMode, setGoogleMeetLinkMode] = useState('manual')
 
   const selectedCourse = useMemo(
     () => courses.find((course) => course.id === selectedCourseId) || null,
     [courses, selectedCourseId]
   )
 
-  const jitsiSessions = useMemo(
-    () => sessions.filter((session) => isJitsiMeeting(session)),
+  const liveSessions = useMemo(
+    () => sessions.filter((session) => isJitsiMeeting(session) || isExternalGoogleMeet(session) || session.platform === 'google_meet'),
     [sessions]
   )
 
-  const buildSessionLinks = (session, courseId = selectedCourseId) => {
-    const roomName = resolveJitsiRoomName(session, courseId)
-    const jitsiUrl = roomName ? getJitsiExternalUrl(roomName) : ''
+  const isGoogleMeetSession = (session) => (
+    isExternalGoogleMeet(session) || session?.platform === 'google_meet'
+  )
+
+  const buildSessionShareInfo = (session, courseId = selectedCourseId) => {
     const learnUrl = session?.id
       ? `/courses/${courseId}/learn?session=${session.id}`
       : `/courses/${courseId}/learn?session=live`
 
-    return { roomName, jitsiUrl, learnUrl }
+    if (isGoogleMeetSession(session) && session?.meet_link) {
+      return {
+        platform: 'google_meet',
+        shareUrl: session.meet_link,
+        learnUrl,
+        roomName: null
+      }
+    }
+
+    const roomName = resolveJitsiRoomName(session, courseId)
+    const jitsiUrl = roomName ? getJitsiExternalUrl(roomName) : ''
+
+    return {
+      platform: 'jitsi',
+      shareUrl: jitsiUrl,
+      learnUrl,
+      roomName
+    }
   }
 
   const copyText = async (text, label) => {
@@ -94,9 +119,13 @@ const TeacherLiveSession = () => {
       return null
     }
 
-    const { roomName, jitsiUrl, learnUrl } = buildSessionLinks(session)
-    if (!jitsiUrl) {
-      setError(isAr ? 'رابط Jitsi غير متاح' : 'Jitsi link is not available')
+    const shareInfo = buildSessionShareInfo(session)
+    if (!shareInfo.shareUrl) {
+      setError(
+        isAr
+          ? (shareInfo.platform === 'google_meet' ? 'رابط Google Meet غير متاح' : 'رابط Jitsi غير متاح')
+          : (shareInfo.platform === 'google_meet' ? 'Google Meet link is not available' : 'Jitsi link is not available')
+      )
       return null
     }
 
@@ -108,14 +137,15 @@ const TeacherLiveSession = () => {
 
     try {
       const sessionTitle = session.title || (isAr ? 'جلسة مباشرة' : 'Live session')
+      const platformLabel = shareInfo.platform === 'google_meet' ? 'Google Meet' : 'Jitsi'
       const notifyResult = await notificationService.notifyEligibleStudents({
         course_id: selectedCourseId,
         title: isAr ? `دعوة لجلسة مباشرة: ${sessionTitle}` : `Live session invitation: ${sessionTitle}`,
         message: isAr
-          ? `تمت دعوتك لجلسة مباشرة في "${selectedCourse?.title}".\n\nاضغط «دخول الجلسة» من الإشعار 🔔 للانضمام فوراً.\n\nرابط Jitsi:\n${jitsiUrl}`
-          : `You are invited to a live session in "${selectedCourse?.title}".\n\nTap "Join session" in the notification bell to enter.\n\nJitsi link:\n${jitsiUrl}`,
+          ? `تمت دعوتك لجلسة مباشرة في "${selectedCourse?.title}".\n\nاضغط «دخول الجلسة» من الإشعار 🔔 للانضمام فوراً.\n\nرابط ${platformLabel}:\n${shareInfo.shareUrl}`
+          : `You are invited to a live session in "${selectedCourse?.title}".\n\nTap "Join session" in the notification bell to enter.\n\n${platformLabel} link:\n${shareInfo.shareUrl}`,
         type: 'meeting',
-        action_url: learnUrl
+        action_url: shareInfo.learnUrl
       })
 
       if (!silent) {
@@ -132,8 +162,8 @@ const TeacherLiveSession = () => {
         } else {
           setSuccess(
             isAr
-              ? `تم إرسال رابط Jitsi إلى ${notifyResult.count} طالب/ة (${audienceText}).`
-              : `Jitsi link sent to ${notifyResult.count} student(s) ${audienceText}.`
+              ? `تم إرسال رابط ${platformLabel} إلى ${notifyResult.count} طالب/ة (${audienceText}).`
+              : `${platformLabel} link sent to ${notifyResult.count} student(s) ${audienceText}.`
           )
         }
       }
@@ -159,49 +189,111 @@ const TeacherLiveSession = () => {
 
     const sessionTitle = (titleOverride || form.title).trim() || (isAr ? 'جلسة مباشرة' : 'Live session')
     const scheduledAt = form.scheduled_at || new Date().toISOString().slice(0, 16)
+    const isManualGoogleMeet = sessionPlatform === 'google_meet' && googleMeetLinkMode === 'manual'
+
+    if (sessionPlatform === 'google_meet' && isManualGoogleMeet) {
+      const meetLink = normalizeGoogleMeetLink(form.manual_meet_link)
+      if (!isValidGoogleMeetLink(meetLink)) {
+        setError(
+          isAr
+            ? 'يرجى إدخال رابط Google Meet صالح (مثال: https://meet.google.com/abc-defg-hij)'
+            : 'Please enter a valid Google Meet link (e.g. https://meet.google.com/abc-defg-hij)'
+        )
+        return
+      }
+    } else if (sessionPlatform === 'google_meet' && googleMeetLinkMode === 'calendar') {
+      if (!sessionTitle || !scheduledAt) {
+        setError(isAr ? 'يرجى إدخال عنوان الجلسة والموعد' : 'Please enter session title and scheduled time')
+        return
+      }
+    }
 
     setSubmitting(true)
     setError('')
     setSuccess('')
 
     try {
-      const jitsiRoomName = getCourseLiveRoomName(selectedCourseId)
-        || generateJitsiRoomName(selectedCourse?.title || 'course', sessionTitle)
+      let meetingPayload
 
-      const meeting = await meetingService.createMeeting({
-        course_id: selectedCourseId,
-        created_by: user.id,
-        title: sessionTitle,
-        description: form.description.trim() || null,
-        scheduled_at: new Date(scheduledAt).toISOString(),
-        duration_minutes: Number(form.duration_minutes) || 60,
-        platform: 'jitsi',
-        jitsi_room_name: jitsiRoomName,
-        meet_link: null,
-        status: startNow ? 'live' : 'scheduled'
-      })
+      if (sessionPlatform === 'jitsi') {
+        const jitsiRoomName = getCourseLiveRoomName(selectedCourseId)
+          || generateJitsiRoomName(selectedCourse?.title || 'course', sessionTitle)
 
-      const resolvedMeeting = {
-        ...meeting,
-        jitsi_room_name: resolveJitsiRoomName(meeting, selectedCourseId)
+        meetingPayload = {
+          course_id: selectedCourseId,
+          created_by: user.id,
+          title: sessionTitle,
+          description: form.description.trim() || null,
+          scheduled_at: new Date(scheduledAt).toISOString(),
+          duration_minutes: Number(form.duration_minutes) || 60,
+          platform: 'jitsi',
+          jitsi_room_name: jitsiRoomName,
+          meet_link: null,
+          status: startNow ? 'live' : 'scheduled'
+        }
+      } else if (isManualGoogleMeet) {
+        const meetLink = normalizeGoogleMeetLink(form.manual_meet_link)
+        meetingPayload = {
+          course_id: selectedCourseId,
+          created_by: user.id,
+          title: sessionTitle,
+          description: form.description.trim() || null,
+          scheduled_at: new Date(scheduledAt).toISOString(),
+          duration_minutes: Number(form.duration_minutes) || 60,
+          platform: 'google_meet',
+          meet_link: meetLink,
+          jitsi_room_name: null,
+          status: startNow ? 'live' : 'scheduled'
+        }
+      } else {
+        const { meetLink, eventId } = await googleCalendarService.createGoogleMeetEvent({
+          title: sessionTitle,
+          description: form.description.trim() || '',
+          scheduledAt: scheduledAt,
+          durationMinutes: Number(form.duration_minutes) || 60
+        })
+
+        meetingPayload = {
+          course_id: selectedCourseId,
+          created_by: user.id,
+          title: sessionTitle,
+          description: form.description.trim() || null,
+          scheduled_at: new Date(scheduledAt).toISOString(),
+          duration_minutes: Number(form.duration_minutes) || 60,
+          platform: 'google_meet',
+          meet_link: meetLink,
+          calendar_event_id: eventId,
+          jitsi_room_name: null,
+          status: startNow ? 'live' : 'scheduled'
+        }
       }
 
+      const meeting = await meetingService.createMeeting(meetingPayload)
+
+      const resolvedMeeting = sessionPlatform === 'jitsi'
+        ? {
+            ...meeting,
+            jitsi_room_name: resolveJitsiRoomName(meeting, selectedCourseId)
+          }
+        : meeting
+
       const notifyResult = await sendSessionLinkToStudents(resolvedMeeting, { silent: true })
+      const platformLabel = sessionPlatform === 'google_meet' ? 'Google Meet' : 'Jitsi'
 
       setSuccess(
         (notifyResult?.count ?? 0) === 0
           ? (isAr
-              ? 'تم فتح الجلسة، لكن لم يُرسل إشعار لأي طالب. سيظهر للطلاب تنبيه الجلسة المباشرة تلقائياً عند فتح الصفحة.'
+              ? `تم فتح الجلسة، لكن لم يُرسل إشعار لأي طالب. سيظهر للطلاب تنبيه الجلسة المباشرة تلقائياً عند فتح الصفحة.`
               : 'Session opened, but no notification was sent. Students will still see a live session alert when they open the site.')
           : (isAr
-              ? `تم فتح الجلسة وإرسال رابط Jitsi إلى ${notifyResult.count} طالب/ة.`
-              : `Session opened and Jitsi link sent to ${notifyResult.count} student(s).`)
+              ? `تم فتح الجلسة وإرسال رابط ${platformLabel} إلى ${notifyResult.count} طالب/ة.`
+              : `Session opened and ${platformLabel} link sent to ${notifyResult.count} student(s).`)
       )
 
       setForm(defaultForm)
       setActiveSession(resolvedMeeting)
 
-      const refreshed = await meetingService.getMeetingsByCourse(selectedCourseId)
+      const refreshed = await meetingService.getMeetingsByCourse(selectedCourseId, { instructorView: true })
       setSessions(refreshed || [])
     } catch (err) {
       setError(err.message || (isAr ? 'فشل إنشاء الجلسة' : 'Failed to create session'))
@@ -259,7 +351,7 @@ const TeacherLiveSession = () => {
 
       setLoadingSessions(true)
       try {
-        const data = await meetingService.getMeetingsByCourse(selectedCourseId)
+        const data = await meetingService.getMeetingsByCourse(selectedCourseId, { instructorView: true })
         setSessions(data || [])
       } catch (err) {
         setError(err.message || (isAr ? 'تعذر تحميل الجلسات' : 'Failed to load sessions'))
@@ -287,31 +379,33 @@ const TeacherLiveSession = () => {
   }, [instantMode, loadingCourses, selectedCourseId, submitting, isAr])
 
   const renderShareLinkCard = (session, compact = false) => {
-    const links = buildSessionLinks(session)
-    if (!links.jitsiUrl) return null
+    const shareInfo = buildSessionShareInfo(session)
+    if (!shareInfo.shareUrl) return null
+
+    const platformLabel = shareInfo.platform === 'google_meet' ? 'Google Meet' : 'Jitsi'
 
     return (
       <div className={`rounded-lg border border-green-200 dark:border-green-800 bg-green-50/80 dark:bg-green-900/20 ${compact ? 'p-3' : 'p-4'} space-y-3`}>
         <p className="text-sm font-medium text-green-800 dark:text-green-200">
-          {isAr ? 'رابط Jitsi للطلاب' : 'Jitsi link for students'}
+          {isAr ? `رابط ${platformLabel} للطلاب` : `${platformLabel} link for students`}
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             readOnly
             className="input flex-1 text-sm bg-white dark:bg-dark-card"
-            value={links.jitsiUrl}
+            value={shareInfo.shareUrl}
           />
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className="btn btn-outline btn-sm inline-flex items-center gap-2"
-              onClick={() => copyText(links.jitsiUrl, isAr ? 'تم نسخ رابط Jitsi' : 'Jitsi link copied')}
+              onClick={() => copyText(shareInfo.shareUrl, isAr ? `تم نسخ رابط ${platformLabel}` : `${platformLabel} link copied`)}
             >
               <FiCopy className="w-4 h-4" />
               {isAr ? 'نسخ' : 'Copy'}
             </button>
             <a
-              href={links.jitsiUrl}
+              href={shareInfo.shareUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-outline btn-sm inline-flex items-center gap-2"
@@ -337,6 +431,82 @@ const TeacherLiveSession = () => {
     )
   }
 
+  const renderPlatformPicker = () => (
+    <div className="space-y-3">
+      <label className="label">{isAr ? 'منصة الجلسة' : 'Session platform'}</label>
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label={isAr ? 'منصة الجلسة' : 'Session platform'}>
+        <button
+          type="button"
+          className={`rounded-xl border-2 px-4 py-3 font-semibold transition ${
+            sessionPlatform === 'jitsi'
+              ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-200'
+              : 'border-secondary-200 dark:border-dark-border bg-secondary-50 dark:bg-dark-card'
+          }`}
+          onClick={() => setSessionPlatform('jitsi')}
+        >
+          🎥 Jitsi
+        </button>
+        <button
+          type="button"
+          className={`rounded-xl border-2 px-4 py-3 font-semibold transition ${
+            sessionPlatform === 'google_meet'
+              ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-200'
+              : 'border-secondary-200 dark:border-dark-border bg-secondary-50 dark:bg-dark-card'
+          }`}
+          onClick={() => setSessionPlatform('google_meet')}
+        >
+          📅 Google Meet
+        </button>
+      </div>
+
+      {sessionPlatform === 'google_meet' && (
+        <>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label={isAr ? 'مصدر رابط Google Meet' : 'Google Meet link source'}>
+            <button
+              type="button"
+              className={`rounded-xl border-2 px-3 py-2 text-sm font-medium transition ${
+                googleMeetLinkMode === 'manual'
+                  ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-200'
+                  : 'border-secondary-200 dark:border-dark-border bg-secondary-50 dark:bg-dark-card'
+              }`}
+              onClick={() => setGoogleMeetLinkMode('manual')}
+            >
+              {isAr ? 'رابط يدوي' : 'Manual link'}
+            </button>
+            <button
+              type="button"
+              className={`rounded-xl border-2 px-3 py-2 text-sm font-medium transition ${
+                googleMeetLinkMode === 'calendar'
+                  ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-200'
+                  : 'border-secondary-200 dark:border-dark-border bg-secondary-50 dark:bg-dark-card'
+              }`}
+              onClick={() => setGoogleMeetLinkMode('calendar')}
+            >
+              {isAr ? 'Google Calendar' : 'Google Calendar'}
+            </button>
+          </div>
+
+          {googleMeetLinkMode === 'manual' && (
+            <div>
+              <label className="label">{isAr ? 'رابط Google Meet' : 'Google Meet link'}</label>
+              <input
+                className="input"
+                value={form.manual_meet_link}
+                onChange={(e) => setForm((prev) => ({ ...prev, manual_meet_link: e.target.value }))}
+                placeholder="https://meet.google.com/abc-defg-hij"
+              />
+              <p className="text-xs text-secondary-500 mt-1">
+                {isAr
+                  ? 'الصق رابط Google Meet الذي أنشأته مسبقاً.'
+                  : 'Paste a Google Meet link you created beforehand.'}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+
   return (
     <div className="min-h-screen pt-20 pb-16 bg-secondary-50 dark:bg-dark-bg">
       <div className="container-custom max-w-5xl space-y-6">
@@ -347,12 +517,12 @@ const TeacherLiveSession = () => {
               {isAr ? 'العودة للوحة التحكم' : 'Back to dashboard'}
             </Link>
             <h1 className="text-2xl md:text-3xl font-bold">
-              {isAr ? 'جلسة Jitsi مباشرة' : 'Live Jitsi Session'}
+              {isAr ? 'جلسة مباشرة' : 'Live Session'}
             </h1>
             <p className="text-secondary-500 mt-1">
               {isAr
-                ? 'أنشئ جلسة، انسخ رابط Jitsi، وأرسله للطلاب الذين دفعوا وتم قبول دفعهم.'
-                : 'Create a session, copy the Jitsi link, and send it to students with approved payment.'}
+                ? 'أنشئ جلسة عبر Jitsi أو Google Meet، وشارك الرابط مع الطلاب الذين دفعوا وتم قبول دفعهم.'
+                : 'Create a session via Jitsi or Google Meet, and share the link with students who have approved payment.'}
             </p>
           </div>
         </div>
@@ -369,17 +539,43 @@ const TeacherLiveSession = () => {
           </div>
         )}
 
-        {activeSession?.jitsi_room_name && (
+        {activeSession && (
           <div className="card card-body space-y-4">
-            <h2 className="text-lg font-bold">{activeSession.title}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-bold">{activeSession.title}</h2>
+              <span className="text-xs font-medium px-2 py-1 rounded-full bg-secondary-100 dark:bg-dark-border">
+                {isGoogleMeetSession(activeSession) ? 'Google Meet' : 'Jitsi'}
+              </span>
+            </div>
             {renderShareLinkCard(activeSession)}
-            <JitsiMeetingRoom
-              roomName={activeSession.jitsi_room_name}
-              displayName={user?.full_name || user?.email || 'Instructor'}
-              isModerator
-              onClose={() => setActiveSession(null)}
-              language={language}
-            />
+            {isGoogleMeetSession(activeSession) ? (
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href={activeSession.meet_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary inline-flex items-center gap-2"
+                >
+                  <FiExternalLink className="w-4 h-4" />
+                  {isAr ? 'فتح Google Meet' : 'Open Google Meet'}
+                </a>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setActiveSession(null)}
+                >
+                  {isAr ? 'إغلاق' : 'Close'}
+                </button>
+              </div>
+            ) : activeSession.jitsi_room_name ? (
+              <JitsiMeetingRoom
+                roomName={activeSession.jitsi_room_name}
+                displayName={user?.full_name || user?.email || 'Instructor'}
+                isModerator
+                onClose={() => setActiveSession(null)}
+                language={language}
+              />
+            ) : null}
           </div>
         )}
 
@@ -421,15 +617,17 @@ const TeacherLiveSession = () => {
             <div className="card card-body space-y-4 border-2 border-green-200 dark:border-green-800">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <FiVideo className="w-5 h-5 text-green-500" />
-                {isAr ? 'بدء Jitsi ومشاركة الرابط' : 'Start Jitsi & share link'}
+                {isAr ? 'بدء جلسة ومشاركة الرابط' : 'Start session & share link'}
               </h2>
               <p className="text-sm text-secondary-500">
                 {isAr
-                  ? 'يفتح الجلسة، ينشئ رابط Jitsi، ويرسله تلقائياً للطلاب الذين دفعوا الكورس.'
-                  : 'Opens the session, creates a Jitsi link, and automatically sends it to paid students.'}
+                  ? 'اختر Jitsi أو Google Meet، ثم افتح الجلسة وأرسل الرابط تلقائياً للطلاب المؤهلين.'
+                  : 'Choose Jitsi or Google Meet, then open the session and automatically send the link to eligible students.'}
               </p>
 
-              {selectedCourseId && renderShareLinkCard({
+              {renderPlatformPicker()}
+
+              {sessionPlatform === 'jitsi' && selectedCourseId && renderShareLinkCard({
                 id: null,
                 title: isAr ? 'رابط الكورس المباشر' : 'Course live link',
                 jitsi_room_name: getCourseLiveRoomName(selectedCourseId),
@@ -446,15 +644,17 @@ const TeacherLiveSession = () => {
                   {submitting ? <FiLoader className="w-4 h-4 animate-spin" /> : <FiVideo className="w-4 h-4" />}
                   {isAr ? 'فتح جلسة وإرسال الرابط' : 'Open session & send link'}
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary inline-flex items-center gap-2"
-                  disabled={sendingLink}
-                  onClick={handleSendCourseLiveLink}
-                >
-                  {sendingLink ? <FiLoader className="w-4 h-4 animate-spin" /> : <FiSend className="w-4 h-4" />}
-                  {isAr ? 'إرسال الرابط فقط' : 'Send link only'}
-                </button>
+                {sessionPlatform === 'jitsi' && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary inline-flex items-center gap-2"
+                    disabled={sendingLink}
+                    onClick={handleSendCourseLiveLink}
+                  >
+                    {sendingLink ? <FiLoader className="w-4 h-4 animate-spin" /> : <FiSend className="w-4 h-4" />}
+                    {isAr ? 'إرسال الرابط فقط' : 'Send link only'}
+                  </button>
+                )}
               </div>
 
               <p className="text-sm text-secondary-500 flex items-center gap-2">
@@ -468,8 +668,10 @@ const TeacherLiveSession = () => {
             <div className="card card-body space-y-4">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <FiVideo className="w-5 h-5 text-green-500" />
-                {isAr ? 'جدولة جلسة Jitsi' : 'Schedule Jitsi session'}
+                {isAr ? 'جدولة جلسة' : 'Schedule session'}
               </h2>
+
+              {renderPlatformPicker()}
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
@@ -530,7 +732,7 @@ const TeacherLiveSession = () => {
 
             <div className="card card-body">
               <h2 className="text-lg font-bold mb-4">
-                {isAr ? 'جلسات Jitsi لهذا الكورس' : 'Jitsi sessions for this course'}
+                {isAr ? 'جلسات هذا الكورس' : 'Sessions for this course'}
               </h2>
 
               {loadingSessions ? (
@@ -538,14 +740,15 @@ const TeacherLiveSession = () => {
                   <FiLoader className="w-5 h-5 animate-spin" />
                   {isAr ? 'جاري التحميل...' : 'Loading...'}
                 </div>
-              ) : jitsiSessions.length === 0 ? (
+              ) : liveSessions.length === 0 ? (
                 <p className="text-secondary-500">
-                  {isAr ? 'لا توجد جلسات Jitsi بعد.' : 'No Jitsi sessions yet.'}
+                  {isAr ? 'لا توجد جلسات بعد.' : 'No sessions yet.'}
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {jitsiSessions.map((session) => {
-                    const links = buildSessionLinks(session)
+                  {liveSessions.map((session) => {
+                    const shareInfo = buildSessionShareInfo(session)
+                    const platformLabel = shareInfo.platform === 'google_meet' ? 'Google Meet' : 'Jitsi'
                     return (
                       <div
                         key={session.id}
@@ -553,7 +756,12 @@ const TeacherLiveSession = () => {
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <div className="font-semibold">{session.title}</div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="font-semibold">{session.title}</div>
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-secondary-100 dark:bg-dark-border">
+                                {platformLabel}
+                              </span>
+                            </div>
                             <div className="text-sm text-secondary-500 flex flex-wrap items-center gap-3 mt-1">
                               <span className="inline-flex items-center gap-1">
                                 <FiCalendar className="w-4 h-4" />
@@ -570,28 +778,32 @@ const TeacherLiveSession = () => {
                           <button
                             type="button"
                             className="btn btn-primary btn-sm inline-flex items-center gap-2"
-                            onClick={() => setActiveSession({
-                              ...session,
-                              jitsi_room_name: resolveJitsiRoomName(session, selectedCourseId)
-                            })}
+                            onClick={() => setActiveSession(
+                              isGoogleMeetSession(session)
+                                ? session
+                                : {
+                                    ...session,
+                                    jitsi_room_name: resolveJitsiRoomName(session, selectedCourseId)
+                                  }
+                            )}
                           >
                             <FiVideo className="w-4 h-4" />
                             {isAr ? 'بدء/انضمام' : 'Start / Join'}
                           </button>
                         </div>
 
-                        {links.jitsiUrl && (
+                        {shareInfo.shareUrl && (
                           <div className="flex flex-col sm:flex-row gap-2">
                             <input
                               readOnly
                               className="input flex-1 text-xs sm:text-sm"
-                              value={links.jitsiUrl}
+                              value={shareInfo.shareUrl}
                             />
                             <div className="flex flex-wrap gap-2">
                               <button
                                 type="button"
                                 className="btn btn-outline btn-sm inline-flex items-center gap-1"
-                                onClick={() => copyText(links.jitsiUrl, isAr ? 'تم النسخ' : 'Copied')}
+                                onClick={() => copyText(shareInfo.shareUrl, isAr ? 'تم النسخ' : 'Copied')}
                               >
                                 <FiCopy className="w-4 h-4" />
                                 {isAr ? 'نسخ' : 'Copy'}

@@ -24,7 +24,7 @@ import {
 } from 'react-icons/fi'
 import './SiteNavbar.css'
 
-const SiteNavbar = ({ onAuthClick }) => {
+const SiteNavbar = ({ onAuthClick, hideTeacherSignup = false }) => {
   const { t } = useTranslation()
   const { language, toggleLanguage, isRTL } = useLanguage()
   const { user, isAuthenticated, logout } = useAuth()
@@ -129,9 +129,11 @@ const SiteNavbar = ({ onAuthClick }) => {
 
         {mobileMenuOpen && !isAuthenticated && (
           <div className="nav-mobile-auth">
-            <button type="button" className="nav-teach-btn" onClick={() => handleAuthClick('register', 'teacher')}>
-              {language === 'ar' ? 'سجّل كمدرس' : 'Teach'}
-            </button>
+            {!hideTeacherSignup && (
+              <button type="button" className="nav-teach-btn" onClick={() => handleAuthClick('register', 'teacher')}>
+                {language === 'ar' ? 'سجّل كمدرس' : 'Teach'}
+              </button>
+            )}
             <button type="button" className="nav-login-btn" onClick={() => handleAuthClick('login')}>
               {t('nav.login')}
             </button>
@@ -214,9 +216,11 @@ const SiteNavbar = ({ onAuthClick }) => {
           </>
         ) : (
           <div className="nav-auth hidden md:flex">
-            <button type="button" className="nav-teach-btn" onClick={() => handleAuthClick('register', 'teacher')}>
-              {language === 'ar' ? 'سجّل كمدرس' : 'Teach'}
-            </button>
+            {!hideTeacherSignup && (
+              <button type="button" className="nav-teach-btn" onClick={() => handleAuthClick('register', 'teacher')}>
+                {language === 'ar' ? 'سجّل كمدرس' : 'Teach'}
+              </button>
+            )}
             <button type="button" className="nav-login-btn" onClick={() => handleAuthClick('login')}>
               {t('nav.login')}
             </button>
