@@ -44,6 +44,9 @@ const CourseCard = ({ course, variant = 'default' }) => {
 
   const levelBadge = getLevelBadge(course.level)
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight
+  const formattedPrice = course.price != null && String(course.price).startsWith('$')
+    ? course.price
+    : `$${course.price}`
 
   if (variant === 'horizontal') {
     return (
@@ -122,7 +125,7 @@ const CourseCard = ({ course, variant = 'default' }) => {
               ) : (
                 <div className="text-end">
                   <span className="text-lg font-bold text-primary-500">
-                    {course.price} {t('course.price')}
+                    {formattedPrice} {t('course.price')}
                   </span>
                   {course.originalPrice > course.price && (
                     <span className="text-sm text-secondary-400 line-through ms-2">
@@ -245,7 +248,7 @@ const CourseCard = ({ course, variant = 'default' }) => {
           ) : (
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-[#00D9FF]">
-                {course.price} {t('course.price')}
+                {formattedPrice} {t('course.price')}
               </span>
               {course.originalPrice > course.price && (
                 <span className="text-sm text-gray-500 line-through">

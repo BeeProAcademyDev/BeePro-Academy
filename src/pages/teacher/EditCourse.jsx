@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { courseService, lessonService, meetingService, notificationService } from '../../services/api'
 import { googleCalendarService } from '../../lib/googleCalendar'
 import { generateJitsiRoomName } from '../../lib/jitsi'
+import { isValidGoogleMeetLink, normalizeGoogleMeetLink } from '../../lib/meetLinks'
 import { requireOwner } from '../../lib/authGuards'
 import './CreateCourse.css'
 
@@ -29,8 +30,10 @@ const EditCourse = () => {
     price: 0,
     thumbnail_url: '',
     language: 'ar',
-    is_published: true
+    is_published: true,
+    google_meet_link: ''
   })
+  const [primaryGoogleMeetId, setPrimaryGoogleMeetId] = useState(null)
   
   // Lessons data
   const [lessons, setLessons] = useState([])
@@ -107,6 +110,12 @@ const EditCourse = () => {
         return
       }
 
+      // Get meetings
+      const courseMeetings = await meetingService.getMeetingsByCourse(id, { instructorView: true })
+      const primaryMeet = (courseMeetings || []).find(
+        (meeting) => meeting.platform === 'google_meet' && meeting.meet_link
+      )
+
       // Set course data
       setCourseData({
         title: course.title || '',
@@ -116,10 +125,11 @@ const EditCourse = () => {
         price: course.price || 0,
         thumbnail_url: course.thumbnail_url || '',
         language: course.language || 'ar',
-        is_published: course.is_published ?? true
+        is_published: course.is_published ?? true,
+        google_meet_link: primaryMeet?.meet_link || ''
       })
+      setPrimaryGoogleMeetId(primaryMeet?.id || null)
 
-      // Get lessons
       const courseLessons = await lessonService.getLessonsByCourse(id)
       setLessons(courseLessons.map(lesson => ({
         ...lesson,
@@ -127,8 +137,6 @@ const EditCourse = () => {
         files: lesson.files || []
       })))
 
-      // Get meetings
-      const courseMeetings = await meetingService.getMeetingsByCourse(id)
       setScheduledMeetings(courseMeetings.map(meeting => ({
         ...meeting,
         isExisting: true
@@ -435,6 +443,12 @@ const EditCourse = () => {
       return
     }
 
+    const courseMeetLink = normalizeGoogleMeetLink(courseData.google_meet_link)
+    if (courseData.google_meet_link?.trim() && !isValidGoogleMeetLink(courseMeetLink)) {
+      setError('رابط Google Meet غير صالح. استخدم رابطاً مثل https://meet.google.com/abc-defg-hij')
+      return
+    }
+
     setIsSaving(true)
     setError(null)
 
@@ -498,6 +512,30 @@ const EditCourse = () => {
           course_id: id,
           created_by: meeting.created_by
         })
+      }
+
+      if (courseMeetLink) {
+        if (primaryGoogleMeetId) {
+          await meetingService.updateMeeting(primaryGoogleMeetId, {
+            meet_link: courseMeetLink,
+            platform: 'google_meet',
+            title: `Google Meet - ${courseData.title}`,
+            description: 'رابط الجلسة المباشرة — متاح للطلاب بعد قبول الدفع'
+          })
+        } else {
+          const created = await meetingService.createMeeting({
+            course_id: id,
+            title: `Google Meet - ${courseData.title}`,
+            description: 'رابط الجلسة المباشرة — متاح للطلاب بعد قبول الدفع',
+            meet_link: courseMeetLink,
+            platform: 'google_meet',
+            scheduled_at: new Date().toISOString(),
+            duration_minutes: 60,
+            status: 'scheduled',
+            created_by: user?.id
+          })
+          setPrimaryGoogleMeetId(created?.id || null)
+        }
       }
 
       // Send notification to enrolled students about updates
@@ -660,7 +698,7 @@ const EditCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>السعر (جنيه)</label>
+                  <label>السعر (USD)</label>
                   <input
                     type="number"
                     name="price"
@@ -670,6 +708,21 @@ const EditCourse = () => {
                     className="form-control"
                   />
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label>رابط Google Meet (اختياري)</label>
+                <input
+                  type="url"
+                  name="google_meet_link"
+                  value={courseData.google_meet_link}
+                  onChange={handleCourseChange}
+                  placeholder="https://meet.google.com/abc-defg-hij"
+                  className="form-control"
+                />
+                <small className="form-hint">
+                  يظهر للطلاب بعد قبول الدفع فقط.
+                </small>
               </div>
 
               <div className="form-row">
@@ -1040,7 +1093,7 @@ const EditCourse = () => {
                     <div className="review-meta">
                       <span>📁 {categories.find(c => c.value === courseData.category)?.label}</span>
                       <span>📊 {levels.find(l => l.value === courseData.level)?.label}</span>
-                      <span>💰 {courseData.price} جنيه</span>
+                      <span>💰 ${courseData.price} USD</span>
                       <span className={`badge ${courseData.is_published ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
                         {courseData.is_published ? 'منشور' : 'مسودة'}
                       </span>

@@ -2031,48 +2031,49 @@ export const meetingService = {
   ensureMeetingJoinFields,
 
   // Get meetings for a course
-  async getMeetingsByCourse(courseId) {
+  async getMeetingsByCourse(courseId, { instructorView = false } = {}) {
     if (!isSupabaseAvailable()) {
       return []
     }
 
     const normalizeAll = (rows) => (rows || []).map(normalizeMeetingRecord)
 
+    if (instructorView) {
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('*')
+        .eq('course_id', courseId)
+        .order('scheduled_at', { ascending: true })
+
+      if (error) {
+        if (isMissingTableError(error)) {
+          warnMissingMeetingsTable()
+          return []
+        }
+        throw error
+      }
+
+      return normalizeAll(data)
+    }
+
     const { data: rpcData, error: rpcError } = await supabase.rpc(
       'get_course_meetings_for_student',
       { p_course_id: courseId }
     )
 
-    const { data, error } = await supabase
-      .from('meetings')
-      .select('*')
-      .eq('course_id', courseId)
-      .order('scheduled_at', { ascending: true })
-
-    if (error) {
-      if (isMissingTableError(error)) {
-        warnMissingMeetingsTable()
-        return []
-      }
-      if (!rpcData?.length) {
-        throw error
-      }
+    if (!rpcError && Array.isArray(rpcData)) {
+      return normalizeAll(rpcData)
     }
 
-    const merged = mergeMeetingRows(
-      Array.isArray(rpcData) ? rpcData : [],
-      Array.isArray(data) ? data : []
-    )
-
-    if (merged.length > 0) {
-      return normalizeAll(merged)
+    if (rpcError?.message?.includes('Access denied')) {
+      return []
     }
 
     if (rpcError && !rpcError.message?.includes('Could not find the function')) {
       console.warn('get_course_meetings_for_student RPC failed:', rpcError.message)
     }
 
-    return normalizeAll(data)
+    return []
   },
 
   // Get upcoming meetings for a user

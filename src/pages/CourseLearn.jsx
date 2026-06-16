@@ -43,8 +43,8 @@ const CourseLearn = () => {
     }
   }, [searchParams])
 
-  const loadMeetings = async (courseId) => {
-    const courseMeetings = await meetingService.getMeetingsByCourse(courseId)
+  const loadMeetings = async (courseId, options = {}) => {
+    const courseMeetings = await meetingService.getMeetingsByCourse(courseId, options)
     setMeetings(courseMeetings || [])
     return courseMeetings || []
   }
@@ -136,32 +136,32 @@ const CourseLearn = () => {
         setCourse(courseData)
 
         if (isTeacherOrAdmin || courseData.instructor_id === user.id) {
-          await loadMeetings(id)
+          await loadMeetings(id, { instructorView: true })
           setHasFullAccess(true)
           return
         }
 
         const enrolled = await enrollmentService.isEnrolled(id)
         const isPaidCourse = Number(courseData.price || 0) > 0
-        const hasApprovedPayment = isPaidCourse
-          ? await paymentService.hasApprovedPaymentForCourse(user.id, id)
-          : false
-        const hasCourseAccess = enrolled || hasApprovedPayment
+        const hasApprovedPayment = await paymentService.hasApprovedPaymentForCourse(user.id, id)
+        const hasCourseAccess = isPaidCourse
+          ? hasApprovedPayment
+          : (enrolled || hasApprovedPayment)
 
         if (!hasCourseAccess) {
           setAccessDeniedReason(
             language === 'ar'
               ? isPaidCourse
-                ? 'الجلسات المباشرة متاحة بعد قبول الدفع. الدردشة مع المدرس متاحة الآن.'
+                ? 'رابط Google Meet والجلسات المباشرة متاحة بعد قبول الدفع فقط. الدردشة مع المدرس متاحة الآن.'
                 : 'الجلسات المباشرة للمسجّلين في الدورة. الدردشة مع المدرس متاحة الآن.'
               : isPaidCourse
-                ? 'Live sessions require approved payment. Chat with your instructor is available now.'
+                ? 'Google Meet and live sessions are available only after payment is approved. Chat with your instructor is available now.'
                 : 'Live sessions are for enrolled students. Chat with your instructor is available now.'
           )
           return
         }
 
-        await loadMeetings(id)
+        await loadMeetings(id, { instructorView: false })
         setHasFullAccess(true)
       } catch (err) {
         console.error('Failed to load learning page:', err)
@@ -307,10 +307,19 @@ const CourseLearn = () => {
       <button
         type="button"
         className="btn btn-primary inline-flex items-center gap-2"
-        onClick={() => openJitsiSession(meeting)}
+        onClick={() => {
+          if (canJoinMeet) {
+            window.open(joinTarget.url, '_blank', 'noopener,noreferrer')
+            return
+          }
+          openJitsiSession(meeting)
+        }}
+        disabled={!canJoinJitsi && !canJoinMeet}
       >
         <FiVideo className="w-4 h-4" />
-        {language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join live session'}
+        {canJoinMeet
+          ? (language === 'ar' ? 'انضم عبر Google Meet' : 'Join via Google Meet')
+          : (language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join live session')}
       </button>
     </div>
   )

@@ -392,7 +392,7 @@ const PaymentCheckout = () => {
             <h3 className="text-lg font-bold mb-3">{language === 'ar' ? 'ملخص الطلب' : 'Order Summary'}</h3>
             <div className="space-y-2 text-sm">
               <p><span className="font-medium">{language === 'ar' ? 'الدورة:' : 'Course:'}</span> {course.title}</p>
-              <p><span className="font-medium">{language === 'ar' ? 'السعر:' : 'Price:'}</span> ${course.price || 0}</p>
+              <p><span className="font-medium">{language === 'ar' ? 'السعر:' : 'Price:'}</span> ${course.price || 0} USD</p>
               <p><span className="font-medium">{language === 'ar' ? 'الحالة:' : 'Status:'}</span> {language === 'ar' ? 'بانتظار التحويل' : 'Awaiting payment proof'}</p>
             </div>
           </div>

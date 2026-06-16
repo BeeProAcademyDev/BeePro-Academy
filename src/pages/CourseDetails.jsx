@@ -35,6 +35,9 @@ const CourseDetails = () => {
   
   const course = courses.find(c => c.id === id)
   const lessons = courseLessons[id] || []
+  const formattedPrice = course?.price != null && String(course.price).startsWith('$')
+    ? course.price
+    : `$${course?.price ?? 0}`
   
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight
   
@@ -166,7 +169,7 @@ const CourseDetails = () => {
                     <div className="text-3xl font-bold text-green-500 mb-4">{t('course.free')}</div>
                   ) : (
                     <div className="flex items-center gap-3 mb-4">
-                      <span className="text-3xl font-bold">{course.price} {t('course.price')}</span>
+                      <span className="text-3xl font-bold">{formattedPrice} {t('course.price')}</span>
                       {course.originalPrice > course.price && (
                         <span className="text-xl text-secondary-400 line-through">{course.originalPrice}</span>
                       )}
@@ -233,7 +236,7 @@ const CourseDetails = () => {
               <span className="text-2xl font-bold text-green-500">{t('course.free')}</span>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold">{course.price} {t('course.price')}</span>
+                <span className="text-2xl font-bold">{formattedPrice} {t('course.price')}</span>
                 {course.originalPrice > course.price && (
                   <span className="text-sm text-secondary-400 line-through">{course.originalPrice}</span>
                 )}

@@ -81,7 +81,7 @@ const About = () => {
   ]
 
   return (
-    <div className="bepro-page pt-20">
+    <div className="bepro-page pb-16">
       {/* Hero Section */}
       <section className="py-20">
         <div className="bepro-container">
@@ -198,13 +198,13 @@ const About = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20">
+      <section className="py-16">
         <div className="bepro-container">
-          <div className="bepro-card-white text-center">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <div className="bepro-card text-center">
+            <h2 className="text-3xl font-bold text-white mb-4">
               {language === 'ar' ? 'ابدأ رحلتك معنا اليوم' : 'Start Your Journey With Us Today'}
             </h2>
-            <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
+            <p className="text-white/80 mb-8 max-w-2xl mx-auto">
               {language === 'ar'
                 ? 'انضم إلى آلاف الطلاب الذين يثقون في BeePro Academy لتحقيق أهدافهم المالية والمهنية.'
                 : 'Join thousands of students who trust BeePro Academy to achieve their financial and professional goals.'
@@ -215,7 +215,7 @@ const About = () => {
                 {language === 'ar' ? 'تصفح الدورات' : 'Browse Courses'}
                 <FiArrowRight className="w-5 h-5" />
               </Link>
-              <Link to="/contact" className="bepro-btn-secondary" style={{ color: '#009FFD', borderColor: '#009FFD' }}>
+              <Link to="/contact" className="bepro-btn-secondary">
                 {language === 'ar' ? 'تواصل معنا' : 'Contact Us'}
               </Link>
             </div>

@@ -7,8 +7,8 @@
 }
 
 .landing-page {
-  --landing-icon-purple: #a855f7;
-  --landing-icon-purple-dark: #7c3aed;
+  --landing-icon-purple: #ffffff;
+  --landing-icon-purple-dark: rgba(255, 255, 255, 0.9);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   background: #fff;
@@ -556,8 +556,8 @@
   margin-bottom: 25px;
   display: inline-block;
   animation: iconBounce 3s ease-in-out infinite;
-  color: var(--landing-icon-purple);
-  filter: drop-shadow(0 10px 30px rgba(168, 85, 247, 0.44));
+  color: #ffffff;
+  filter: drop-shadow(0 10px 30px rgba(255, 255, 255, 0.35));
 }
 
 @keyframes iconBounce {
@@ -906,7 +906,7 @@ html {
 
 .vision-mission-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(168, 85, 247, 0.48);
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 .vision-card {
@@ -920,8 +920,8 @@ html {
 .vm-card-icon {
   font-size: 2rem;
   margin-bottom: 14px;
-  color: var(--landing-icon-purple);
-  filter: drop-shadow(0 8px 20px rgba(168, 85, 247, 0.34));
+  color: #ffffff;
+  filter: drop-shadow(0 8px 20px rgba(255, 255, 255, 0.3));
 }
 
 .vm-card-labels h3 {
@@ -1135,8 +1135,8 @@ html {
   font-size: 3rem;
   margin-bottom: 20px;
   display: inline-block;
-  color: var(--landing-icon-purple);
-  filter: drop-shadow(0 8px 22px rgba(168, 85, 247, 0.3));
+  color: #ffffff;
+  filter: drop-shadow(0 8px 22px rgba(255, 255, 255, 0.28));
   animation: iconFloat 3s ease-in-out infinite;
 }
 
@@ -1285,10 +1285,7 @@ html {
 
 .feature-check {
   font-size: 1.5rem;
-  background: linear-gradient(135deg, var(--landing-icon-purple) 0%, var(--landing-icon-purple-dark) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ffffff;
 }
 
 /* ========== CONTACT SECTION ========== */
@@ -1467,8 +1464,8 @@ html {
 
 .contact-method-icon {
   font-size: 1.5rem;
-  color: var(--landing-icon-purple);
-  filter: drop-shadow(0 6px 16px rgba(168, 85, 247, 0.28));
+  color: #ffffff;
+  filter: drop-shadow(0 6px 16px rgba(255, 255, 255, 0.25));
 }
 
 .social-media-section {
@@ -1503,15 +1500,15 @@ html {
   text-decoration: none;
   transition: all 0.3s ease;
   font-size: 1.5rem;
-  color: var(--landing-icon-purple);
+  color: #ffffff;
 }
 
 .social-link:hover {
-  background: linear-gradient(135deg, var(--landing-icon-purple) 0%, var(--landing-icon-purple-dark) 100%);
+  background: rgba(255, 255, 255, 0.2);
   color: #fff;
-  border-color: transparent;
+  border-color: rgba(255, 255, 255, 0.5);
   transform: translateY(-5px) scale(1.1);
-  box-shadow: 0 10px 30px rgba(168, 85, 247, 0.38);
+  box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
 }
 
 /* ========== AUTH MODAL ========== */
@@ -2646,7 +2643,7 @@ html {
 }
 
 .footer-links a svg {
-  color: var(--landing-icon-purple);
+  color: #ffffff;
 }
 
 .footer-features {
@@ -2663,7 +2660,7 @@ html {
 }
 
 .footer-feature span {
-  color: var(--landing-icon-purple);
+  color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;

@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { courseService, lessonService, meetingService, notificationService } from '../../services/api'
 import { googleCalendarService } from '../../lib/googleCalendar'
 import { generateJitsiRoomName } from '../../lib/jitsi'
+import { isValidGoogleMeetLink, normalizeGoogleMeetLink } from '../../lib/meetLinks'
 import './CreateCourse.css'
 
 const CreateCourse = () => {
@@ -25,7 +26,8 @@ const CreateCourse = () => {
     level: 'beginner',
     price: 0,
     thumbnail_url: '',
-    language: 'ar'
+    language: 'ar',
+    google_meet_link: ''
   })
   
   // Lessons data
@@ -46,8 +48,10 @@ const CreateCourse = () => {
     title: '',
     description: '',
     scheduled_at: '',
-    duration_minutes: 60
+    duration_minutes: 60,
+    manual_meet_link: ''
   })
+  const [googleMeetLinkMode, setGoogleMeetLinkMode] = useState('manual')
   const [scheduledMeetings, setScheduledMeetings] = useState([])
   
   // File uploads
@@ -265,8 +269,15 @@ const CreateCourse = () => {
   }
 
   const createMeetingSession = async () => {
-    if (!meetingData.title || !meetingData.scheduled_at) {
+    const isManualGoogleMeet = meetingPlatform === 'google_meet' && googleMeetLinkMode === 'manual'
+
+    if (!isManualGoogleMeet && (!meetingData.title || !meetingData.scheduled_at)) {
       setError('يرجى إدخال عنوان الاجتماع والوقت')
+      return
+    }
+
+    if (isManualGoogleMeet && !meetingData.manual_meet_link?.trim()) {
+      setError('يرجى إدخال رابط Google Meet')
       return
     }
 
@@ -281,6 +292,23 @@ const CreateCourse = () => {
           platform: 'jitsi',
           jitsi_room_name: jitsiRoomName,
           meet_link: null,
+          created_by: user?.id,
+          created_at: new Date().toISOString()
+        }
+      } else if (googleMeetLinkMode === 'manual') {
+        const meetLink = normalizeGoogleMeetLink(meetingData.manual_meet_link)
+        if (!isValidGoogleMeetLink(meetLink)) {
+          setError('يرجى إدخال رابط Google Meet صالح (مثال: https://meet.google.com/abc-defg-hij)')
+          setIsLoading(false)
+          return
+        }
+
+        meeting = {
+          ...meetingData,
+          title: meetingData.title || 'جلسة Google Meet',
+          scheduled_at: meetingData.scheduled_at || new Date().toISOString(),
+          platform: 'google_meet',
+          meet_link: meetLink,
           created_by: user?.id,
           created_at: new Date().toISOString()
         }
@@ -308,12 +336,15 @@ const CreateCourse = () => {
         title: '',
         description: '',
         scheduled_at: '',
-        duration_minutes: 60
+        duration_minutes: 60,
+        manual_meet_link: ''
       })
       setSuccess(
         meetingPlatform === 'jitsi'
           ? 'تم إنشاء جلسة Jitsi داخل المنصة بنجاح!'
-          : 'تم إنشاء جلسة Google Meet من Google Calendar بنجاح!'
+          : googleMeetLinkMode === 'manual'
+            ? 'تم إضافة رابط Google Meet بنجاح!'
+            : 'تم إنشاء جلسة Google Meet من Google Calendar بنجاح!'
       )
     } catch (err) {
       setError(err.message || (meetingPlatform === 'jitsi' ? 'فشل إنشاء جلسة Jitsi' : 'فشل إنشاء جلسة Google Meet'))
@@ -338,6 +369,12 @@ const CreateCourse = () => {
 
     if (lessons.length === 0) {
       setError('يرجى إضافة درس واحد على الأقل')
+      return
+    }
+
+    const courseMeetLink = normalizeGoogleMeetLink(courseData.google_meet_link)
+    if (courseData.google_meet_link?.trim() && !isValidGoogleMeetLink(courseMeetLink)) {
+      setError('رابط Google Meet غير صالح. استخدم رابطاً مثل https://meet.google.com/abc-defg-hij')
       return
     }
 
@@ -368,8 +405,22 @@ const CreateCourse = () => {
         })
       }
 
+      if (courseMeetLink) {
+        await meetingService.createMeeting({
+          course_id: course.id,
+          title: `Google Meet - ${courseData.title}`,
+          description: 'رابط الجلسة المباشرة — متاح للطلاب بعد قبول الدفع',
+          meet_link: courseMeetLink,
+          platform: 'google_meet',
+          scheduled_at: new Date().toISOString(),
+          duration_minutes: 60,
+          status: 'scheduled',
+          created_by: user?.id
+        })
+      }
+
       // Send notification to all enrolled students (if editing existing course)
-      if (scheduledMeetings.length > 0) {
+      if (scheduledMeetings.length > 0 || courseMeetLink) {
         await notificationService.notifyStudents({
           course_id: course.id,
           title: `جلسة جديدة: ${scheduledMeetings[0].title}`,
@@ -532,7 +583,7 @@ const CreateCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>السعر (جنيه)</label>
+                  <label>السعر (USD)</label>
                   <input
                     type="number"
                     name="price"
@@ -542,6 +593,21 @@ const CreateCourse = () => {
                     className="form-control"
                   />
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label>رابط Google Meet (اختياري)</label>
+                <input
+                  type="url"
+                  name="google_meet_link"
+                  value={courseData.google_meet_link}
+                  onChange={handleCourseChange}
+                  placeholder="https://meet.google.com/abc-defg-hij"
+                  className="form-control"
+                />
+                <small className="form-hint">
+                  يظهر للطلاب بعد قبول الدفع فقط. يمكنك أيضاً إضافة جلسات مجدولة من خطوة الدروس.
+                </small>
               </div>
 
               <div className="form-group">
@@ -863,7 +929,7 @@ const CreateCourse = () => {
                     <div className="review-meta">
                       <span>📁 {categories.find(c => c.value === courseData.category)?.label}</span>
                       <span>📊 {levels.find(l => l.value === courseData.level)?.label}</span>
-                      <span>💰 {courseData.price} جنيه</span>
+                      <span>💰 ${courseData.price} USD</span>
                     </div>
                   </div>
                 </div>
@@ -967,13 +1033,50 @@ const CreateCourse = () => {
               </div>
 
               {meetingPlatform === 'google_meet' && (
-                <div className="meeting-integration-note">
-                  سيتم إنشاء حدث في Google Calendar وإرجاع رابط Google Meet تلقائيًا. تأكد من ضبط
-                  <code> VITE_GOOGLE_CALENDAR_CLIENT_ID </code>
-                  في إعدادات المشروع.
-                </div>
+                <>
+                  <div className="meeting-platform-picker" role="group" aria-label="Google Meet link source">
+                    <button
+                      type="button"
+                      className={googleMeetLinkMode === 'manual' ? 'active' : ''}
+                      onClick={() => setGoogleMeetLinkMode('manual')}
+                    >
+                      🔗 لصق الرابط
+                    </button>
+                    <button
+                      type="button"
+                      className={googleMeetLinkMode === 'calendar' ? 'active' : ''}
+                      onClick={() => setGoogleMeetLinkMode('calendar')}
+                    >
+                      📅 Google Calendar
+                    </button>
+                  </div>
+
+                  {googleMeetLinkMode === 'calendar' ? (
+                    <div className="meeting-integration-note">
+                      سيتم إنشاء حدث في Google Calendar وإرجاع رابط Google Meet تلقائيًا. تأكد من ضبط
+                      <code> VITE_GOOGLE_CALENDAR_CLIENT_ID </code>
+                      في إعدادات المشروع.
+                    </div>
+                  ) : (
+                    <div className="form-group">
+                      <label>رابط Google Meet *</label>
+                      <input
+                        type="url"
+                        value={meetingData.manual_meet_link}
+                        onChange={e => setMeetingData(prev => ({ ...prev, manual_meet_link: e.target.value }))}
+                        placeholder="https://meet.google.com/abc-defg-hij"
+                        className="form-control"
+                      />
+                      <small className="form-hint">متاح للطلاب بعد قبول الدفع فقط.</small>
+                    </div>
+                  )}
+                </>
               )}
 
+              {meetingPlatform === 'jitsi' && null}
+
+              {!(meetingPlatform === 'google_meet' && googleMeetLinkMode === 'manual') && (
+              <>
               <div className="form-group">
                 <label>عنوان الجلسة *</label>
                 <input
@@ -1019,6 +1122,22 @@ const CreateCourse = () => {
                   />
                 </div>
               </div>
+              </>
+              )}
+
+              {meetingPlatform === 'google_meet' && googleMeetLinkMode === 'manual' && (
+              <div className="form-row">
+                <div className="form-group">
+                  <label>موعد الجلسة (اختياري)</label>
+                  <input
+                    type="datetime-local"
+                    value={meetingData.scheduled_at}
+                    onChange={e => setMeetingData(prev => ({ ...prev, scheduled_at: e.target.value }))}
+                    className="form-control"
+                  />
+                </div>
+              </div>
+              )}
             </div>
             <div className="modal-footer">
               <button 
@@ -1030,7 +1149,12 @@ const CreateCourse = () => {
               <button 
                 className="btn btn-meet"
                 onClick={createMeetingSession}
-                disabled={isLoading || !meetingData.title || !meetingData.scheduled_at}
+                disabled={
+                  isLoading
+                  || (meetingPlatform === 'google_meet' && googleMeetLinkMode === 'manual'
+                    ? !meetingData.manual_meet_link?.trim()
+                    : (!meetingData.title || !meetingData.scheduled_at))
+                }
               >
                 {isLoading ? 'جاري الإنشاء...' : (meetingPlatform === 'jitsi' ? '🎥 إنشاء جلسة Jitsi' : '📅 إنشاء الرابط')}
               </button>

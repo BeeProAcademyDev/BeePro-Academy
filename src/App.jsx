@@ -133,9 +133,9 @@ const PublicRoute = ({ children }) => {
 // Layout Component
 const Layout = ({ children, showFooter = true }) => {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={`min-h-screen flex flex-col ${showFooter ? '' : 'bg-[#000428]'}`}>
       <SiteNavbar />
-      <main className="flex-1 site-main-offset">{children}</main>
+      <main className="flex-1 site-main-offset flex flex-col">{children}</main>
       {showFooter && <Footer />}
     </div>
   )
