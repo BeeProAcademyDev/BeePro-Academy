@@ -2176,6 +2176,8 @@ html {
 
 /* ========== CHATBOT ========== */
 .chatbot-widget {
+  --chat-purple: #a855f7;
+  --chat-purple-dark: #7c3aed;
   position: fixed;
   bottom: 30px;
   right: 30px;
@@ -2186,7 +2188,7 @@ html {
   width: 65px;
   height: 65px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--landing-icon-purple) 0%, var(--landing-icon-purple-dark) 100%);
+  background: linear-gradient(135deg, var(--chat-purple) 0%, var(--chat-purple-dark) 100%);
   box-shadow: 0 5px 20px rgba(168, 85, 247, 0.4), 0 0 0 0 rgba(168, 85, 247, 0.4);
   cursor: pointer;
   display: flex;
@@ -2306,7 +2308,7 @@ html {
 }
 
 .chat-header {
-  background: linear-gradient(135deg, var(--landing-icon-purple) 0%, var(--landing-icon-purple-dark) 100%);
+  background: linear-gradient(135deg, var(--chat-purple) 0%, var(--chat-purple-dark) 100%);
   padding: 20px;
   color: white;
   display: flex;
@@ -2335,7 +2337,7 @@ html {
   height: 12px;
   background: #4CD964;
   border-radius: 50%;
-  border: 2px solid var(--landing-icon-purple);
+  border: 2px solid var(--chat-purple);
   animation: onlinePulse 2s infinite;
 }
 
@@ -2412,7 +2414,7 @@ html {
 
 .message.user {
   align-self: flex-end;
-  background: linear-gradient(135deg, var(--landing-icon-purple) 0%, var(--landing-icon-purple-dark) 100%);
+  background: linear-gradient(135deg, var(--chat-purple) 0%, var(--chat-purple-dark) 100%);
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -2484,7 +2486,7 @@ html {
 }
 
 .quick-reply svg {
-  color: var(--landing-icon-purple);
+  color: var(--chat-purple);
 }
 
 .quick-reply:hover svg {
@@ -2492,9 +2494,9 @@ html {
 }
 
 .quick-reply:hover {
-  background: var(--landing-icon-purple);
+  background: var(--chat-purple);
   color: white;
-  border-color: var(--landing-icon-purple);
+  border-color: var(--chat-purple);
   transform: translateY(-2px);
 }
 
@@ -2528,7 +2530,7 @@ html {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--landing-icon-purple) 0%, var(--landing-icon-purple-dark) 100%);
+  background: linear-gradient(135deg, var(--chat-purple) 0%, var(--chat-purple-dark) 100%);
   border: none;
   cursor: pointer;
   display: flex;

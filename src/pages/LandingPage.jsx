@@ -15,6 +15,7 @@ import {
   FiEdit3,
   FiEye,
   FiMail,
+  FiMapPin,
   FiMessageCircle,
   FiMonitor,
   FiPlayCircle,
@@ -560,6 +561,10 @@ const ContactSection = () => {
             <div className="contact-method">
               <span className="contact-method-icon"><FiMessageCircle /></span>
               <span>Live Chat Available</span>
+            </div>
+            <div className="contact-method">
+              <span className="contact-method-icon"><FiMapPin /></span>
+              <span>United Arab Emirates</span>
             </div>
           </div>
           

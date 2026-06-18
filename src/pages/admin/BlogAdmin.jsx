@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { blogService, courseService } from '../../services/api'
-import { FiCheckCircle, FiEdit3, FiLoader, FiPlus, FiRefreshCw, FiTrash2 } from 'react-icons/fi'
+import { generateArticleDraft, slugifyArticle } from '../../lib/articleAiGenerator'
+import ArticleSchedulePanel from './ArticleSchedulePanel'
+import { FiCheckCircle, FiEdit3, FiLoader, FiPlus, FiRefreshCw, FiTrash2, FiZap } from 'react-icons/fi'
 
 const emptyForm = {
   id: null,
@@ -20,17 +22,10 @@ const emptyForm = {
   status: 'draft'
 }
 
-const slugify = (value) => value
-  .toString()
-  .trim()
-  .toLowerCase()
-  .replace(/[\u064B-\u065F]/g, '')
-  .replace(/[^\p{L}\p{N}]+/gu, '-')
-  .replace(/^-+|-+$/g, '')
-
 const BlogAdmin = () => {
   const { language } = useLanguage()
   const { user } = useAuth()
+  const [activeTab, setActiveTab] = useState('editor')
   const [posts, setPosts] = useState([])
   const [courses, setCourses] = useState([])
   const [form, setForm] = useState(emptyForm)
@@ -41,6 +36,7 @@ const BlogAdmin = () => {
   const [error, setError] = useState('')
 
   const isEditing = Boolean(form.id)
+  const isAr = language === 'ar'
 
   const selectedCourse = useMemo(
     () => courses.find((course) => `${course.id}` === `${form.course_id}`),
@@ -59,7 +55,7 @@ const BlogAdmin = () => {
       setCourses(courseRows?.data || [])
     } catch (err) {
       console.error('Error loading blog admin data:', err)
-      setError(language === 'ar' ? 'تعذر تحميل بيانات المدونة.' : 'Could not load blog data.')
+      setError(isAr ? 'تعذر تحميل بيانات المدونة.' : 'Could not load blog data.')
     } finally {
       setIsLoading(false)
     }
@@ -73,7 +69,7 @@ const BlogAdmin = () => {
     setForm((current) => {
       const next = { ...current, [name]: value }
       if (name === 'title' && !current.slug) {
-        next.slug = slugify(value)
+        next.slug = slugifyArticle(value)
       }
       return next
     })
@@ -92,6 +88,7 @@ const BlogAdmin = () => {
       course_id: post.course_id || '',
       status: post.status || 'draft'
     })
+    setActiveTab('editor')
     setMessage('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -100,48 +97,28 @@ const BlogAdmin = () => {
     setIsGenerating(true)
     setMessage('')
 
-    const coursePool = selectedCourse ? [selectedCourse] : courses.slice(0, 4)
-    const primary = coursePool[0]
-    const titles = coursePool.map((course) => course.title).filter(Boolean).join('، ')
-    const category = primary?.category || form.category || 'education'
-    const title = primary
-      ? `كيف تبدأ رحلتك في ${primary.title} مع BeePro Academy`
-      : 'كيف تختار مسارك التعليمي القادم مع BeePro Academy'
-
-    const arabicBody = [
-      `اختيار المسار التعليمي المناسب يبدأ من فهم الهدف العملي من التعلم. في BeePro Academy نربط المحتوى بالممارسة حتى يتحول كل درس إلى خطوة قابلة للتطبيق.`,
-      primary
-        ? `كورس ${primary.title} يقدم مدخلاً منظماً للمهارات الأساسية، مع شرح يناسب مستوى ${primary.level || 'المتعلم'} ويمنح الطالب تصوراً واضحاً لما سيبنيه خلال الرحلة.`
-        : `تضم المنصة كورسات متعددة مثل ${titles || 'الأسواق المالية والبرمجة وتقنية المعلومات'}، وهذا يساعد الطالب على الانتقال من الفضول إلى خطة تعلم واضحة.`,
-      `قبل التسجيل، حدد المشكلة التي تريد حلها: هل تريد تطوير مهارة مهنية، فهم سوق معين، أو بناء مشروع تطبيقي؟ الإجابة ستجعل اختيار الكورس أسهل وتزيد من استفادتك.`,
-      `ننصح بأن تبدأ بالمفاهيم الأساسية، ثم تنتقل إلى التمارين، وبعدها توثق ما تعلمته في مشروع صغير أو ملخص عملي. هذا الأسلوب يجعل التعلم أعمق وأكثر ثباتاً.`
-    ].join('\n\n')
-
-    const englishBody = [
-      'Choosing the right learning path starts with understanding the practical outcome you want. BeePro Academy connects course content with applied practice so every lesson becomes a usable step.',
-      primary
-        ? `${primary.title} gives learners a structured way into the core skills, with a path that suits the ${primary.level || 'learner'} level and clarifies what they will build over time.`
-        : `The platform includes courses such as ${titles || 'financial markets, data analysis, and IT'}, helping learners turn curiosity into a clear plan.`,
-      'Before enrolling, define the problem you want to solve: a professional skill, a market you want to understand, or a practical project you want to build.',
-      'Start with fundamentals, move into practice, then document what you learned in a small project or applied summary. This makes learning deeper and easier to retain.'
-    ].join('\n\n')
+    const draft = generateArticleDraft({
+      course: selectedCourse,
+      courses,
+      category: form.category
+    })
 
     setForm((current) => ({
       ...current,
-      title: current.title || title,
-      title_en: current.title_en || (primary ? `How to Start Learning ${primary.title}` : 'How to Choose Your Next Learning Path'),
-      slug: current.slug || slugify(title),
-      excerpt: current.excerpt || 'دليل مختصر يساعد الطالب على اختيار الكورس المناسب وتحويل التعلم إلى خطوات عملية.',
-      excerpt_en: current.excerpt_en || 'A concise guide for choosing the right course and turning learning into practical steps.',
-      content: current.content || arabicBody,
-      content_en: current.content_en || englishBody,
-      category,
-      course_id: current.course_id || primary?.id || ''
+      title: current.title || draft.title,
+      title_en: current.title_en || draft.title_en,
+      slug: current.slug || draft.slug,
+      excerpt: current.excerpt || draft.excerpt,
+      excerpt_en: current.excerpt_en || draft.excerpt_en,
+      content: current.content || draft.content,
+      content_en: current.content_en || draft.content_en,
+      category: draft.category,
+      course_id: current.course_id || draft.course_id || ''
     }))
 
     setTimeout(() => {
       setIsGenerating(false)
-      setMessage(language === 'ar' ? 'تم توليد مسودة قابلة للتحرير.' : 'Editable draft generated.')
+      setMessage(isAr ? 'تم توليد مسودة قابلة للتحرير.' : 'Editable draft generated.')
     }, 250)
   }
 
@@ -154,7 +131,7 @@ const BlogAdmin = () => {
     try {
       const payload = {
         ...form,
-        slug: form.slug || slugify(form.title),
+        slug: form.slug || slugifyArticle(form.title),
         course_id: form.course_id || null,
         author_id: form.author_id || user?.id,
         published_at: form.status === 'published' ? form.published_at || new Date().toISOString() : null
@@ -169,24 +146,24 @@ const BlogAdmin = () => {
         return [saved, ...withoutSaved]
       })
       setForm({ ...emptyForm, ...saved, course_id: saved.course_id || '' })
-      setMessage(language === 'ar' ? 'تم حفظ المقال بنجاح.' : 'Post saved successfully.')
+      setMessage(isAr ? 'تم حفظ المقال بنجاح.' : 'Post saved successfully.')
     } catch (err) {
       console.error('Error saving blog post:', err)
-      setError(err?.message || (language === 'ar' ? 'تعذر حفظ المقال.' : 'Could not save post.'))
+      setError(err?.message || (isAr ? 'تعذر حفظ المقال.' : 'Could not save post.'))
     } finally {
       setIsSaving(false)
     }
   }
 
   const deletePost = async (postId) => {
-    if (!window.confirm(language === 'ar' ? 'هل تريد حذف هذا المقال؟' : 'Delete this post?')) return
+    if (!window.confirm(isAr ? 'هل تريد حذف هذا المقال؟' : 'Delete this post?')) return
 
     try {
       await blogService.deletePost(postId)
       setPosts((current) => current.filter((post) => post.id !== postId))
       if (form.id === postId) resetForm()
     } catch (err) {
-      setError(err?.message || (language === 'ar' ? 'تعذر حذف المقال.' : 'Could not delete post.'))
+      setError(err?.message || (isAr ? 'تعذر حذف المقال.' : 'Could not delete post.'))
     }
   }
 
@@ -196,155 +173,192 @@ const BlogAdmin = () => {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
           <div>
             <h1 className="text-4xl font-bold text-white mb-2">
-              {language === 'ar' ? 'إدارة المدونة' : 'Blog Management'}
+              {isAr ? 'إدارة المدونة' : 'Blog Management'}
             </h1>
             <p className="text-white/70">
-              {language === 'ar'
-                ? 'الأدمن فقط يمكنه إنشاء المقالات أو توليد مسودات من كورسات المنصة.'
-                : 'Only admins can create articles or generate course-based drafts.'}
+              {isAr
+                ? 'إنشاء المقالات يدوياً أو جدولة وكيل AI لكتابتها تلقائياً.'
+                : 'Create articles manually or schedule the AI agent to write them automatically.'}
             </p>
           </div>
           <Link to="/blogs" className="bepro-btn-secondary">
-            {language === 'ar' ? 'عرض المدونة' : 'View Blogs'}
+            {isAr ? 'عرض المدونة' : 'View Blogs'}
           </Link>
         </div>
 
-        {message && (
-          <div className="mb-6 bepro-card p-4 flex items-center gap-3 text-white">
-            <FiCheckCircle className="w-5 h-5 text-green-400" />
-            {message}
-          </div>
-        )}
-        {error && <div className="mb-6 bepro-card p-4 text-red-200">{error}</div>}
+        <div className="flex flex-wrap gap-2 mb-8">
+          <button
+            type="button"
+            onClick={() => setActiveTab('editor')}
+            className={`px-5 py-2.5 rounded-xl font-semibold transition-colors ${
+              activeTab === 'editor'
+                ? 'bg-[#00D9FF] text-[#000428]'
+                : 'bg-white/10 text-white hover:bg-white/20'
+            }`}
+          >
+            <span className="inline-flex items-center gap-2">
+              <FiEdit3 className="w-4 h-4" />
+              {isAr ? 'تحرير المقالات' : 'Article Editor'}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('schedule')}
+            className={`px-5 py-2.5 rounded-xl font-semibold transition-colors ${
+              activeTab === 'schedule'
+                ? 'bg-[#00D9FF] text-[#000428]'
+                : 'bg-white/10 text-white hover:bg-white/20'
+            }`}
+          >
+            <span className="inline-flex items-center gap-2">
+              <FiZap className="w-4 h-4" />
+              {isAr ? 'جدول AI Agent' : 'AI Agent Schedule'}
+            </span>
+          </button>
+        </div>
 
-        <div className="grid xl:grid-cols-[minmax(0,1fr)_420px] gap-8 items-start">
-          <form onSubmit={savePost} className="bepro-card p-6 space-y-5">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-bold text-white">
-                {isEditing
-                  ? (language === 'ar' ? 'تعديل مقال' : 'Edit Post')
-                  : (language === 'ar' ? 'مقال جديد' : 'New Post')}
-              </h2>
-              <button type="button" onClick={resetForm} className="bepro-btn-secondary">
-                <FiPlus className="w-5 h-5" />
-                {language === 'ar' ? 'جديد' : 'New'}
-              </button>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <label className="block">
-                <span className="text-white font-bold mb-2 block">العنوان</span>
-                <input required value={form.title} onChange={(e) => updateField('title', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
-              </label>
-              <label className="block">
-                <span className="text-white font-bold mb-2 block">English Title</span>
-                <input value={form.title_en} onChange={(e) => updateField('title_en', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
-              </label>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-4">
-              <label className="block">
-                <span className="text-white font-bold mb-2 block">Slug</span>
-                <input required value={form.slug} onChange={(e) => updateField('slug', slugify(e.target.value))} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
-              </label>
-              <label className="block">
-                <span className="text-white font-bold mb-2 block">{language === 'ar' ? 'التصنيف' : 'Category'}</span>
-                <input value={form.category} onChange={(e) => updateField('category', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
-              </label>
-              <label className="block">
-                <span className="text-white font-bold mb-2 block">{language === 'ar' ? 'الحالة' : 'Status'}</span>
-                <select value={form.status} onChange={(e) => updateField('status', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white">
-                  <option className="bg-[#000428]" value="draft">{language === 'ar' ? 'مسودة' : 'Draft'}</option>
-                  <option className="bg-[#000428]" value="published">{language === 'ar' ? 'منشور' : 'Published'}</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="grid md:grid-cols-[minmax(0,1fr)_auto] gap-4 items-end">
-              <label className="block">
-                <span className="text-white font-bold mb-2 block">{language === 'ar' ? 'الكورس المرتبط' : 'Related Course'}</span>
-                <select value={form.course_id} onChange={(e) => updateField('course_id', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white">
-                  <option className="bg-[#000428]" value="">{language === 'ar' ? 'بدون كورس محدد' : 'No specific course'}</option>
-                  {courses.map((course) => (
-                    <option className="bg-[#000428]" key={course.id} value={course.id}>{course.title}</option>
-                  ))}
-                </select>
-              </label>
-              <button type="button" onClick={generateDraft} disabled={isGenerating || courses.length === 0} className="bepro-btn-primary min-h-[48px]">
-                {isGenerating ? <FiLoader className="w-5 h-5 animate-spin" /> : <FiRefreshCw className="w-5 h-5" />}
-                {language === 'ar' ? 'توليد بالـ AI' : 'AI Draft'}
-              </button>
-            </div>
-
-            <label className="block">
-              <span className="text-white font-bold mb-2 block">{language === 'ar' ? 'رابط صورة الغلاف' : 'Cover Image URL'}</span>
-              <input value={form.cover_image_url || ''} onChange={(e) => updateField('cover_image_url', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
-            </label>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <label className="block">
-                <span className="text-white font-bold mb-2 block">{language === 'ar' ? 'ملخص عربي' : 'Arabic Excerpt'}</span>
-                <textarea rows="3" value={form.excerpt || ''} onChange={(e) => updateField('excerpt', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
-              </label>
-              <label className="block">
-                <span className="text-white font-bold mb-2 block">English Excerpt</span>
-                <textarea rows="3" value={form.excerpt_en || ''} onChange={(e) => updateField('excerpt_en', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
-              </label>
-            </div>
-
-            <label className="block">
-              <span className="text-white font-bold mb-2 block">{language === 'ar' ? 'المحتوى العربي' : 'Arabic Content'}</span>
-              <textarea required rows="10" value={form.content || ''} onChange={(e) => updateField('content', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white leading-7" />
-            </label>
-            <label className="block">
-              <span className="text-white font-bold mb-2 block">English Content</span>
-              <textarea rows="8" value={form.content_en || ''} onChange={(e) => updateField('content_en', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white leading-7" />
-            </label>
-
-            <button type="submit" disabled={isSaving} className="bepro-btn-primary w-full justify-center min-h-[50px]">
-              {isSaving ? <FiLoader className="w-5 h-5 animate-spin" /> : <FiEdit3 className="w-5 h-5" />}
-              {language === 'ar' ? 'حفظ المقال' : 'Save Post'}
-            </button>
-          </form>
-
-          <aside className="bepro-card p-5">
-            <h2 className="text-xl font-bold text-white mb-4">
-              {language === 'ar' ? 'كل المقالات' : 'All Posts'}
-            </h2>
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <FiLoader className="w-10 h-10 text-[#00D9FF] animate-spin" />
-              </div>
-            ) : posts.length === 0 ? (
-              <p className="text-white/70">{language === 'ar' ? 'لا توجد مقالات بعد.' : 'No posts yet.'}</p>
-            ) : (
-              <div className="space-y-3">
-                {posts.map((post) => (
-                  <div key={post.id} className="bg-white/10 border border-white/10 rounded-lg p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-white font-bold">{post.title}</h3>
-                        <p className="text-sm text-white/60 mt-1">
-                          {post.status === 'published'
-                            ? (language === 'ar' ? 'منشور' : 'Published')
-                            : (language === 'ar' ? 'مسودة' : 'Draft')}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => editPost(post)} className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Edit">
-                          <FiEdit3 className="w-4 h-4" />
-                        </button>
-                        <button type="button" onClick={() => deletePost(post.id)} className="p-2 rounded-lg bg-red-500/20 text-red-100 hover:bg-red-500/30" title="Delete">
-                          <FiTrash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+        {activeTab === 'schedule' ? (
+          <ArticleSchedulePanel courses={courses} onPostGenerated={loadData} />
+        ) : (
+          <>
+            {message && (
+              <div className="mb-6 bepro-card p-4 flex items-center gap-3 text-white">
+                <FiCheckCircle className="w-5 h-5 text-green-400" />
+                {message}
               </div>
             )}
-          </aside>
-        </div>
+            {error && <div className="mb-6 bepro-card p-4 text-red-200">{error}</div>}
+
+            <div className="grid xl:grid-cols-[minmax(0,1fr)_420px] gap-8 items-start">
+              <form onSubmit={savePost} className="bepro-card p-6 space-y-5">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="text-2xl font-bold text-white">
+                    {isEditing
+                      ? (isAr ? 'تعديل مقال' : 'Edit Post')
+                      : (isAr ? 'مقال جديد' : 'New Post')}
+                  </h2>
+                  <button type="button" onClick={resetForm} className="bepro-btn-secondary">
+                    <FiPlus className="w-5 h-5" />
+                    {isAr ? 'جديد' : 'New'}
+                  </button>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <label className="block">
+                    <span className="text-white font-bold mb-2 block">العنوان</span>
+                    <input required value={form.title} onChange={(e) => updateField('title', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
+                  </label>
+                  <label className="block">
+                    <span className="text-white font-bold mb-2 block">English Title</span>
+                    <input value={form.title_en} onChange={(e) => updateField('title_en', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
+                  </label>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4">
+                  <label className="block">
+                    <span className="text-white font-bold mb-2 block">Slug</span>
+                    <input required value={form.slug} onChange={(e) => updateField('slug', slugifyArticle(e.target.value))} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
+                  </label>
+                  <label className="block">
+                    <span className="text-white font-bold mb-2 block">{isAr ? 'التصنيف' : 'Category'}</span>
+                    <input value={form.category} onChange={(e) => updateField('category', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
+                  </label>
+                  <label className="block">
+                    <span className="text-white font-bold mb-2 block">{isAr ? 'الحالة' : 'Status'}</span>
+                    <select value={form.status} onChange={(e) => updateField('status', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white">
+                      <option className="bg-[#000428]" value="draft">{isAr ? 'مسودة' : 'Draft'}</option>
+                      <option className="bg-[#000428]" value="published">{isAr ? 'منشور' : 'Published'}</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="grid md:grid-cols-[minmax(0,1fr)_auto] gap-4 items-end">
+                  <label className="block">
+                    <span className="text-white font-bold mb-2 block">{isAr ? 'الكورس المرتبط' : 'Related Course'}</span>
+                    <select value={form.course_id} onChange={(e) => updateField('course_id', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white">
+                      <option className="bg-[#000428]" value="">{isAr ? 'بدون كورس محدد' : 'No specific course'}</option>
+                      {courses.map((course) => (
+                        <option className="bg-[#000428]" key={course.id} value={course.id}>{course.title}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="button" onClick={generateDraft} disabled={isGenerating || courses.length === 0} className="bepro-btn-primary min-h-[48px]">
+                    {isGenerating ? <FiLoader className="w-5 h-5 animate-spin" /> : <FiRefreshCw className="w-5 h-5" />}
+                    {isAr ? 'توليد بالـ AI' : 'AI Draft'}
+                  </button>
+                </div>
+
+                <label className="block">
+                  <span className="text-white font-bold mb-2 block">{isAr ? 'رابط صورة الغلاف' : 'Cover Image URL'}</span>
+                  <input value={form.cover_image_url || ''} onChange={(e) => updateField('cover_image_url', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
+                </label>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <label className="block">
+                    <span className="text-white font-bold mb-2 block">{isAr ? 'ملخص عربي' : 'Arabic Excerpt'}</span>
+                    <textarea rows="3" value={form.excerpt || ''} onChange={(e) => updateField('excerpt', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
+                  </label>
+                  <label className="block">
+                    <span className="text-white font-bold mb-2 block">English Excerpt</span>
+                    <textarea rows="3" value={form.excerpt_en || ''} onChange={(e) => updateField('excerpt_en', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
+                  </label>
+                </div>
+
+                <label className="block">
+                  <span className="text-white font-bold mb-2 block">{isAr ? 'المحتوى العربي' : 'Arabic Content'}</span>
+                  <textarea required rows="10" value={form.content || ''} onChange={(e) => updateField('content', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white leading-7" />
+                </label>
+                <label className="block">
+                  <span className="text-white font-bold mb-2 block">English Content</span>
+                  <textarea rows="8" value={form.content_en || ''} onChange={(e) => updateField('content_en', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white leading-7" />
+                </label>
+
+                <button type="submit" disabled={isSaving} className="bepro-btn-primary w-full justify-center min-h-[50px]">
+                  {isSaving ? <FiLoader className="w-5 h-5 animate-spin" /> : <FiEdit3 className="w-5 h-5" />}
+                  {isAr ? 'حفظ المقال' : 'Save Post'}
+                </button>
+              </form>
+
+              <aside className="bepro-card p-5">
+                <h2 className="text-xl font-bold text-white mb-4">
+                  {isAr ? 'كل المقالات' : 'All Posts'}
+                </h2>
+                {isLoading ? (
+                  <div className="flex justify-center py-12">
+                    <FiLoader className="w-10 h-10 text-[#00D9FF] animate-spin" />
+                  </div>
+                ) : posts.length === 0 ? (
+                  <p className="text-white/70">{isAr ? 'لا توجد مقالات بعد.' : 'No posts yet.'}</p>
+                ) : (
+                  <div className="space-y-3">
+                    {posts.map((post) => (
+                      <div key={post.id} className="bg-white/10 border border-white/10 rounded-lg p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-white font-bold">{post.title}</h3>
+                            <p className="text-sm text-white/60 mt-1">
+                              {post.status === 'published'
+                                ? (isAr ? 'منشور' : 'Published')
+                                : (isAr ? 'مسودة' : 'Draft')}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => editPost(post)} className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Edit">
+                              <FiEdit3 className="w-4 h-4" />
+                            </button>
+                            <button type="button" onClick={() => deletePost(post.id)} className="p-2 rounded-lg bg-red-500/20 text-red-100 hover:bg-red-500/30" title="Delete">
+                              <FiTrash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </aside>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

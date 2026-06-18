@@ -60,7 +60,7 @@ const Contact = () => {
     {
       icon: FiMapPin,
       title: language === 'ar' ? 'الموقع' : 'Location',
-      value: language === 'ar' ? 'المملكة العربية السعودية' : 'Saudi Arabia',
+      value: language === 'ar' ? 'الإمارات العربية المتحدة' : 'United Arab Emirates',
       description: language === 'ar' ? 'مقرنا الرئيسي' : 'Our headquarters'
     }
   ]

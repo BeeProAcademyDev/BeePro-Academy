@@ -124,7 +124,7 @@ const Footer = () => {
               </li>
               <li className="flex items-start gap-3 text-secondary-400">
                 <FiMapPin className="w-5 h-5 text-primary-400 shrink-0 mt-0.5" />
-                <span>{language === 'ar' ? 'الرياض، المملكة العربية السعودية' : 'Riyadh, Saudi Arabia'}</span>
+                <span>{language === 'ar' ? 'الإمارات العربية المتحدة' : 'United Arab Emirates'}</span>
               </li>
             </ul>
 
