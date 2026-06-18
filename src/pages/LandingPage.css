@@ -580,10 +580,6 @@
   text-transform: uppercase;
   letter-spacing: 4px;
   text-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  background: linear-gradient(135deg, #fff 0%, var(--category-color, #00D9FF) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .category-subtitle {
