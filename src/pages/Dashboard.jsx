@@ -40,7 +40,7 @@ import {
 const Dashboard = () => {
   const { t } = useTranslation()
   const { language, isRTL } = useLanguage()
-  const { user } = useAuth()
+  const { user, updateProfile, uploadAvatar } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const normalizedUserRole = resolveUserRole(user)
@@ -89,6 +89,14 @@ const Dashboard = () => {
     instructions: ''
   })
   const paymentFeedbackRef = useRef(null)
+  const avatarInputRef = useRef(null)
+  const [profileForm, setProfileForm] = useState({
+    full_name: '',
+    bio: ''
+  })
+  const [profileStatus, setProfileStatus] = useState({ type: '', message: '' })
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight
 
@@ -137,6 +145,13 @@ const Dashboard = () => {
   
   // Check if user is an admin
   const isAdmin = normalizedUserRole === 'admin'
+
+  useEffect(() => {
+    setProfileForm({
+      full_name: user?.full_name || user?.name || '',
+      bio: user?.bio || ''
+    })
+  }, [user?.full_name, user?.name, user?.bio])
 
   const [studentChatInbox, setStudentChatInbox] = useState([])
 
@@ -485,6 +500,64 @@ const Dashboard = () => {
       setCourseActionError(error.message || (language === 'ar' ? 'فشل حذف الكورس' : 'Failed to delete course'))
     } finally {
       setCourseActionLoadingId(null)
+    }
+  }
+
+  const handleProfileSave = async (event) => {
+    event.preventDefault()
+
+    try {
+      setIsSavingProfile(true)
+      setProfileStatus({ type: '', message: '' })
+
+      const result = await updateProfile({
+        full_name: profileForm.full_name.trim(),
+        bio: profileForm.bio.trim() || null
+      })
+
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+
+      setProfileStatus({
+        type: 'success',
+        message: language === 'ar' ? 'تم حفظ بيانات الملف الشخصي' : 'Profile saved successfully'
+      })
+    } catch (error) {
+      setProfileStatus({
+        type: 'error',
+        message: error.message || (language === 'ar' ? 'تعذر حفظ الملف الشخصي' : 'Failed to save profile')
+      })
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setIsUploadingAvatar(true)
+      setProfileStatus({ type: '', message: '' })
+
+      const result = await uploadAvatar(file)
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+
+      setProfileStatus({
+        type: 'success',
+        message: language === 'ar' ? 'تم تحديث صورة الملف الشخصي' : 'Profile photo updated'
+      })
+    } catch (error) {
+      setProfileStatus({
+        type: 'error',
+        message: error.message || (language === 'ar' ? 'تعذر رفع الصورة' : 'Failed to upload photo')
+      })
+    } finally {
+      setIsUploadingAvatar(false)
+      event.target.value = ''
     }
   }
 
@@ -1654,13 +1727,62 @@ const Dashboard = () => {
                 <h2 className="text-2xl font-bold mb-6">{t('dashboard.settings')}</h2>
                 
                 <div className="card card-body">
-                  <form className="space-y-6">
+                  <form className="space-y-6" onSubmit={handleProfileSave}>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      {user?.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={displayName}
+                          className="w-24 h-24 rounded-full object-cover border border-secondary-200 dark:border-dark-border"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-secondary-100 dark:bg-dark-bg rounded-full flex items-center justify-center">
+                          <FiUser className="w-10 h-10 text-secondary-500" />
+                        </div>
+                      )}
+                      <div>
+                        <input
+                          ref={avatarInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleAvatarChange}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => avatarInputRef.current?.click()}
+                          disabled={isUploadingAvatar}
+                        >
+                          {isUploadingAvatar && <FiLoader className="w-4 h-4 animate-spin" />}
+                          {language === 'ar' ? 'رفع صورة شخصية' : 'Upload Profile Photo'}
+                        </button>
+                        <p className="text-sm text-secondary-500 mt-2">
+                          {language === 'ar'
+                            ? 'ستظهر الصورة للزوار في صفحة الكورس.'
+                            : 'This photo appears to visitors on course pages.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {profileStatus.message && (
+                      <div className={`rounded-lg px-4 py-3 text-sm ${
+                        profileStatus.type === 'success'
+                          ? 'border border-green-300 bg-green-50 text-green-700'
+                          : 'border border-red-300 bg-red-50 text-red-700'
+                      }`}>
+                        {profileStatus.message}
+                      </div>
+                    )}
+
                     <div>
                       <label className="label">{t('auth.register.name')}</label>
                       <input
                         type="text"
                         className="input"
-                        defaultValue={user?.name}
+                        value={profileForm.full_name}
+                        onChange={(event) => setProfileForm((prev) => ({ ...prev, full_name: event.target.value }))}
+                        required
                       />
                     </div>
                     <div>
@@ -1668,10 +1790,31 @@ const Dashboard = () => {
                       <input
                         type="email"
                         className="input"
-                        defaultValue={user?.email}
+                        value={user?.email || ''}
+                        disabled
                       />
                     </div>
-                    <button type="submit" className="btn btn-primary">
+                    {isTeacher && (
+                      <div>
+                        <label className="label">
+                          {language === 'ar' ? 'وصف المعلم' : 'Instructor Bio'}
+                        </label>
+                        <textarea
+                          className="input min-h-[140px]"
+                          value={profileForm.bio}
+                          onChange={(event) => setProfileForm((prev) => ({ ...prev, bio: event.target.value }))}
+                          placeholder={language === 'ar'
+                            ? 'اكتب نبذة قصيرة عن خبرتك وما سيستفيده الطلاب من دوراتك'
+                            : 'Write a short bio about your experience and what students can expect from your courses'}
+                          maxLength={1000}
+                        />
+                        <p className="text-xs text-secondary-500 mt-2">
+                          {profileForm.bio.length}/1000
+                        </p>
+                      </div>
+                    )}
+                    <button type="submit" className="btn btn-primary" disabled={isSavingProfile}>
+                      {isSavingProfile && <FiLoader className="w-4 h-4 animate-spin" />}
                       {t('common.save')}
                     </button>
                   </form>

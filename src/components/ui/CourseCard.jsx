@@ -24,7 +24,8 @@ const CourseCard = ({ course, variant = 'default' }) => {
     : {
         name: course.instructor || course.instructor_name || 'Instructor',
         nameEn: course.instructor || course.instructor_name || 'Instructor',
-        avatar: course.instructorAvatar || course.instructor_avatar || '/assets/abdullah1.jpg'
+        avatar: course.instructorAvatar || course.instructor_avatar || '/assets/abdullah1.jpg',
+        bio: course.instructor_bio || ''
       }
   const isEnrolled = isAuthenticated && user?.enrolledCourses?.includes(course.id)
   const progress = user?.progress?.[course.id] || 0
@@ -103,16 +104,23 @@ const CourseCard = ({ course, variant = 'default' }) => {
           </div>
 
           <div className="mt-auto flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <img
-                src={instructor.avatar || '/assets/abdullah1.jpg'}
-                alt={instructorName}
-                className="w-8 h-8 rounded-full object-cover"
-                onError={(event) => {
-                  event.currentTarget.src = '/assets/abdullah1.jpg'
-                }}
-              />
-              <span className="text-sm font-medium">{instructorName}</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <img
+                  src={instructor.avatar || '/assets/abdullah1.jpg'}
+                  alt={instructorName}
+                  className="w-8 h-8 rounded-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.src = '/assets/abdullah1.jpg'
+                  }}
+                />
+                <span className="text-sm font-medium">{instructorName}</span>
+              </div>
+              {instructor.bio && (
+                <p className="text-xs text-secondary-500 line-clamp-2 mt-2 max-w-xs">
+                  {instructor.bio}
+                </p>
+              )}
             </div>
             
             <div className="flex items-center gap-3">
@@ -223,6 +231,11 @@ const CourseCard = ({ course, variant = 'default' }) => {
             {instructorName}
           </span>
         </div>
+        {instructor.bio && (
+          <p className="text-xs text-gray-500 mb-4 line-clamp-2">
+            {instructor.bio}
+          </p>
+        )}
 
         {/* Stats */}
         <div className="flex items-center gap-3 md:gap-4 text-xs text-gray-400 mb-4 flex-wrap">

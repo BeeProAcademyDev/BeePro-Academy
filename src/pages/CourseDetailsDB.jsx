@@ -144,7 +144,8 @@ const CourseDetailsDB = () => {
           users:instructor_id (
             full_name,
             email,
-            avatar_url
+            avatar_url,
+            bio
           )
         `)
         .eq('id', id)
@@ -344,6 +345,9 @@ const CourseDetailsDB = () => {
                 <div>
                   <p className="text-sm text-secondary-400">{t('course.instructor')}</p>
                   <p className="font-medium">{instructor.full_name || 'Instructor'}</p>
+                  {instructor.bio && (
+                    <p className="text-sm text-secondary-300 mt-1 line-clamp-2">{instructor.bio}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -619,6 +623,11 @@ const CourseDetailsDB = () => {
                   <div>
                     <h3 className="text-xl font-bold mb-1">{instructor.full_name || 'Instructor'}</h3>
                     <p className="text-secondary-500 mb-4">{instructor.email}</p>
+                    {instructor.bio && (
+                      <p className="text-secondary-600 dark:text-secondary-400 leading-relaxed">
+                        {instructor.bio}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

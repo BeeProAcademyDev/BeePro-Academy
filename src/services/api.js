@@ -413,7 +413,7 @@ export const courseService = {
       .from('courses')
       .select(`
         *,
-        instructor:users!instructor_id(id, full_name, avatar_url),
+        instructor:users!instructor_id(id, full_name, avatar_url, bio),
         lessons(count),
         reviews(rating)
       `, { count: 'exact' })
@@ -458,7 +458,7 @@ export const courseService = {
       .from('courses')
       .select(`
         *,
-        instructor:users!instructor_id(id, full_name, avatar_url, role),
+        instructor:users!instructor_id(id, full_name, avatar_url, bio, role),
         lessons(id, title, duration, order_index),
         reviews(
           id, rating, comment, created_at,
@@ -542,7 +542,7 @@ export const courseService = {
       .from('courses')
       .select(`
         *,
-        instructor:users!instructor_id(id, full_name, avatar_url),
+        instructor:users!instructor_id(id, full_name, avatar_url, bio),
         enrollments(count),
         reviews(rating)
       `)
@@ -1254,17 +1254,17 @@ export const userService = {
     }
 
     const fileExt = file.name.split('.').pop()
-    const fileName = `${userId}.${fileExt}`
-    const filePath = `avatars/${fileName}`
+    const fileName = `avatar.${fileExt}`
+    const filePath = `${userId}/${fileName}`
 
     const { error: uploadError } = await supabase.storage
-      .from('avatars')
+      .from('user-avatars')
       .upload(filePath, file, { upsert: true })
 
     if (uploadError) throw uploadError
 
     const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
+      .from('user-avatars')
       .getPublicUrl(filePath)
 
     // Update user profile with avatar URL

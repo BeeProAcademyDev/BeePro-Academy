@@ -70,7 +70,8 @@ const Courses = () => {
           instructor: {
             name: course.instructor?.full_name || 'Instructor',
             nameEn: course.instructor?.full_name || 'Instructor',
-            avatar: course.instructor?.avatar_url || '/assets/abdullah1.jpg'
+            avatar: course.instructor?.avatar_url || '/assets/abdullah1.jpg',
+            bio: course.instructor?.bio || ''
           },
           instructorAvatar: course.instructor?.avatar_url || '/assets/abdullah1.jpg',
           tags: [],
