@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useCurrency } from '../../contexts/CurrencyContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { 
   FiClock, 
@@ -15,6 +16,7 @@ import {
 const CourseCard = ({ course, variant = 'default' }) => {
   const { t } = useTranslation()
   const { language, isRTL } = useLanguage()
+  const { formatCoursePrice } = useCurrency()
   const { user, isAuthenticated } = useAuth()
 
   const fallbackThumbnail = '/assets/hero-background.png'
@@ -45,9 +47,10 @@ const CourseCard = ({ course, variant = 'default' }) => {
 
   const levelBadge = getLevelBadge(course.level)
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight
-  const formattedPrice = course.price != null && String(course.price).startsWith('$')
-    ? course.price
-    : `$${course.price}`
+  const priceDisplay = formatCoursePrice(course.price)
+  const originalPriceDisplay = course.originalPrice
+    ? formatCoursePrice(course.originalPrice).full
+    : null
 
   if (variant === 'horizontal') {
     return (
@@ -133,11 +136,11 @@ const CourseCard = ({ course, variant = 'default' }) => {
               ) : (
                 <div className="text-end">
                   <span className="text-lg font-bold text-primary-500">
-                    {formattedPrice} {t('course.price')}
+                    {priceDisplay.full}
                   </span>
-                  {course.originalPrice > course.price && (
+                  {originalPriceDisplay && course.originalPrice > course.price && (
                     <span className="text-sm text-secondary-400 line-through ms-2">
-                      {course.originalPrice}
+                      {originalPriceDisplay}
                     </span>
                   )}
                 </div>
@@ -261,11 +264,11 @@ const CourseCard = ({ course, variant = 'default' }) => {
           ) : (
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-[#00D9FF]">
-                {formattedPrice} {t('course.price')}
+                {priceDisplay.full}
               </span>
-              {course.originalPrice > course.price && (
+              {originalPriceDisplay && course.originalPrice > course.price && (
                 <span className="text-sm text-gray-500 line-through">
-                  {course.originalPrice}
+                  {originalPriceDisplay}
                 </span>
               )}
             </div>

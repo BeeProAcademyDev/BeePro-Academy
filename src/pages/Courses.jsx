@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../contexts/LanguageContext'
 import CourseCard from '../components/ui/CourseCard'
-import { courses as mockCourses, categories } from '../data/courses'
+import { categories } from '../data/courses'
 import { courseService } from '../services/api'
 import {
   FiSearch,
@@ -77,10 +77,10 @@ const Courses = () => {
           tags: [],
           createdAt: course.created_at
         })).filter((course) => PUBLIC_COURSE_CATEGORIES.has(course.category))
-        setCourses([...formattedDbCourses, ...mockCourses])
+        setCourses(formattedDbCourses)
       } catch (error) {
         console.error('Error fetching courses:', error)
-        setCourses(mockCourses)
+        setCourses([])
       } finally {
         setIsLoading(false)
       }

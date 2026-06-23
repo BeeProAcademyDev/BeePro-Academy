@@ -182,6 +182,81 @@ const UserManagement = () => {
     }
   }
 
+  const toggleUserBlock = async (targetUser) => {
+    if (!user?.id || !isAdminUser || !targetUser?.id) return
+
+    const shouldSuspend = !targetUser.is_suspended
+    if (targetUser.id === user.id && shouldSuspend) {
+      alert(language === 'ar' ? 'لا يمكنك حظر حسابك الحالي' : 'You cannot block your own account')
+      return
+    }
+
+    const confirmed = window.confirm(
+      shouldSuspend
+        ? (language === 'ar'
+          ? `هل تريد حظر "${targetUser.email}" من المنصة؟`
+          : `Block "${targetUser.email}" from the platform?`)
+        : (language === 'ar'
+          ? `هل تريد فك الحظر عن "${targetUser.email}"؟`
+          : `Unblock "${targetUser.email}"?`)
+    )
+
+    if (!confirmed) return
+
+    setActionLoading(targetUser.id)
+    try {
+      await adminService.setUserSuspended(targetUser.id, shouldSuspend)
+      setUsers((prev) => prev.map((item) => (
+        item.id === targetUser.id ? { ...item, is_suspended: shouldSuspend } : item
+      )))
+      alert(
+        shouldSuspend
+          ? (language === 'ar' ? 'تم حظر المستخدم من المنصة' : 'User blocked from the platform')
+          : (language === 'ar' ? 'تم فك حظر المستخدم' : 'User unblocked')
+      )
+    } catch (error) {
+      alert(
+        language === 'ar'
+          ? `فشل تحديث حالة المستخدم: ${error.message || ''}`
+          : `Failed to update user status: ${error.message || ''}`
+      )
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const deleteUser = async (targetUser) => {
+    if (!user?.id || !isAdminUser || !targetUser?.id) return
+
+    if (targetUser.id === user.id) {
+      alert(language === 'ar' ? 'لا يمكنك حذف حسابك الحالي' : 'You cannot delete your own account')
+      return
+    }
+
+    const confirmed = window.confirm(
+      language === 'ar'
+        ? `سيتم حذف "${targetUser.email}" نهائيا من المنصة. هل أنت متأكد؟`
+        : `Delete "${targetUser.email}" permanently from the platform?`
+    )
+
+    if (!confirmed) return
+
+    setActionLoading(targetUser.id)
+    try {
+      await adminService.deletePlatformUser(targetUser.id)
+      setUsers((prev) => prev.filter((item) => item.id !== targetUser.id))
+      alert(language === 'ar' ? 'تم حذف المستخدم' : 'User deleted')
+    } catch (error) {
+      alert(
+        language === 'ar'
+          ? `فشل حذف المستخدم: ${error.message || ''}`
+          : `Failed to delete user: ${error.message || ''}`
+      )
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   // Update user role
   const updateUserRole = async (targetUserId, newRole) => {
     if (!user?.id || !isAdminUser) return
@@ -345,7 +420,7 @@ const UserManagement = () => {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-blue-600">{users.filter(u => u.role === 'student').length}</div>
           <div className="text-sm text-gray-500">{language === 'ar' ? 'طلاب' : 'Students'}</div>
@@ -361,6 +436,10 @@ const UserManagement = () => {
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-red-600">{users.filter(u => u.role === 'admin').length}</div>
           <div className="text-sm text-gray-500">{language === 'ar' ? 'إداريين' : 'Admins'}</div>
+        </div>
+        <div className="card card-body text-center">
+          <div className="text-2xl font-bold text-orange-600">{users.filter(u => u.is_suspended).length}</div>
+          <div className="text-sm text-gray-500">{language === 'ar' ? 'محظورين' : 'Blocked'}</div>
         </div>
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-gray-600">{users.length}</div>
@@ -449,7 +528,38 @@ const UserManagement = () => {
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {userData.full_name || 'N/A'}
                           </div>
-                          <div className="text-sm text-gray-500">{userData.email}</div>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span>{userData.email}</span>
+                            {userData.is_suspended && (
+                              <span className="inline-flex px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[11px] font-semibold">
+                                {language === 'ar' ? 'محظور' : 'Blocked'}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => toggleUserBlock(userData)}
+                              disabled={actionLoading === userData.id}
+                              className={`disabled:opacity-50 ${userData.is_suspended ? 'text-green-600 hover:text-green-800' : 'text-orange-600 hover:text-orange-800'}`}
+                              title={userData.is_suspended
+                                ? (language === 'ar' ? 'فك الحظر' : 'Unblock user')
+                                : (language === 'ar' ? 'حظر من المنصة' : 'Block from platform')}
+                            >
+                              {actionLoading === userData.id ? (
+                                <FiLoader className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <FiUserX className="w-4 h-4" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteUser(userData)}
+                              disabled={actionLoading === userData.id}
+                              className="text-red-600 hover:text-red-800 disabled:opacity-50"
+                              title={language === 'ar' ? 'حذف المستخدم' : 'Delete user'}
+                            >
+                              <FiTrash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </td>

@@ -41,6 +41,24 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const assertProfileIsActive = async (profile) => {
+    if (!profile?.is_suspended) return
+
+    try {
+      await authService.signOut()
+    } catch (signOutError) {
+      console.warn('Error signing out suspended user:', signOutError)
+    }
+
+    setUser(null)
+    setSession(null)
+    throw new Error('Your account has been blocked from this platform.')
+  }
+
+  const isBlockedAccountError = (err) => (
+    (err?.message || '').toString().toLowerCase().includes('blocked from this platform')
+  )
+
   const buildSessionUser = (authUser) => {
     if (!authUser?.id) return null
     return applyRoleFallback({
@@ -108,11 +126,18 @@ export const AuthProvider = ({ children }) => {
         full_name: currentUser.full_name || currentUser.user_metadata?.full_name,
         avatar_url: currentUser.avatar_url || currentUser.user_metadata?.avatar_url
       })
+      await assertProfileIsActive(profile)
 
       const mergedUser = mergeAuthProfile(currentUser, profile)
       setUser(applyRoleFallback(mergedUser))
     } catch (err) {
       console.error('Error checking user:', err)
+      if (isBlockedAccountError(err)) {
+        setUser(null)
+        setSession(null)
+        setError(formatErrorMessage(err))
+        return
+      }
       try {
         const lower = formatErrorMessage(err).toLowerCase()
         if (lower.includes('jwt expired') || lower.includes('token expired') || lower.includes('session expired')) {
@@ -151,10 +176,17 @@ export const AuthProvider = ({ children }) => {
         full_name: authUser.user_metadata?.full_name,
         avatar_url: authUser.user_metadata?.avatar_url
       })
+      await assertProfileIsActive(profile)
       const mergedUser = mergeAuthProfile(authUser, profile)
       setUser(applyRoleFallback(mergedUser))
     } catch (err) {
       console.error('Error fetching/creating profile:', err)
+      if (isBlockedAccountError(err)) {
+        setUser(null)
+        setSession(null)
+        setError(formatErrorMessage(err))
+        return
+      }
       setUser(buildSessionUser(authUser))
     }
   }
@@ -176,6 +208,7 @@ export const AuthProvider = ({ children }) => {
           full_name: authUser.user_metadata?.full_name,
           avatar_url: authUser.user_metadata?.avatar_url
         })
+        await assertProfileIsActive(profile)
         const mergedUser = mergeAuthProfile(authUser, profile)
         setUser(applyRoleFallback(mergedUser))
       }

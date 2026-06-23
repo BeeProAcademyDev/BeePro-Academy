@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { FiUploadCloud, FiCheckCircle, FiLoader } from 'react-icons/fi'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useCurrency } from '../contexts/CurrencyContext'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { isStudentUser } from '../lib/roles'
@@ -22,6 +23,7 @@ const PaymentCheckout = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const { language } = useLanguage()
+  const { formatCoursePrice, currencyCode, convertFromUsd, currency } = useCurrency()
   const { user } = useAuth()
 
   const [course, setCourse] = useState(null)
@@ -58,7 +60,7 @@ const PaymentCheckout = () => {
         setCourse(courseData)
         setFormData((prev) => ({
           ...prev,
-          amount: String(courseData.price || 0)
+          amount: String(convertFromUsd(courseData.price || 0))
         }))
 
         const methods = await paymentService.getCoursePaymentMethods(id, courseData.instructor_id)
@@ -75,7 +77,15 @@ const PaymentCheckout = () => {
     }
 
     loadData()
-  }, [id])
+  }, [id, convertFromUsd])
+
+  useEffect(() => {
+    if (!course) return
+    setFormData((prev) => ({
+      ...prev,
+      amount: String(convertFromUsd(course.price || 0)),
+    }))
+  }, [course, currencyCode, convertFromUsd])
 
   const selectedMethod = useMemo(
     () => paymentMethods.find((m) => m.id === selectedMethodId),
@@ -129,7 +139,7 @@ const PaymentCheckout = () => {
         course_id: course.id,
         payment_method_id: selectedMethodId,
         amount: Number(formData.amount || 0),
-        currency: 'USD',
+        currency: currencyCode,
         transaction_reference: formData.transactionReference || null,
         payment_screenshot_url: screenshotUrl,
         additional_notes: notesParts.join('\n\n') || null
@@ -297,7 +307,9 @@ const PaymentCheckout = () => {
                   </h3>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <label className="label">{language === 'ar' ? 'المبلغ' : 'Amount'}</label>
+                      <label className="label">
+                        {language === 'ar' ? 'المبلغ' : 'Amount'} ({language === 'ar' ? currency.labelAr : currency.labelEn})
+                      </label>
                       <input
                         type="number"
                         step="0.01"
@@ -392,7 +404,7 @@ const PaymentCheckout = () => {
             <h3 className="text-lg font-bold mb-3">{language === 'ar' ? 'ملخص الطلب' : 'Order Summary'}</h3>
             <div className="space-y-2 text-sm">
               <p><span className="font-medium">{language === 'ar' ? 'الدورة:' : 'Course:'}</span> {course.title}</p>
-              <p><span className="font-medium">{language === 'ar' ? 'السعر:' : 'Price:'}</span> ${course.price || 0} USD</p>
+              <p><span className="font-medium">{language === 'ar' ? 'السعر:' : 'Price:'}</span> {formatCoursePrice(course.price || 0).full}</p>
               <p><span className="font-medium">{language === 'ar' ? 'الحالة:' : 'Status:'}</span> {language === 'ar' ? 'بانتظار التحويل' : 'Awaiting payment proof'}</p>
             </div>
           </div>

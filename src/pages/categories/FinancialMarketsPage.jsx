@@ -13,9 +13,6 @@ const FinancialMarketsPage = () => {
       icon="📈"
       color="#96CEB4"
       features={['Technical Analysis', 'Trading Strategies', 'Risk Management', 'Portfolio Management', 'Forex', 'Stocks', 'Crypto', 'Investment']}
-      courses={[
-        { id: 'financial-markets-demo', title: 'Financial Markets Basics', level: 'Beginner', duration: '4 weeks', price: '$49', image: '/assets/anlysis.jpg' },
-      ]}
     />
   );
 };

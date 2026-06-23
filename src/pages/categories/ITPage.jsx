@@ -13,9 +13,6 @@ const ITPage = () => {
       icon="🖥️"
       color="#4ECDC4"
       features={['Cloud Computing', 'Cybersecurity', 'Network Administration', 'System Management', 'AWS', 'Azure', 'Linux', 'DevOps']}
-      courses={[
-        { id: 'it-demo', title: 'IT Fundamentals', level: 'Beginner', duration: '4 weeks', price: '$49', image: '/assets/it2.jpg' },
-      ]}
     />
   );
 };

@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { trackEvent } from '../../lib/analytics'
 import {
-  FiActivity,
+  FiFacebook,
+  FiInstagram,
+  FiLinkedin,
   FiMail,
   FiMapPin,
   FiMessageCircle,
-  FiPlayCircle,
-  FiUsers
+  FiTwitter,
 } from 'react-icons/fi'
+import { SiTiktok } from 'react-icons/si'
 import '../../pages/LandingPage.css'
 
 const LandingContactSection = () => {
@@ -151,10 +153,11 @@ const LandingContactSection = () => {
           <div className="social-media-section">
             <h3>Follow us on social media</h3>
             <div className="social-media-links">
-              <a href="#" className="social-link" title="Community"><span><FiUsers /></span></a>
-              <a href="#" className="social-link" title="Video Lessons"><span><FiPlayCircle /></span></a>
-              <a href="#" className="social-link" title="Learning Updates"><span><FiActivity /></span></a>
-              <a href="#" className="social-link" title="Support"><span><FiMessageCircle /></span></a>
+              <a href="https://www.facebook.com/share/1BtuCiJgMo/" target="_blank" rel="noopener noreferrer" className="social-link" title="Facebook" aria-label="Facebook"><span><FiFacebook /></span></a>
+              <a href="https://www.instagram.com/beepro99?igsh=MTN4aXFoZnZ6bHdsMQ==" target="_blank" rel="noopener noreferrer" className="social-link" title="Instagram" aria-label="Instagram"><span><FiInstagram /></span></a>
+              <a href="https://www.tiktok.com/@bee.pro46?_r=1&_t=ZS-97PNKSmUp52" target="_blank" rel="noopener noreferrer" className="social-link" title="TikTok" aria-label="TikTok"><span><SiTiktok /></span></a>
+              <a href="https://www.linkedin.com/company/bee-professiona/" target="_blank" rel="noopener noreferrer" className="social-link" title="LinkedIn" aria-label="LinkedIn"><span><FiLinkedin /></span></a>
+              <a href="https://x.com/BEEPROpp" target="_blank" rel="noopener noreferrer" className="social-link" title="X" aria-label="X"><span><FiTwitter /></span></a>
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useCurrency } from '../contexts/CurrencyContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getLandingAuthUrl } from '../lib/authRoutes'
 import Button from '../components/ui/Button'
@@ -28,6 +29,7 @@ const CourseDetails = () => {
   const { id } = useParams()
   const { t } = useTranslation()
   const { language, isRTL } = useLanguage()
+  const { formatCoursePrice } = useCurrency()
   const { user, isAuthenticated } = useAuth()
   
   const [activeTab, setActiveTab] = useState('overview')
@@ -35,9 +37,10 @@ const CourseDetails = () => {
   
   const course = courses.find(c => c.id === id)
   const lessons = courseLessons[id] || []
-  const formattedPrice = course?.price != null && String(course.price).startsWith('$')
-    ? course.price
-    : `$${course?.price ?? 0}`
+  const priceDisplay = course ? formatCoursePrice(course.price) : null
+  const originalPriceDisplay = course?.originalPrice
+    ? formatCoursePrice(course.originalPrice).full
+    : null
   
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight
   
@@ -169,9 +172,9 @@ const CourseDetails = () => {
                     <div className="text-3xl font-bold text-green-500 mb-4">{t('course.free')}</div>
                   ) : (
                     <div className="flex items-center gap-3 mb-4">
-                      <span className="text-3xl font-bold">{formattedPrice} {t('course.price')}</span>
-                      {course.originalPrice > course.price && (
-                        <span className="text-xl text-secondary-400 line-through">{course.originalPrice}</span>
+                      <span className="text-3xl font-bold">{priceDisplay?.full}</span>
+                      {originalPriceDisplay && course.originalPrice > course.price && (
+                        <span className="text-xl text-secondary-400 line-through">{originalPriceDisplay}</span>
                       )}
                     </div>
                   )}
@@ -236,9 +239,9 @@ const CourseDetails = () => {
               <span className="text-2xl font-bold text-green-500">{t('course.free')}</span>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold">{formattedPrice} {t('course.price')}</span>
-                {course.originalPrice > course.price && (
-                  <span className="text-sm text-secondary-400 line-through">{course.originalPrice}</span>
+                <span className="text-2xl font-bold">{priceDisplay?.full}</span>
+                {originalPriceDisplay && course.originalPrice > course.price && (
+                  <span className="text-sm text-secondary-400 line-through">{originalPriceDisplay}</span>
                 )}
               </div>
             )}

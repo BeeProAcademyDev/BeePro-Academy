@@ -1,7 +1,9 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { courseService } from '../../services/api';
+import { useCurrency } from '../../contexts/CurrencyContext';
+import { parseUsdPrice } from '../../lib/currency';
 import './CategoryPage.css';
 
 const CategoryPage = ({
@@ -12,17 +14,17 @@ const CategoryPage = ({
   backgroundVideo,
   icon,
   color,
-  courses = [],
   categoryKey,
   features = [],
   hideHeroContent = false
 }) => {
-  const location = useLocation();
+  const { formatCoursePrice } = useCurrency();
   const [dbCourses, setDbCourses] = useState([]);
 
-  const defaultCourses = [
-    { id: categoryKey || 'category-course', title, level: 'All Levels', duration: 'Self-paced', price: '$0', image: backgroundImage },
-  ];
+  const formatDisplayPrice = (price) => {
+    if (price == null || price === '') return formatCoursePrice(0).full
+    return formatCoursePrice(parseUsdPrice(price)).full
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -39,7 +41,7 @@ const CategoryPage = ({
             title: course.title,
             level: course.level || 'All Levels',
             duration: course.duration ? `${course.duration} hours` : 'Self-paced',
-            price: typeof course.price === 'number' ? `$${course.price}` : '$0',
+            price: course.price ?? 0,
             image: course.thumbnail_url || backgroundImage
           }));
 
@@ -60,7 +62,7 @@ const CategoryPage = ({
     };
   }, [categoryKey, backgroundImage]);
 
-  const displayCourses = dbCourses.length > 0 ? dbCourses : (courses.length > 0 ? courses : defaultCourses);
+  const displayCourses = dbCourses
 
   return (
     <div className="category-page">
@@ -107,26 +109,33 @@ const CategoryPage = ({
             <p>Explore our comprehensive courses designed to take you from beginner to expert</p>
           </div>
           <div className="category-courses-grid">
-            {displayCourses.map((course) => (
-              <div key={course.id} className="category-course-card" style={{ '--card-color': color }}>
-                <div 
-                  className="category-course-image"
-                  style={{ backgroundImage: `url(${course.image || backgroundImage})` }}
-                >
-                  <span className="category-course-level">{course.level}</span>
-                </div>
-                <div className="category-course-content">
-                  <h3>{course.title}</h3>
-                  <div className="category-course-meta">
-                    <span>⏱️ {course.duration}</span>
-                    <span className="category-course-price">{course.price}</span>
+            {displayCourses.length > 0 ? (
+              displayCourses.map((course) => (
+                <div key={course.id} className="category-course-card" style={{ '--card-color': color }}>
+                  <div 
+                    className="category-course-image"
+                    style={{ backgroundImage: `url(${course.image || backgroundImage})` }}
+                  >
+                    <span className="category-course-level">{course.level}</span>
                   </div>
-                  <Link to={`/courses/${course.id}`} className="category-course-btn">
-                    View Course
-                  </Link>
+                  <div className="category-course-content">
+                    <h3>{course.title}</h3>
+                    <div className="category-course-meta">
+                      <span>⏱️ {course.duration}</span>
+                      <span className="category-course-price">{formatDisplayPrice(course.price)}</span>
+                    </div>
+                    <Link to={`/courses/${course.id}`} className="category-course-btn">
+                      View Course
+                    </Link>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="category-courses-empty">
+                <p>No published courses in this category yet.</p>
+                <Link to="/courses" className="category-course-btn">Browse All Courses</Link>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>

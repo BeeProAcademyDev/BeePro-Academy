@@ -4,14 +4,47 @@ import {
   FiBookOpen,
   FiCheckCircle,
   FiEdit3,
+  FiFacebook,
+  FiInstagram,
+  FiLinkedin,
   FiMail,
   FiMonitor,
   FiShield,
   FiTool,
+  FiTwitter,
   FiUsers,
   FiVideo
 } from 'react-icons/fi'
+import { SiTiktok } from 'react-icons/si'
 import '../../pages/LandingPage.css'
+
+const SOCIAL_LINKS = [
+  {
+    href: 'https://www.facebook.com/share/1BtuCiJgMo/',
+    label: 'Facebook',
+    icon: FiFacebook,
+  },
+  {
+    href: 'https://www.instagram.com/beepro99?igsh=MTN4aXFoZnZ6bHdsMQ==',
+    label: 'Instagram',
+    icon: FiInstagram,
+  },
+  {
+    href: 'https://www.tiktok.com/@bee.pro46?_r=1&_t=ZS-97PNKSmUp52',
+    label: 'TikTok',
+    icon: SiTiktok,
+  },
+  {
+    href: 'https://www.linkedin.com/company/bee-professiona/',
+    label: 'LinkedIn',
+    icon: FiLinkedin,
+  },
+  {
+    href: 'https://x.com/BEEPROpp',
+    label: 'X',
+    icon: FiTwitter,
+  },
+]
 
 const LandingFooter = () => (
   <footer className="landing-footer">
@@ -73,6 +106,24 @@ const LandingFooter = () => (
             <a href="/#terms">Terms of Service</a>
             <a href="/#privacy">Privacy Policy</a>
             <a href="/#refund">Refund Policy</a>
+          </div>
+        </div>
+
+        <div className="footer-social">
+          <div className="social-media-links">
+            {SOCIAL_LINKS.map(({ href, label, icon: Icon }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="social-link"
+                title={label}
+                aria-label={label}
+              >
+                <span><Icon /></span>
+              </a>
+            ))}
           </div>
         </div>
 

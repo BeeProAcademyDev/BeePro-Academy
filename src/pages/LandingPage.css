@@ -2714,6 +2714,12 @@ html {
   color: #00D9FF;
 }
 
+.footer-social {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
 .footer-credits {
   text-align: center;
   margin-top: 30px;

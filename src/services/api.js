@@ -39,7 +39,7 @@ import {
   mapSignupProfileError
 } from '../lib/supabaseErrors'
 import { resolveSignupRole, normalizeDbRole, normalizeRole } from '../lib/roles'
-import { courses as mockCourses, categories as mockCategories } from '../data/courses'
+import { categories as mockCategories } from '../data/courses'
 
 // Check if Supabase is available
 const isSupabaseAvailable = () => !!supabase
@@ -185,10 +185,7 @@ export const authService = {
     }
 
     if (!isSupabaseAvailable()) {
-      return {
-        user: { id: 'mock-user-id', email, full_name: fullName, phone, role: resolvedRole },
-        session: { access_token: 'mock-token' }
-      }
+      throw new Error('Authentication service is not configured. Please contact support.')
     }
 
     try {
@@ -237,11 +234,7 @@ export const authService = {
   // Sign in with email and password
   async signIn({ email, password }) {
     if (!isSupabaseAvailable()) {
-      // Mock signin
-      return {
-        user: { id: 'mock-user-id', email, full_name: 'Demo User', role: 'student' },
-        session: { access_token: 'mock-token' }
-      }
+      throw new Error('Authentication service is not configured. Please contact support.')
     }
 
     try {
@@ -386,27 +379,7 @@ export const courseService = {
   // Get all courses with optional filters
   async getCourses({ category, level, search, limit = 20, offset = 0 } = {}) {
     if (!isSupabaseAvailable()) {
-      // Return mock data
-      let filtered = [...mockCourses]
-      
-      if (category) {
-        filtered = filtered.filter(c => c.category === category)
-      }
-      if (level) {
-        filtered = filtered.filter(c => c.level === level)
-      }
-      if (search) {
-        const searchLower = search.toLowerCase()
-        filtered = filtered.filter(c => 
-          c.title.toLowerCase().includes(searchLower) ||
-          c.description.toLowerCase().includes(searchLower)
-        )
-      }
-      
-      return {
-        data: filtered.slice(offset, offset + limit),
-        count: filtered.length
-      }
+      return { data: [], count: 0 }
     }
 
     let query = supabase
@@ -450,8 +423,7 @@ export const courseService = {
   // Get single course by ID
   async getCourseById(id) {
     if (!isSupabaseAvailable()) {
-      const course = mockCourses.find(c => c.id === id)
-      return course || null
+      return null
     }
 
     const { data, error } = await supabase
@@ -535,7 +507,7 @@ export const courseService = {
   // Get featured/popular courses
   async getFeaturedCourses(limit = 6) {
     if (!isSupabaseAvailable()) {
-      return mockCourses.slice(0, limit)
+      return []
     }
 
     const { data, error } = await supabase
@@ -583,31 +555,7 @@ export const courseService = {
 }
 
 // ============ BLOG SERVICES ============
-const mockBlogPosts = mockCourses.slice(0, 3).map((course, index) => ({
-  id: `mock-blog-${course.id}`,
-  title: `كيف تبدأ تعلم ${course.title}`,
-  title_en: `How to Start Learning ${course.titleEn || course.title}`,
-  slug: `start-learning-${course.id}`,
-  excerpt: 'مقال تعليمي مرتبط بالكورس يساعدك على فهم المسار قبل التسجيل.',
-  excerpt_en: 'A course-aware article that helps learners understand the path before enrolling.',
-  content: [
-    `يمنحك كورس ${course.title} نقطة بداية واضحة لفهم المهارات الأساسية وتطبيقها خطوة بخطوة.`,
-    'ابدأ بتحديد هدفك من التعلم، ثم راجع محتوى الكورس والدروس العملية المتاحة.',
-    'أفضل طريقة للاستفادة هي تدوين الملاحظات، تطبيق كل مفهوم، وبناء مشروع صغير يلخص ما تعلمته.'
-  ].join('\n\n'),
-  content_en: [
-    `${course.titleEn || course.title} gives you a clear starting point for understanding and applying the core skills step by step.`,
-    'Start by defining your learning goal, then review the course structure and practical lessons.',
-    'The best way to benefit is to take notes, apply every concept, and build a small project that reflects what you learned.'
-  ].join('\n\n'),
-  category: course.category || 'education',
-  course_id: course.id,
-  cover_image_url: course.thumbnail || course.image || '/assets/hero-background.png',
-  status: 'published',
-  published_at: new Date(Date.now() - index * 86400000).toISOString(),
-  created_at: new Date(Date.now() - index * 86400000).toISOString(),
-  author: { full_name: 'BeePro Academy' }
-}))
+const mockBlogPosts = []
 
 export const blogService = {
   async getPublishedPosts() {
@@ -1119,12 +1067,7 @@ export const userService = {
   // Get user profile
   async getProfile(userId) {
     if (!isSupabaseAvailable()) {
-      return {
-        id: userId,
-        full_name: 'Demo User',
-        email: 'demo@example.com',
-        role: 'student'
-      }
+      return null
     }
 
     const { data, error } = await supabase
@@ -1141,12 +1084,7 @@ export const userService = {
   // Get or create user profile
   async getOrCreateProfile(userId, userData = {}) {
     if (!isSupabaseAvailable()) {
-      return {
-        id: userId,
-        full_name: userData.full_name || 'Demo User',
-        email: userData.email || 'demo@example.com',
-        role: 'student'
-      }
+      return null
     }
 
     // First try to get existing profile
@@ -1213,7 +1151,7 @@ export const userService = {
       return { id: userId, ...profileData }
     }
 
-    const { role, ...safeProfileData } = profileData || {}
+    const { role, is_suspended, ...safeProfileData } = profileData || {}
 
     const { data, error } = await supabase
       .from('users')
@@ -1493,6 +1431,41 @@ export const adminService = {
 
     if (profileError) throw profileError
     assertRoleUpdateResult(profile, 'student')
+
+    return result
+  },
+
+  async setUserSuspended(targetUserId, isSuspended) {
+    assertSupabaseAvailable()
+
+    const { data, error } = await supabase.rpc('admin_set_user_suspended', {
+      target_user_id: targetUserId,
+      suspend_user: Boolean(isSuspended)
+    })
+
+    if (error) throw error
+
+    const result = parseRpcJsonResult(data)
+    if (result?.success === false) {
+      throw new Error(result.error || 'Failed to update user status')
+    }
+
+    return result
+  },
+
+  async deletePlatformUser(targetUserId) {
+    assertSupabaseAvailable()
+
+    const { data, error } = await supabase.rpc('admin_delete_platform_user', {
+      target_user_id: targetUserId
+    })
+
+    if (error) throw error
+
+    const result = parseRpcJsonResult(data)
+    if (result?.success === false) {
+      throw new Error(result.error || 'Failed to delete user')
+    }
 
     return result
   },

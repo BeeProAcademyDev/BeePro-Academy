@@ -13,9 +13,6 @@ const DataAnalysisPage = () => {
       icon="📊"
       color="#45B7D1"
       features={['Statistical Analysis', 'Data Visualization', 'Python & R', 'Business Intelligence', 'SQL', 'Excel', 'Tableau', 'Power BI']}
-      courses={[
-        { id: 'data-analysis-demo', title: 'Data Analysis Fundamentals', level: 'Beginner', duration: '4 weeks', price: '$49', image: '/assets/data.jpg' },
-      ]}
     />
   );
 };

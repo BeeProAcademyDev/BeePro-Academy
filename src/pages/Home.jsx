@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../contexts/LanguageContext'
 import CourseCard from '../components/ui/CourseCard'
 import Button from '../components/ui/Button'
-import { courses, categories, stats, testimonials } from '../data/courses'
+import { categories, stats, testimonials } from '../data/courses'
+import { courseService } from '../services/api'
 import { 
   FiBarChart2,
   FiServer, 
@@ -23,9 +25,46 @@ import {
 const Home = () => {
   const { t } = useTranslation()
   const { language, isRTL } = useLanguage()
+  const [popularCourses, setPopularCourses] = useState([])
   
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight
-  const popularCourses = courses.filter(course => course.isPopular).slice(0, 4)
+
+  useEffect(() => {
+    const loadPopularCourses = async () => {
+      try {
+        const data = await courseService.getFeaturedCourses(4)
+        const formatted = (data || [])
+          .filter((course) => course.is_published !== false)
+          .map((course) => ({
+            id: course.id,
+            title: course.title,
+            titleEn: course.title_en || course.title,
+            description: course.description,
+            descriptionEn: course.description_en || course.description,
+            thumbnail: course.thumbnail_url || course.image_url || '/assets/hero-background.png',
+            price: course.price || 0,
+            category: course.category,
+            level: course.level || 'beginner',
+            rating: course.rating || 0,
+            students: course.students || 0,
+            lessons: course.lessons_count || course.lessonsCount || 0,
+            duration: course.duration || 0,
+            instructor: {
+              name: course.instructor?.full_name || 'Instructor',
+              nameEn: course.instructor?.full_name || 'Instructor',
+              avatar: course.instructor?.avatar_url || '/assets/abdullah1.jpg',
+            },
+            isPopular: true,
+          }))
+        setPopularCourses(formatted)
+      } catch (error) {
+        console.error('Error loading featured courses:', error)
+        setPopularCourses([])
+      }
+    }
+
+    loadPopularCourses()
+  }, [])
 
   const categoryIcons = {
     financial_markets: FiTrendingUp,
@@ -240,9 +279,17 @@ const Home = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {popularCourses.map((course) => (
-              <CourseCard key={course.id} course={course} />
-            ))}
+            {popularCourses.length > 0 ? (
+              popularCourses.map((course) => (
+                <CourseCard key={course.id} course={course} />
+              ))
+            ) : (
+              <div className="col-span-full card card-body text-center py-10">
+                <p className="text-secondary-500">
+                  {language === 'ar' ? 'لا توجد دورات منشورة حالياً' : 'No published courses yet'}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="mt-8 text-center md:hidden">

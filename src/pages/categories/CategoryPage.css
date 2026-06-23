@@ -236,6 +236,21 @@
   z-index: 2;
 }
 
+.category-courses-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 48px 24px;
+  border-radius: 20px;
+  background: rgba(0, 4, 40, 0.55);
+  border: 1px dashed rgba(0, 217, 255, 0.25);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.category-courses-empty p {
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+}
+
 .category-course-card {
   background: rgba(0, 4, 40, 0.6);
   backdrop-filter: blur(10px);

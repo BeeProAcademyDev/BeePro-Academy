@@ -3,9 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
+import { formatStoredAmount } from '../lib/currency'
 import CourseCard from '../components/ui/CourseCard'
 import CourseChat from '../components/chat/CourseChat'
-import { courses } from '../data/courses'
 import { courseService, enrollmentService, notificationService, chatService } from '../services/api'
 import { paymentService, PAYMENT_TYPES } from '../services/paymentAPI'
 import UserManagement from './admin/UserManagement'
@@ -45,6 +45,9 @@ const Dashboard = () => {
   const navigate = useNavigate()
   const normalizedUserRole = resolveUserRole(user)
   const isPendingTeacher = isPendingInstructor(normalizedUserRole)
+
+  const formatPaymentAmount = (payment) =>
+    formatStoredAmount(payment.amount, payment.currency || 'USD', language)
   
   const [activeTab, setActiveTab] = useState('courses')
   const [myCourses, setMyCourses] = useState([])
@@ -100,18 +103,39 @@ const Dashboard = () => {
   
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight
 
-  // Get enrolled courses
-  const enrolledCourses = courses.filter(course => 
-    user?.enrolledCourses?.includes(course.id)
-  )
+  const enrolledCourses = useMemo(() => {
+    return (studentEnrollments || [])
+      .filter((enrollment) => enrollment.course?.id)
+      .map((enrollment) => ({
+        id: enrollment.course.id,
+        title: enrollment.course.title,
+        titleEn: enrollment.course.title_en || enrollment.course.title,
+        description: enrollment.course.description || '',
+        descriptionEn: enrollment.course.description_en || enrollment.course.description || '',
+        thumbnail: enrollment.course.thumbnail_url || '/assets/hero-background.png',
+        price: enrollment.course.price || 0,
+        category: enrollment.course.category || '',
+        level: enrollment.course.level || 'beginner',
+        rating: enrollment.course.rating || 0,
+        students: enrollment.course.students || 0,
+        lessons: enrollment.course.lessons?.[0]?.count || 0,
+        duration: enrollment.course.duration || 0,
+        instructor: {
+          name: enrollment.course.instructor?.full_name || 'Instructor',
+          nameEn: enrollment.course.instructor?.full_name || 'Instructor',
+          avatar: enrollment.course.instructor?.avatar_url || '/assets/abdullah1.jpg',
+        },
+      }))
+  }, [studentEnrollments])
 
-  const completedCourses = enrolledCourses.filter(course => 
+  const completedCourses = enrolledCourses.filter((course) =>
     user?.progress?.[course.id] === 100
   )
 
-  const inProgressCourses = enrolledCourses.filter(course => 
-    user?.progress?.[course.id] > 0 && user?.progress?.[course.id] < 100
-  )
+  const inProgressCourses = enrolledCourses.filter((course) => {
+    const progress = user?.progress?.[course.id] || 0
+    return progress > 0 && progress < 100
+  })
 
   const stats = [
     {
@@ -877,7 +901,7 @@ const Dashboard = () => {
                                     {new Date(payment.submitted_at || payment.created_at).toLocaleDateString()}
                                   </td>
                                   <td className="py-2 px-2">{payment.courses?.title || payment.course_id}</td>
-                                  <td className="py-2 px-2">${payment.amount}</td>
+                                  <td className="py-2 px-2">{formatPaymentAmount(payment)}</td>
                                   <td className="py-2 px-2">{payment.payment_method?.display_name || payment.payment_method_id}</td>
                                   <td className="py-2 px-2">{payment.transaction_reference || '-'}</td>
                                   <td className="py-2 px-2 max-w-[260px]">
@@ -1068,7 +1092,7 @@ const Dashboard = () => {
                                 <td className="py-3 px-4">
                                   {submission.students?.full_name || submission.students?.email || 'Student'}
                                 </td>
-                                <td className="py-3 px-4">${submission.amount}</td>
+                                <td className="py-3 px-4">{formatPaymentAmount(submission)}</td>
                                 <td className="py-3 px-4">
                                   <span className={`px-2 py-1 text-xs rounded-full ${
                                     submission.status === 'approved'
@@ -1542,7 +1566,7 @@ const Dashboard = () => {
                                 <td className="py-3 px-4">
                                   {submission.students?.full_name || submission.students?.email || 'Student'}
                                 </td>
-                                <td className="py-3 px-4">${submission.amount}</td>
+                                <td className="py-3 px-4">{formatPaymentAmount(submission)}</td>
                                 <td className="py-3 px-4">
                                   {submission.payment_method?.display_name || submission.payment_method?.payment_type}
                                 </td>

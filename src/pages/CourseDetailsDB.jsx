@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useCurrency } from '../contexts/CurrencyContext'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { enrollmentService, meetingService } from '../services/api'
@@ -36,6 +37,7 @@ const CourseDetailsDB = () => {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { language, isRTL } = useLanguage()
+  const { formatCoursePrice } = useCurrency()
   const { user, isAuthenticated } = useAuth()
   
   const [course, setCourse] = useState(null)
@@ -49,6 +51,7 @@ const CourseDetailsDB = () => {
   const [expandedSections, setExpandedSections] = useState(['section-1'])
   const [liveMeetings, setLiveMeetings] = useState([])
   const isPaidCourse = Number(course?.price || 0) > 0
+  const coursePriceDisplay = course ? formatCoursePrice(course.price).full : ''
   const isStudent = isStudentUser(user)
 
   const hasCourseAccess = isEnrolled || hasApprovedPayment
@@ -421,7 +424,7 @@ const CourseDetailsDB = () => {
                 {/* Price & CTA */}
                 <div className="p-6 text-secondary-900 dark:text-white">
                   <div className="text-3xl font-bold text-green-500 mb-4">
-                    {isPaidCourse ? `$${course.price}` : (language === 'ar' ? 'مجاني' : 'Free')}
+                    {isPaidCourse ? coursePriceDisplay : (language === 'ar' ? 'مجاني' : 'Free')}
                   </div>
 
                   {hasCourseAccess ? (
@@ -480,7 +483,7 @@ const CourseDetailsDB = () => {
         <div className="flex items-center justify-between">
           <div>
             <span className="text-2xl font-bold text-green-500">
-              {isPaidCourse ? `$${course.price}` : (language === 'ar' ? 'مجاني' : 'Free')}
+              {isPaidCourse ? coursePriceDisplay : (language === 'ar' ? 'مجاني' : 'Free')}
             </span>
           </div>
           {hasCourseAccess ? (
