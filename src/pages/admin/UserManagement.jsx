@@ -54,44 +54,9 @@ const UserManagement = () => {
       console.error('Error fetching users:', error)
 
       if (isAccessDeniedError(error)) {
-        try {
-          const { data: fallbackUsers } = await adminService.getAllUsers({ limit: 500, offset: 0 })
-          const safeUsers = (fallbackUsers || []).map((item) => ({
-            ...item,
-            total_courses: item.total_courses || 0,
-            total_enrollments: item.total_enrollments || 0
-          }))
-
-          if (safeUsers.length > 0) {
-            setUsers(safeUsers)
-            alert(language === 'ar' ? 'تم تحميل المستخدمين عبر الوضع الاحتياطي. راجع صلاحيات admin في قاعدة البيانات.' : 'Users loaded via fallback mode. Please fix admin role in database.')
-            return
-          }
-        } catch (fallbackError) {
-          console.error('Fallback users fetch after P0001 failed:', fallbackError)
-        }
-
         const adminHint = getAccessDeniedHint()
         alert(language === 'ar' ? `تم رفض الوصول: ${adminHint}` : `Access denied: ${adminHint}`)
         return
-      }
-
-      const configError = (error?.message || '').includes('Supabase is not configured')
-      if (!configError) {
-        try {
-          const { data: fallbackUsers } = await adminService.getAllUsers({ limit: 500, offset: 0 })
-          const safeUsers = (fallbackUsers || []).map((item) => ({
-            ...item,
-            total_courses: item.total_courses || 0,
-            total_enrollments: item.total_enrollments || 0
-          }))
-          if (safeUsers.length > 0) {
-            setUsers(safeUsers)
-            return
-          }
-        } catch (fallbackError) {
-          console.error('Fallback users fetch failed:', fallbackError)
-        }
       }
 
       const details = error?.message || error?.details || error?.hint || ''
@@ -288,26 +253,18 @@ const UserManagement = () => {
     } catch (error) {
       console.error('Error getting user details:', error)
 
-      // Fallback to direct queries so admins can still inspect user details.
-      try {
-        const fallbackDetails = await adminService.getUserDetailsFallback(targetUserId, selectedFromList)
-        setSelectedUser(fallbackDetails)
+      if (selectedFromList && !isAccessDeniedError(error)) {
+        setSelectedUser({
+          success: true,
+          user: selectedFromList,
+          courses: [],
+          enrollments: []
+        })
         setShowUserDetails(true)
-      } catch (fallbackError) {
-        console.error('Fallback user details failed:', fallbackError)
-        if (selectedFromList) {
-          setSelectedUser({
-            success: true,
-            user: selectedFromList,
-            courses: [],
-            enrollments: []
-          })
-          setShowUserDetails(true)
-          return
-        }
-
-        alert(language === 'ar' ? 'تعذر تحميل التفاصيل' : 'Unable to load user details')
+        return
       }
+
+      alert(language === 'ar' ? 'تعذر تحميل التفاصيل' : 'Unable to load user details')
     }
   }
 

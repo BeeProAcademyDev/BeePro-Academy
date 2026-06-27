@@ -1253,19 +1253,8 @@ export const adminService = {
   },
 
   // Get all users (admin only)
-  async getAllUsers({ limit = 50, offset = 0 } = {}) {
-    if (!isSupabaseAvailable()) {
-      return { data: [], count: 0 }
-    }
-
-    const { data, error, count } = await supabase
-      .from('users')
-      .select('*', { count: 'exact' })
-      .range(offset, offset + limit - 1)
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-    return { data, count }
+  async getAllUsers() {
+    throw new Error('Direct admin user listing is disabled. Use admin_get_all_users RPC.')
   },
 
   async getAllUsersAdmin() {
@@ -1330,57 +1319,8 @@ export const adminService = {
     return data
   },
 
-  async getUserDetailsFallback(targetUserId, selectedFromList = null) {
-    assertSupabaseAvailable()
-
-    const { data: profile } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', targetUserId)
-      .maybeSingle()
-
-    let courses = []
-    let enrollments = []
-
-    if ((profile?.role || '').toLowerCase() === 'instructor') {
-      const { data: instructorCourses } = await supabase
-        .from('courses')
-        .select('id, title, status')
-        .eq('instructor_id', targetUserId)
-        .order('created_at', { ascending: false })
-
-      courses = (instructorCourses || []).map((course) => ({
-        ...course,
-        enrollments: 0
-      }))
-    }
-
-    if ((profile?.role || '').toLowerCase() === 'student') {
-      const { data: studentEnrollments } = await supabase
-        .from('enrollments')
-        .select('id, progress, course:courses(title, instructor:users!instructor_id(full_name))')
-        .eq('user_id', targetUserId)
-        .order('enrolled_at', { ascending: false })
-
-      enrollments = (studentEnrollments || []).map((enrollment) => ({
-        id: enrollment.id,
-        progress: enrollment.progress || 0,
-        course_title: enrollment.course?.title || 'N/A',
-        instructor_name: enrollment.course?.instructor?.full_name || 'N/A'
-      }))
-    }
-
-    const fallbackUser = profile || selectedFromList
-    if (!fallbackUser) {
-      throw new Error('User details are not available')
-    }
-
-    return {
-      success: true,
-      user: fallbackUser,
-      courses,
-      enrollments
-    }
+  async getUserDetailsFallback() {
+    throw new Error('Direct admin user detail fallback is disabled. Use admin_get_user_details RPC.')
   },
 
   async approveInstructor(targetUserId) {

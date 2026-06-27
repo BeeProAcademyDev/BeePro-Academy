@@ -45,9 +45,6 @@ function warnIfUrlDoesNotMatchAnonHost() {
   }
 }
 
-console.log('Supabase URL:', supabaseUrl ? `Set (${supabaseUrl})` : 'NOT SET ✗')
-console.log('Supabase Key:', supabaseAnonKey ? 'Set ✓' : 'NOT SET ✗')
-
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('⚠️ Supabase environment variables not set. Using mock mode.')
   console.warn(
@@ -67,9 +64,7 @@ export const supabase = supabaseUrl && supabaseAnonKey
     })
   : null
 
-if (supabase) {
-  console.log('✅ Supabase client initialized successfully')
-} else {
+if (!supabase) {
   console.log('❌ Supabase client not initialized - running in mock mode')
 }
 

@@ -8,13 +8,13 @@
 
 -- Step 2: Add admin email to server allowlist
 INSERT INTO public.admin_email_allowlist (email)
-VALUES ('admin@bepro.academy')  -- Replace with your admin email
+VALUES ('admin63@beepro-academy.com')  -- Replace with your admin email
 ON CONFLICT (email) DO NOTHING;
 
 -- Step 3: Promote existing auth user to admin profile
 UPDATE public.users
 SET role = 'admin'
-WHERE lower(email) = lower('admin@bepro.academy');  -- Replace with your admin email
+WHERE lower(email) = lower('admin63@beepro-academy.com');  -- Replace with your admin email
 
 -- Step 4: Verify
 SELECT id, full_name, email, role, created_at
