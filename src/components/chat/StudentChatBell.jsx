@@ -101,9 +101,6 @@ const StudentChatBell = () => {
   }
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7427/ingest/558f5932-6500-4722-9bbf-9e5e1306baf3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'45e2a3'},body:JSON.stringify({sessionId:'45e2a3',location:'StudentChatBell.jsx:visibility',message:'chat bell visibility check',data:{isAuthenticated,rawRole:user?.role,resolvedRole:resolveUserRole(user),isStudentUser:isStudentUser(user),shouldShow:shouldShowStudentChatBell(user),hasUserId:!!user?.id},hypothesisId:'F',timestamp:Date.now(),runId:'pre-fix'})}).catch(()=>{});
-    // #endregion
     if (!isAuthenticated || !shouldShowStudentChatBell(user)) return
     loadChatData()
     const pollId = window.setInterval(loadChatData, 10000)

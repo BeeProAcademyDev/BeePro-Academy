@@ -1504,16 +1504,6 @@ const normalizeRpcRow = (data) => {
   return null
 }
 
-// #region agent log
-const __dbgChat = (location, message, data, hypothesisId) => {
-  fetch('http://127.0.0.1:7427/ingest/558f5932-6500-4722-9bbf-9e5e1306baf3', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '45e2a3' },
-    body: JSON.stringify({ sessionId: '45e2a3', location, message, data, hypothesisId, timestamp: Date.now(), runId: 'pre-fix' })
-  }).catch(() => {})
-}
-// #endregion
-
 export const chatService = {
   getCourseChatChannelName,
 
@@ -1590,41 +1580,17 @@ export const chatService = {
     const authUserId = sessionData?.session?.user?.id
     const isSelfStudent = authUserId && studentId === authUserId
 
-    // #region agent log
-    __dbgChat('api.js:getOrCreateConversation:entry', 'resolve conversation', {
-      courseId,
-      studentIdTail: studentId?.slice(-8),
-      authUserIdTail: authUserId?.slice(-8),
-      isSelfStudent
-    }, 'A')
-    // #endregion
-
     if (isSelfStudent) {
       const { data: myConvRaw, error: myConvError } = await supabase.rpc('get_my_course_conversation', {
         p_course_id: courseId
       })
       const myConv = normalizeRpcRow(myConvRaw)
 
-      // #region agent log
-      __dbgChat('api.js:getOrCreateConversation:myConvRpc', 'get_my_course_conversation result', {
-        courseId,
-        convId: myConv?.id || null,
-        rpcError: myConvError?.message || null,
-        rpcCode: myConvError?.code || null
-      }, 'A')
-      // #endregion
-
       if (!myConvError && myConv?.id) {
         try {
           const hydrated = await this._hydrateConversation(myConv.id)
-          // #region agent log
-          __dbgChat('api.js:getOrCreateConversation:return', 'via myConvRpc', { courseId, convId: hydrated?.id }, 'A')
-          // #endregion
           return hydrated
         } catch {
-          // #region agent log
-          __dbgChat('api.js:getOrCreateConversation:return', 'via myConvRpc unhydrated', { courseId, convId: myConv?.id }, 'A')
-          // #endregion
           return myConv
         }
       }
@@ -1647,14 +1613,8 @@ export const chatService = {
     if (!rpcError && rpcData?.id) {
       try {
         const hydrated = await this._hydrateConversation(rpcData.id)
-        // #region agent log
-        __dbgChat('api.js:getOrCreateConversation:return', 'via getOrCreateRpc', { courseId, convId: hydrated?.id }, 'A')
-        // #endregion
         return hydrated
       } catch {
-        // #region agent log
-        __dbgChat('api.js:getOrCreateConversation:return', 'via getOrCreateRpc unhydrated', { courseId, convId: rpcData?.id }, 'A')
-        // #endregion
         return rpcData
       }
     }
@@ -1680,9 +1640,6 @@ export const chatService = {
 
     if (fetchError) throw fetchError
     if (existing) {
-      // #region agent log
-      __dbgChat('api.js:getOrCreateConversation:return', 'via directSelect', { courseId, convId: existing?.id }, 'A')
-      // #endregion
       return existing
     }
 
@@ -1701,9 +1658,6 @@ export const chatService = {
       .single()
 
     if (error) throw error
-    // #region agent log
-    __dbgChat('api.js:getOrCreateConversation:return', 'via insert', { courseId, convId: data?.id }, 'A')
-    // #endregion
     return data
   },
 
@@ -1787,12 +1741,6 @@ export const chatService = {
     const { data: rpcData, error: rpcError } = await supabase.rpc('get_student_chat_inbox')
 
     if (!rpcError && Array.isArray(rpcData)) {
-      // #region agent log
-      __dbgChat('api.js:getStudentChatInbox', 'inbox loaded', {
-        count: rpcData.length,
-        withMessages: rpcData.filter((r) => (r.message_count || 0) > 0).length
-      }, 'D')
-      // #endregion
       return rpcData
     }
 
@@ -1883,13 +1831,6 @@ export const chatService = {
       rpcCount = rows.length
       if (rows.length > 0) {
         const hydrated = await this._hydrateMessages(rows)
-        // #region agent log
-        __dbgChat('api.js:getMessages:return', 'via rpc', {
-          conversationIdTail: conversationId?.slice(-8),
-          rpcCount,
-          hydratedCount: hydrated?.length || 0
-        }, 'B')
-        // #endregion
         return hydrated
       }
     }
@@ -1911,15 +1852,6 @@ export const chatService = {
 
     if (error) throw error
     const hydrated = await this._hydrateMessages(data || [])
-    // #region agent log
-    __dbgChat('api.js:getMessages:return', 'via fallback select', {
-      conversationIdTail: conversationId?.slice(-8),
-      rpcCount,
-      rpcError: rpcError?.message || null,
-      fallbackCount: data?.length || 0,
-      hydratedCount: hydrated?.length || 0
-    }, 'B')
-    // #endregion
     return hydrated
   },
 

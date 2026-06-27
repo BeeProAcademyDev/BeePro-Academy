@@ -25,15 +25,9 @@ const Navbar = () => {
   const { t } = useTranslation()
   const { isDarkMode, toggleDarkMode } = useTheme()
   const { language, toggleLanguage, isRTL } = useLanguage()
-  const { user, isAuthenticated, isLoading, logout } = useAuth()
+  const { user, isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
   const showChatBell = shouldShowStudentChatBell(user)
-  
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7427/ingest/558f5932-6500-4722-9bbf-9e5e1306baf3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'45e2a3'},body:JSON.stringify({sessionId:'45e2a3',location:'Navbar.jsx:auth',message:'navbar auth state',data:{isLoading,isAuthenticated,hasUserId:!!user?.id,role:user?.role,resolvedRole:resolveUserRole(user),showChatBell,viewportW:typeof window!=='undefined'?window.innerWidth:null},hypothesisId:'G',timestamp:Date.now(),runId:'pre-fix'})}).catch(()=>{});
-    // #endregion
-  }, [isLoading, isAuthenticated, user?.id, user?.role, showChatBell])
   
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)

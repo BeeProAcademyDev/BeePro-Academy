@@ -58,9 +58,6 @@ const CourseChat = ({
 
   const loadMessages = useCallback(async (conversationId, { scroll = true } = {}) => {
     const data = await chatService.getMessages(conversationId)
-    // #region agent log
-    fetch('http://127.0.0.1:7427/ingest/558f5932-6500-4722-9bbf-9e5e1306baf3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'45e2a3'},body:JSON.stringify({sessionId:'45e2a3',location:'CourseChat.jsx:loadMessages',message:'messages applied to UI',data:{courseId,convIdTail:conversationId?.slice(-8),count:data?.length||0,isInstructor},hypothesisId:'E',timestamp:Date.now(),runId:'pre-fix'})}).catch(()=>{});
-    // #endregion
     applyMessages(data || [], { scroll })
     if (user?.id) {
       await chatService.markMessagesAsRead(conversationId, user.id)
@@ -148,9 +145,6 @@ const CourseChat = ({
       }
     } catch (err) {
       console.error('Chat init error:', err)
-      // #region agent log
-      fetch('http://127.0.0.1:7427/ingest/558f5932-6500-4722-9bbf-9e5e1306baf3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'45e2a3'},body:JSON.stringify({sessionId:'45e2a3',location:'CourseChat.jsx:initChat:error',message:'chat init failed',data:{courseId,error:err?.message,isInstructor},hypothesisId:'C',timestamp:Date.now(),runId:'pre-fix'})}).catch(()=>{});
-      // #endregion
       setError(err.message || (isAr ? 'تعذر تحميل المحادثة' : 'Failed to load chat'))
     } finally {
       setLoading(false)
@@ -158,9 +152,6 @@ const CourseChat = ({
   }, [courseId, isInstructor, isAr, openConversation, openStudentChat, initStudentChat])
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7427/ingest/558f5932-6500-4722-9bbf-9e5e1306baf3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'45e2a3'},body:JSON.stringify({sessionId:'45e2a3',location:'CourseChat.jsx:initEffect',message:'chat init gate',data:{courseId,hasAccess,hasInstructorId:!!instructorId,hasUserId:!!user?.id,isInstructor,userRole:user?.role},hypothesisId:'C',timestamp:Date.now(),runId:'pre-fix'})}).catch(()=>{});
-    // #endregion
     if (!courseId || !user?.id || !hasAccess) {
       setLoading(false)
       return
