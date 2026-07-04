@@ -15,3 +15,5 @@ cursor/
 refs/codex/
 .vercel
 .env*
+web_test/env_audit_report.json
+web_test/env_scan_report.json

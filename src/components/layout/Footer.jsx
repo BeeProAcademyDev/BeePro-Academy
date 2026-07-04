@@ -17,6 +17,10 @@ const Footer = () => {
   const { t } = useTranslation()
   const { language } = useLanguage()
 
+  const handleNewsletterSubmit = (e) => {
+    e.preventDefault()
+  }
+
   const quickLinks = [
     { to: '/', label: t('nav.home') },
     { to: '/courses', label: t('nav.courses') },
@@ -133,7 +137,7 @@ const Footer = () => {
             <p className="text-secondary-400 text-sm mb-3">
               {t('footer.newsletterText')}
             </p>
-            <form className="flex flex-col sm:flex-row gap-2">
+            <form className="flex flex-col sm:flex-row gap-2" onSubmit={handleNewsletterSubmit}>
               <input
                 type="email"
                 placeholder={t('auth.login.email')}
