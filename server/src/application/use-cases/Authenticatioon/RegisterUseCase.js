@@ -1,13 +1,13 @@
-const User = require('../../domain/entities/User')
-const { ConflictError, ValidationError } = require('../../domain/errors/AppError')
-const { toAuthResponseDTO } = require('../dtos/authDTOs')
+const User = require('../../../domain/entities/User')
+const { ConflictError, ValidationError } = require('../../../domain/errors/AppError')
+const { toAuthResponseDTO } = require('../../dtos/authDTOs')
 
 class RegisterUseCase {
   /**
-   * @param {import('../interfaces/IUserRepository')} userRepository
-   * @param {import('../interfaces/ITokenRepository')} tokenRepository
-   * @param {import('../interfaces/IHashService')} hashService
-   * @param {import('../interfaces/ITokenService')} tokenService
+   * @param {import('../../interfaces/IUserRepository')} userRepository
+   * @param {import('../../interfaces/ITokenRepository')} tokenRepository
+   * @param {import('../../interfaces/IHashService')} hashService
+   * @param {import('../../interfaces/ITokenService')} tokenService
    */
   constructor({ userRepository, tokenRepository, hashService, tokenService }) {
     this.userRepository = userRepository

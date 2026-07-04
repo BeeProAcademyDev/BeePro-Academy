@@ -21,14 +21,14 @@ const errorHandler = (err, req, res, next) => {
       success: false,
       error: {
         code: 'BAD_REQUEST',
-        message: 'Invalid JSON payload format',
+        message: 'Invalid JSON Payload Format',
       },
     })
   }
 
   // Unhandled server errors
   console.error('Unhandled Error:', err)
-  
+
   res.status(500).json({
     success: false,
     error: {

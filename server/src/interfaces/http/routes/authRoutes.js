@@ -5,7 +5,7 @@ const validators = require('../validators/authValidators')
 
 function createAuthRoutes(authController, authenticate, authorize) {
   const router = Router()
-
+  // lol
   // Apply rate limiting to all auth routes
   router.use(authLimiter)
 
@@ -25,8 +25,6 @@ function createAuthRoutes(authController, authenticate, authorize) {
   router.get('/me', authenticate, authController.getProfile)
   router.patch('/me', authenticate, validate(validators.updateProfileSchema), authController.updateProfile)
 
-  // Example of role-based route (Admins only)
-  // router.delete('/users/:id', authenticate, authorize('admin'), userController.deleteUser)
 
   return router
 }

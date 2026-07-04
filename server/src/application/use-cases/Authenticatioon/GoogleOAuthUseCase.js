@@ -1,6 +1,6 @@
-const User = require('../../domain/entities/User')
-const { AuthenticationError } = require('../../domain/errors/AppError')
-const { toAuthResponseDTO } = require('../dtos/authDTOs')
+const User = require('../../../domain/entities/User')
+const { AuthenticationError } = require('../../../domain/errors/AppError')
+const { toAuthResponseDTO } = require('../../dtos/authDTOs')
 
 class GoogleOAuthUseCase {
   constructor({ userRepository, tokenRepository, tokenService, googleOAuthService }) {

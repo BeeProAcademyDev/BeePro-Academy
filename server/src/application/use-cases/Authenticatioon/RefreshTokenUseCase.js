@@ -1,4 +1,4 @@
-const { AuthenticationError } = require('../../domain/errors/AppError')
+const { AuthenticationError } = require('../../../domain/errors/AppError')
 
 class RefreshTokenUseCase {
   constructor({ userRepository, tokenRepository, tokenService }) {

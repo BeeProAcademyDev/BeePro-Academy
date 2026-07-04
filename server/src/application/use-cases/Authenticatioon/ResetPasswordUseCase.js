@@ -1,5 +1,5 @@
-const User = require('../../domain/entities/User')
-const { AuthenticationError, ValidationError } = require('../../domain/errors/AppError')
+const User = require('../../../domain/entities/User')
+const { AuthenticationError, ValidationError } = require('../../../domain/errors/AppError')
 
 class ResetPasswordUseCase {
   constructor({ userRepository, tokenRepository, hashService }) {

@@ -1,5 +1,5 @@
-const { NotFoundError } = require('../../domain/errors/AppError')
-const { toUserDTO } = require('../dtos/authDTOs')
+const { NotFoundError } = require('../../../domain/errors/AppError')
+const { toUserDTO } = require('../../dtos/authDTOs')
 
 class UpdateProfileUseCase {
   constructor({ userRepository }) {

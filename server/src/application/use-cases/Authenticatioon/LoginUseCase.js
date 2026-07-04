@@ -1,6 +1,6 @@
-const User = require('../../domain/entities/User')
-const { AuthenticationError, AuthorizationError } = require('../../domain/errors/AppError')
-const { toAuthResponseDTO } = require('../dtos/authDTOs')
+const User = require('../../../domain/entities/User')
+const { AuthenticationError, AuthorizationError } = require('../../../domain/errors/AppError')
+const { toAuthResponseDTO } = require('../../dtos/authDTOs')
 
 class LoginUseCase {
   constructor({ userRepository, tokenRepository, hashService, tokenService }) {

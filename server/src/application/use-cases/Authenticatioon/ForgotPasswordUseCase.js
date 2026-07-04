@@ -1,5 +1,5 @@
 const crypto = require('crypto')
-const User = require('../../domain/entities/User')
+const User = require('../../../domain/entities/User')
 
 class ForgotPasswordUseCase {
   constructor({ userRepository, hashService, emailService, config }) {
