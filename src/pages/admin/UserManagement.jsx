@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { adminService } from '../../services/api'
 import { getRoleLabel as getSharedRoleLabel, normalizeDbRole } from '../../lib/roles'
 import { requireAdmin } from '../../lib/authGuards'
+import { useTranslation } from 'react-i18next'
 import { 
   FiUsers, 
   FiSearch, 
@@ -20,6 +21,7 @@ import {
 } from 'react-icons/fi'
 
 const UserManagement = () => {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const { language } = useLanguage()
   const isAdminUser = requireAdmin(user)
@@ -32,9 +34,7 @@ const UserManagement = () => {
   const [actionLoading, setActionLoading] = useState(null)
 
   const getAccessDeniedHint = () => {
-    return language === 'ar'
-      ? 'صلاحيات المدير يجب أن تكون محفوظة في جدول users داخل قاعدة البيانات. لا يمكن منحها من الواجهة.'
-      : 'Admin access must be stored in the database users.role column. It cannot be granted by the frontend.'
+    return t('userManagement.adminAccessMustBeStoredInTheDa')
   }
 
   const isAccessDeniedError = (error) => {
@@ -55,15 +55,13 @@ const UserManagement = () => {
 
       if (isAccessDeniedError(error)) {
         const adminHint = getAccessDeniedHint()
-        alert(language === 'ar' ? `تم رفض الوصول: ${adminHint}` : `Access denied: ${adminHint}`)
+        alert(t('userManagement.accessDeniedAdminhint'))
         return
       }
 
       const details = error?.message || error?.details || error?.hint || ''
       alert(
-        language === 'ar'
-          ? `خطأ في تحميل المستخدمين${details ? `: ${details}` : ''}`
-          : `Error loading users${details ? `: ${details}` : ''}`
+        `${t('userManagement.errorLoadingUsers')}${details ? `: ${details}` : ''}`
       )
     } finally {
       setLoading(false)
@@ -71,9 +69,7 @@ const UserManagement = () => {
   }
 
   const showRoleUpdateSuccess = (newRole) => {
-    alert(language === 'ar'
-      ? `تم تحديث دور المستخدم إلى ${getRoleLabel(newRole)}`
-      : `User role updated to ${getRoleLabel(newRole)}`)
+    alert(t('userManagement.userRoleUpdatedToGetrolelabeln'))
     fetchUsers()
   }
 
@@ -82,9 +78,7 @@ const UserManagement = () => {
     const details = error?.message || ''
     const hint = isAccessDeniedError(error) ? getAccessDeniedHint() : details
     alert(
-      language === 'ar'
-        ? `فشل ${actionLabelAr}${hint ? `: ${hint}` : ''}`
-        : `Failed to ${actionLabelEn}${hint ? `: ${hint}` : ''}`
+      `${t('userManagement.roleChangeFailed', { action: language === 'ar' ? actionLabelAr : actionLabelEn })}${hint ? `: ${hint}` : ''}`
     )
   }
 
@@ -103,12 +97,12 @@ const UserManagement = () => {
 
   const approveInstructor = async (targetUserId) => {
     if (!user?.id) {
-      alert(language === 'ar' ? 'يجب تسجيل الدخول' : 'You must be signed in')
+      alert(t('userManagement.youMustBeSignedIn'))
       return
     }
 
     if (!isAdminUser) {
-      alert(language === 'ar' ? 'صلاحيات المدير مطلوبة' : 'Admin access is required')
+      alert(t('userManagement.adminAccessIsRequired'))
       return
     }
 
@@ -121,7 +115,7 @@ const UserManagement = () => {
         await applyRoleChange(targetUserId, 'instructor')
         showRoleUpdateSuccess('instructor')
       } catch (fallbackError) {
-        handleRoleChangeError(fallbackError, 'approve instructor', 'قبول المدرس')
+        handleRoleChangeError(fallbackError, 'approve instructor', '\u0642\u0628\u0648\u0644 \u0627\u0644\u0645\u062f\u0631\u0633')
       }
     } finally {
       setActionLoading(null)
@@ -140,7 +134,7 @@ const UserManagement = () => {
         await applyRoleChange(targetUserId, 'student')
         showRoleUpdateSuccess('student')
       } catch (fallbackError) {
-        handleRoleChangeError(fallbackError, 'reject instructor application', 'رفض طلب المدرس')
+        handleRoleChangeError(fallbackError, 'reject instructor application', '\u0631\u0641\u0636 \u0637\u0644\u0628 \u0627\u0644\u0645\u062f\u0631\u0633')
       }
     } finally {
       setActionLoading(null)
@@ -152,18 +146,14 @@ const UserManagement = () => {
 
     const shouldSuspend = !targetUser.is_suspended
     if (targetUser.id === user.id && shouldSuspend) {
-      alert(language === 'ar' ? 'لا يمكنك حظر حسابك الحالي' : 'You cannot block your own account')
+      alert(t('userManagement.youCannotBlockYourOwnAccount'))
       return
     }
 
     const confirmed = window.confirm(
       shouldSuspend
-        ? (language === 'ar'
-          ? `هل تريد حظر "${targetUser.email}" من المنصة؟`
-          : `Block "${targetUser.email}" from the platform?`)
-        : (language === 'ar'
-          ? `هل تريد فك الحظر عن "${targetUser.email}"؟`
-          : `Unblock "${targetUser.email}"?`)
+        ? (t('userManagement.blockTargetuseremailFromThePla'))
+        : (t('userManagement.unblockTargetuseremail'))
     )
 
     if (!confirmed) return
@@ -176,14 +166,12 @@ const UserManagement = () => {
       )))
       alert(
         shouldSuspend
-          ? (language === 'ar' ? 'تم حظر المستخدم من المنصة' : 'User blocked from the platform')
-          : (language === 'ar' ? 'تم فك حظر المستخدم' : 'User unblocked')
+          ? (t('userManagement.userBlockedFromThePlatform'))
+          : (t('userManagement.userUnblocked'))
       )
     } catch (error) {
       alert(
-        language === 'ar'
-          ? `فشل تحديث حالة المستخدم: ${error.message || ''}`
-          : `Failed to update user status: ${error.message || ''}`
+        t('userManagement.failedToUpdateUserStatusErrorm')
       )
     } finally {
       setActionLoading(null)
@@ -194,14 +182,12 @@ const UserManagement = () => {
     if (!user?.id || !isAdminUser || !targetUser?.id) return
 
     if (targetUser.id === user.id) {
-      alert(language === 'ar' ? 'لا يمكنك حذف حسابك الحالي' : 'You cannot delete your own account')
+      alert(t('userManagement.youCannotDeleteYourOwnAccount'))
       return
     }
 
     const confirmed = window.confirm(
-      language === 'ar'
-        ? `سيتم حذف "${targetUser.email}" نهائيا من المنصة. هل أنت متأكد؟`
-        : `Delete "${targetUser.email}" permanently from the platform?`
+      t('userManagement.deleteTargetuseremailPermanent')
     )
 
     if (!confirmed) return
@@ -210,12 +196,10 @@ const UserManagement = () => {
     try {
       await adminService.deletePlatformUser(targetUser.id)
       setUsers((prev) => prev.filter((item) => item.id !== targetUser.id))
-      alert(language === 'ar' ? 'تم حذف المستخدم' : 'User deleted')
+      alert(t('userManagement.userDeleted'))
     } catch (error) {
       alert(
-        language === 'ar'
-          ? `فشل حذف المستخدم: ${error.message || ''}`
-          : `Failed to delete user: ${error.message || ''}`
+        t('userManagement.failedToDeleteUserErrormessage')
       )
     } finally {
       setActionLoading(null)
@@ -231,7 +215,7 @@ const UserManagement = () => {
       await applyRoleChange(targetUserId, newRole)
       showRoleUpdateSuccess(newRole)
     } catch (error) {
-      handleRoleChangeError(error, 'update user role', 'تحديث دور المستخدم')
+      handleRoleChangeError(error, 'update user role', '\u062a\u062d\u062f\u064a\u062b \u062f\u0648\u0631 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645')
     } finally {
       setActionLoading(null)
     }
@@ -264,7 +248,7 @@ const UserManagement = () => {
         return
       }
 
-      alert(language === 'ar' ? 'تعذر تحميل التفاصيل' : 'Unable to load user details')
+      alert(t('userManagement.unableToLoadUserDetails'))
     }
   }
 
@@ -299,10 +283,10 @@ const UserManagement = () => {
       <div className="text-center py-12">
         <FiUsers className="w-16 h-16 mx-auto mb-4 text-red-400" />
         <h3 className="text-xl font-bold mb-2 text-red-600">
-          {language === 'ar' ? 'غير مصرح' : 'Access Denied'}
+          {t('userManagement.accessDenied')}
         </h3>
         <p className="text-gray-500">
-          {language === 'ar' ? 'يجب أن تكون مدير للوصول إلى هذه الصفحة' : 'You must be an admin to access this page'}
+          {t('userManagement.youMustBeAnAdminToAccessThisPa')}
         </p>
       </div>
     )
@@ -314,13 +298,10 @@ const UserManagement = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">
-            {language === 'ar' ? 'إدارة المستخدمين' : 'User Management'}
+            {t('dashboardExtra.userManagement')}
           </h2>
           <p className="text-gray-500">
-            {language === 'ar' 
-              ? 'إدارة جميع المستخدمين وتحويل أدوارهم' 
-              : 'Manage all users and convert their roles'
-            }
+            {t('userManagement.manageAllUsersAndConvertTheirR')}
           </p>
         </div>
         <button
@@ -333,7 +314,7 @@ const UserManagement = () => {
           ) : (
             <FiRefreshCw className="w-5 h-5" />
           )}
-          {language === 'ar' ? 'تحديث' : 'Refresh'}
+          {t('userManagement.refresh')}
         </button>
       </div>
 
@@ -341,9 +322,7 @@ const UserManagement = () => {
       {pendingInstructors.length > 0 && (
         <div className="card card-body border border-amber-200 bg-amber-50 dark:bg-amber-900/20">
           <h3 className="font-bold mb-4">
-            {language === 'ar'
-              ? `طلبات مدرسين بانتظار الموافقة (${pendingInstructors.length})`
-              : `Pending Instructor Applications (${pendingInstructors.length})`}
+            {t('userManagement.pendingInstructorApplicationsP')}
           </h3>
           <div className="space-y-3">
             {pendingInstructors.map((pendingUser) => (
@@ -359,15 +338,15 @@ const UserManagement = () => {
                     className="btn btn-primary text-sm"
                   >
                     {actionLoading === pendingUser.id
-                      ? (language === 'ar' ? 'جاري...' : 'Processing...')
-                      : (language === 'ar' ? 'قبول' : 'Approve')}
+                      ? (t('userManagement.processing'))
+                      : t('dashboardExtra.approve')}
                   </button>
                   <button
                     onClick={() => rejectInstructor(pendingUser.id)}
                     disabled={actionLoading === pendingUser.id}
                     className="btn btn-secondary text-sm"
                   >
-                    {language === 'ar' ? 'رفض' : 'Reject'}
+                    {t('dashboardExtra.reject')}
                   </button>
                 </div>
               </div>
@@ -380,27 +359,27 @@ const UserManagement = () => {
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-blue-600">{users.filter(u => u.role === 'student').length}</div>
-          <div className="text-sm text-gray-500">{language === 'ar' ? 'طلاب' : 'Students'}</div>
+          <div className="text-sm text-gray-500">{t('userManagement.students')}</div>
         </div>
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-amber-600">{pendingInstructors.length}</div>
-          <div className="text-sm text-gray-500">{language === 'ar' ? 'بانتظار الموافقة' : 'Pending'}</div>
+          <div className="text-sm text-gray-500">{t('userManagement.pending')}</div>
         </div>
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-green-600">{users.filter(u => u.role === 'instructor').length}</div>
-          <div className="text-sm text-gray-500">{language === 'ar' ? 'مدرسين' : 'Instructors'}</div>
+          <div className="text-sm text-gray-500">{t('userManagement.instructors')}</div>
         </div>
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-red-600">{users.filter(u => u.role === 'admin').length}</div>
-          <div className="text-sm text-gray-500">{language === 'ar' ? 'إداريين' : 'Admins'}</div>
+          <div className="text-sm text-gray-500">{t('userManagement.admins')}</div>
         </div>
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-orange-600">{users.filter(u => u.is_suspended).length}</div>
-          <div className="text-sm text-gray-500">{language === 'ar' ? 'محظورين' : 'Blocked'}</div>
+          <div className="text-sm text-gray-500">{t('userManagement.blocked_5')}</div>
         </div>
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-gray-600">{users.length}</div>
-          <div className="text-sm text-gray-500">{language === 'ar' ? 'إجمالي' : 'Total'}</div>
+          <div className="text-sm text-gray-500">{t('userManagement.total')}</div>
         </div>
       </div>
 
@@ -409,11 +388,11 @@ const UserManagement = () => {
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
           <div className="flex-1 relative">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <FiSearch className="absolute start-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder={language === 'ar' ? 'البحث بالاسم أو البريد...' : 'Search by name or email...'}
-              className="input pl-10"
+              placeholder={t('userManagement.searchByNameOrEmail')}
+              className="input ps-10 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -421,17 +400,17 @@ const UserManagement = () => {
           {/* Role Filter */}
           <div className="relative">
             <select
-              className="input pr-10"
+              className="input pe-10 w-full"
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
             >
-              <option value="all">{language === 'ar' ? 'جميع الأدوار' : 'All Roles'}</option>
-              <option value="student">{language === 'ar' ? 'طالب' : 'Student'}</option>
-              <option value="pending_instructor">{language === 'ar' ? 'مدرس (بانتظار الموافقة)' : 'Pending Instructor'}</option>
-              <option value="instructor">{language === 'ar' ? 'مدرس' : 'Instructor'}</option>
-              <option value="admin">{language === 'ar' ? 'إداري' : 'Admin'}</option>
+              <option value="all">{t('userManagement.allRoles')}</option>
+              <option value="student">{t('roles.student')}</option>
+              <option value="pending_instructor">{t('userManagement.pendingInstructor')}</option>
+              <option value="instructor">{t('userManagement.instructor_4')}</option>
+              <option value="admin">{t('userManagement.admin')}</option>
             </select>
-            <FiFilter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <FiFilter className="absolute end-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           </div>
         </div>
       </div>
@@ -442,7 +421,7 @@ const UserManagement = () => {
           <div className="p-12 text-center">
             <FiLoader className="w-8 h-8 animate-spin mx-auto mb-4 text-primary-500" />
             <p className="text-gray-500">
-              {language === 'ar' ? 'جاري تحميل المستخدمين...' : 'Loading users...'}
+              {t('userManagement.loadingUsers')}
             </p>
           </div>
         ) : filteredUsers.length > 0 ? (
@@ -450,20 +429,20 @@ const UserManagement = () => {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {language === 'ar' ? 'المستخدم' : 'User'}
+                  <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('userManagement.user')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {language === 'ar' ? 'الدور' : 'Role'}
+                  <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('userManagement.role')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {language === 'ar' ? 'الكورسات' : 'Courses'}
+                  <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('dashboardExtra.coursesTab')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {language === 'ar' ? 'تاريخ التسجيل' : 'Join Date'}
+                  <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('userManagement.joinDate')}
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {language === 'ar' ? 'إجراءات' : 'Actions'}
+                  <th className="px-6 py-3 text-end text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('userManagement.actions')}
                   </th>
                 </tr>
               </thead>
@@ -481,7 +460,7 @@ const UserManagement = () => {
                             </div>
                           )}
                         </div>
-                        <div className="ml-4">
+                        <div className="ms-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {userData.full_name || 'N/A'}
                           </div>
@@ -489,7 +468,7 @@ const UserManagement = () => {
                             <span>{userData.email}</span>
                             {userData.is_suspended && (
                               <span className="inline-flex px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[11px] font-semibold">
-                                {language === 'ar' ? 'محظور' : 'Blocked'}
+                                {t('userManagement.blocked')}
                               </span>
                             )}
                             <button
@@ -498,8 +477,8 @@ const UserManagement = () => {
                               disabled={actionLoading === userData.id}
                               className={`disabled:opacity-50 ${userData.is_suspended ? 'text-green-600 hover:text-green-800' : 'text-orange-600 hover:text-orange-800'}`}
                               title={userData.is_suspended
-                                ? (language === 'ar' ? 'فك الحظر' : 'Unblock user')
-                                : (language === 'ar' ? 'حظر من المنصة' : 'Block from platform')}
+                                ? (t('userManagement.unblockUser'))
+                                : (t('userManagement.blockFromPlatform'))}
                             >
                               {actionLoading === userData.id ? (
                                 <FiLoader className="w-4 h-4 animate-spin" />
@@ -512,7 +491,7 @@ const UserManagement = () => {
                               onClick={() => deleteUser(userData)}
                               disabled={actionLoading === userData.id}
                               className="text-red-600 hover:text-red-800 disabled:opacity-50"
-                              title={language === 'ar' ? 'حذف المستخدم' : 'Delete user'}
+                              title={t('userManagement.deleteUser')}
                             >
                               <FiTrash2 className="w-4 h-4" />
                             </button>
@@ -540,13 +519,13 @@ const UserManagement = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(userData.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
                         {/* View Details */}
                         <button
                           onClick={() => getUserDetails(userData.id)}
                           className="text-blue-600 hover:text-blue-900"
-                          title={language === 'ar' ? 'عرض التفاصيل' : 'View Details'}
+                          title={t('userManagement.viewDetails')}
                         >
                           <FiEdit className="w-4 h-4" />
                         </button>
@@ -558,7 +537,7 @@ const UserManagement = () => {
                               onClick={() => approveInstructor(userData.id)}
                               disabled={actionLoading === userData.id}
                               className="text-green-600 hover:text-green-900 disabled:opacity-50"
-                              title={language === 'ar' ? 'قبول المدرس' : 'Approve Instructor'}
+                              title={t('userManagement.approveInstructor')}
                             >
                               {actionLoading === userData.id ? (
                                 <FiLoader className="w-4 h-4 animate-spin" />
@@ -570,7 +549,7 @@ const UserManagement = () => {
                               onClick={() => rejectInstructor(userData.id)}
                               disabled={actionLoading === userData.id}
                               className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                              title={language === 'ar' ? 'رفض الطلب' : 'Reject Application'}
+                              title={t('userManagement.rejectApplication')}
                             >
                               <FiUserX className="w-4 h-4" />
                             </button>
@@ -582,7 +561,7 @@ const UserManagement = () => {
                             onClick={() => updateUserRole(userData.id, 'instructor')}
                             disabled={actionLoading === userData.id}
                             className="text-green-600 hover:text-green-900 disabled:opacity-50"
-                            title={language === 'ar' ? 'ترقية إلى مدرس' : 'Promote to Instructor'}
+                            title={t('userManagement.promoteToInstructor')}
                           >
                             {actionLoading === userData.id ? (
                               <FiLoader className="w-4 h-4 animate-spin" />
@@ -597,7 +576,7 @@ const UserManagement = () => {
                             onClick={() => updateUserRole(userData.id, 'student')}
                             disabled={actionLoading === userData.id}
                             className="text-blue-600 hover:text-blue-900 disabled:opacity-50"
-                            title={language === 'ar' ? 'تحويل إلى طالب' : 'Convert to Student'}
+                            title={t('userManagement.convertToStudent')}
                           >
                             {actionLoading === userData.id ? (
                               <FiLoader className="w-4 h-4 animate-spin" />
@@ -617,13 +596,10 @@ const UserManagement = () => {
           <div className="p-12 text-center">
             <FiUsers className="w-16 h-16 mx-auto mb-4 text-gray-400" />
             <h3 className="text-lg font-medium mb-2">
-              {language === 'ar' ? 'لا توجد نتائج' : 'No Results'}
+              {t('userManagement.noResults')}
             </h3>
             <p className="text-gray-500">
-              {language === 'ar' 
-                ? 'لم يتم العثور على مستخدمين مطابقين للبحث'
-                : 'No users found matching your search criteria'
-              }
+              {t('userManagement.noUsersFoundMatchingYourSearch')}
             </p>
           </div>
         )}
@@ -636,13 +612,13 @@ const UserManagement = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold">
-                  {language === 'ar' ? 'تفاصيل المستخدم' : 'User Details'}
+                  {t('userManagement.userDetails')}
                 </h3>
                 <button
                   onClick={() => setShowUserDetails(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  ✕
+                  ×
                 </button>
               </div>
               
@@ -674,7 +650,7 @@ const UserManagement = () => {
                   {selectedUser.user.role === 'instructor' && selectedUser.courses && selectedUser.courses.length > 0 && (
                     <div>
                       <h5 className="font-bold mb-3">
-                        {language === 'ar' ? 'الكورسات' : 'Courses'}
+                        {t('dashboardExtra.coursesTab')}
                       </h5>
                       <div className="space-y-2">
                         {selectedUser.courses.map(course => (
@@ -696,17 +672,17 @@ const UserManagement = () => {
                   {selectedUser.user.role === 'student' && selectedUser.enrollments && selectedUser.enrollments.length > 0 && (
                     <div>
                       <h5 className="font-bold mb-3">
-                        {language === 'ar' ? 'الاشتراكات' : 'Enrollments'}
+                        {t('userManagement.enrollments')}
                       </h5>
                       <div className="space-y-2">
                         {selectedUser.enrollments.map(enrollment => (
                           <div key={enrollment.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <div className="font-medium">{enrollment.course_title}</div>
                             <div className="text-sm text-gray-500">
-                              {language === 'ar' ? 'المدرس:' : 'Instructor:'} {enrollment.instructor_name}
+                              {t('userManagement.instructor')} {enrollment.instructor_name}
                             </div>
                             <div className="flex justify-between items-center mt-2">
-                              <span className="text-sm">{language === 'ar' ? 'التقدم:' : 'Progress:'}</span>
+                              <span className="text-sm">{t('userManagement.progress')}</span>
                               <span className="font-bold">{enrollment.progress}%</span>
                             </div>
                           </div>
@@ -725,3 +701,4 @@ const UserManagement = () => {
 }
 
 export default UserManagement
+

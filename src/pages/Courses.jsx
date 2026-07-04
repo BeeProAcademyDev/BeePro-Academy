@@ -33,6 +33,7 @@ const normalizeCategoryId = (category) => {
 const Courses = () => {
   const { t } = useTranslation()
   const { language } = useLanguage()
+  const isArabic = language === 'ar'
   const [searchParams, setSearchParams] = useSearchParams()
   
   const [courses, setCourses] = useState([])
@@ -99,8 +100,8 @@ const Courses = () => {
     { value: 'newest', label: t('courses.sort.newest') },
     { value: 'popular', label: t('courses.sort.popular') },
     { value: 'rating', label: t('courses.sort.rating') },
-    { value: 'price-low', label: language === 'ar' ? 'السعر: من الأقل' : 'Price: Low to High' },
-    { value: 'price-high', label: language === 'ar' ? 'السعر: من الأعلى' : 'Price: High to Low' },
+    { value: 'price-low', label: t('courses.priceLowToHigh') },
+    { value: 'price-high', label: t('courses.priceHighToLow') },
   ]
 
   const filteredCourses = useMemo(() => {
@@ -173,12 +174,9 @@ const Courses = () => {
       <section className="py-12">
         <div className="bepro-container">
           <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">{t('courses.title')}</h1>
-            <p className="text-xl text-white font-semibold">
-              {language === 'ar'
-                ? 'اكتشف دوراتنا في الأسواق المالية وتحليل البيانات وتكنولوجيا المعلومات'
-                : 'Discover our courses in Financial Markets, Data Analysis, and IT'
-              }
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 break-words px-2">{t('courses.title')}</h1>
+            <p className="text-base sm:text-lg md:text-xl text-white font-semibold px-2 max-w-3xl mx-auto">
+              {t('courses.discoverOurCoursesInFinancialM')}
             </p>
           </div>
         </div>
@@ -192,7 +190,7 @@ const Courses = () => {
               onClick={() => handleCategoryChange('all')}
               className={`px-6 py-2 rounded-full border border-white/30 text-white font-bold transition-all ${selectedCategory === 'all' ? 'bg-gradient-to-r from-[#009FFD] to-[#2A93D5] border-transparent' : 'hover:bg-white/10'}`}
             >
-              {language === 'ar' ? 'الكل' : 'All'}
+              {t('courses.all')}
             </button>
             {categories.map(cat => (
               <button
@@ -200,7 +198,7 @@ const Courses = () => {
                 onClick={() => handleCategoryChange(cat.id)}
                 className={`px-6 py-2 rounded-full border border-white/30 text-white font-bold transition-all ${selectedCategory === cat.id ? 'bg-gradient-to-r from-[#009FFD] to-[#2A93D5] border-transparent' : 'hover:bg-white/10'}`}
               >
-                {cat.icon} {language === 'ar' ? cat.name : cat.nameEn}
+                {cat.icon} {isArabic ? cat.name : cat.nameEn}
               </button>
             ))}
           </div>
@@ -210,7 +208,7 @@ const Courses = () => {
       {/* Search and Filters */}
       <section className="pb-8">
         <div className="bepro-container">
-          <div className="bepro-card p-6">
+          <div className="bepro-card p-4 sm:p-6">
             <div className="flex flex-col lg:flex-row gap-4">
               {/* Search */}
               <div className="flex-1 relative">
@@ -283,7 +281,7 @@ const Courses = () => {
             {isFilterOpen && (
               <div className="lg:hidden mt-4 pt-4 border-t border-white/20 space-y-4">
                 <div>
-                  <label className="text-white font-bold text-sm mb-2 block">{language === 'ar' ? 'المستوى' : 'Level'}</label>
+                  <label className="text-white font-bold text-sm mb-2 block">{t('courses.level')}</label>
                   <select
                     value={selectedLevel}
                     onChange={(e) => setSelectedLevel(e.target.value)}
@@ -324,7 +322,7 @@ const Courses = () => {
                 )}
                 {selectedCategory !== 'all' && (
                   <span className="px-3 py-1 bg-[#009FFD]/30 text-white rounded-full text-sm flex items-center gap-2">
-                    {language === 'ar' 
+                    {isArabic 
                       ? categories.find(c => c.id === selectedCategory)?.name 
                       : categories.find(c => c.id === selectedCategory)?.nameEn
                     }
@@ -341,7 +339,7 @@ const Courses = () => {
                   onClick={clearFilters}
                   className="text-sm text-red-400 hover:text-red-300 font-medium"
                 >
-                  {language === 'ar' ? 'مسح الكل' : 'Clear All'}
+                  {t('courses.clearAll')}
                 </button>
               </div>
             )}
@@ -353,10 +351,7 @@ const Courses = () => {
       <section className="pb-4">
         <div className="bepro-container">
           <p className="text-white font-bold">
-            {language === 'ar'
-              ? `عرض ${filteredCourses.length} دورة من أصل ${courses.length}`
-              : `Showing ${filteredCourses.length} of ${courses.length} courses`
-            }
+            {t('courses.showingFilteredcourseslengthOf')}
           </p>
         </div>
       </section>
@@ -393,13 +388,10 @@ const Courses = () => {
               </div>
               <h3 className="text-2xl font-bold text-white mb-3">{t('courses.noResults')}</h3>
               <p className="text-white font-bold mb-8">
-                {language === 'ar'
-                  ? 'جرب تغيير معايير البحث أو الفلترة'
-                  : 'Try changing your search or filter criteria'
-                }
+                {t('courses.tryChangingYourSearchOrFilterC')}
               </p>
               <button onClick={clearFilters} className="bepro-btn-primary">
-                {language === 'ar' ? 'مسح الفلاتر' : 'Clear Filters'}
+                {t('courses.clearFilters')}
               </button>
             </div>
           )}

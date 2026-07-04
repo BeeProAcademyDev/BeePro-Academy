@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { authService } from './api'
 
 const isSupabaseAvailable = () => !!supabase
 
@@ -36,8 +37,7 @@ const ensurePublicUserProfile = async (userId) => {
     return
   }
 
-  const { data: authData } = await supabase.auth.getUser()
-  const authUser = authData?.user
+  const authUser = await authService.getCurrentUser()
 
   const email = authUser?.email || ''
   const fullName = authUser?.user_metadata?.full_name || email.split('@')[0] || 'Student'
@@ -539,6 +539,108 @@ export const paymentService = {
     }
 
     throw new Error(formatPaymentReviewError(rpcResult.error, 'reject'))
+  }
+}
+
+export const paymentNotificationService = {
+  async getUserNotifications(userId, { limit = 50 } = {}) {
+    if (!isSupabaseAvailable() || !userId) {
+      return []
+    }
+
+    const { data, error } = await supabase
+      .from('payment_notifications')
+      .select(`
+        *,
+        payment_submission:payment_submissions(
+          amount,
+          status,
+          student:users!payment_submissions_student_id_fkey(full_name, email),
+          instructor:users!payment_submissions_instructor_id_fkey(full_name),
+          payment_method:instructor_payment_methods(method_name)
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) throw error
+    return data || []
+  },
+
+  subscribeToUserNotifications(userId, onInsert) {
+    if (!isSupabaseAvailable() || !userId || !onInsert) {
+      return null
+    }
+
+    const channel = supabase
+      .channel('payment-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'payment_notifications',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          onInsert(payload.new)
+        }
+      )
+      .subscribe()
+
+    return channel
+  },
+
+  async markAsRead(notificationId, userId) {
+    if (!isSupabaseAvailable()) {
+      return { success: true }
+    }
+
+    const { error } = await supabase
+      .from('payment_notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId)
+      .eq('user_id', userId)
+
+    if (error) throw error
+    return { success: true }
+  },
+
+  async markAllAsRead(userId) {
+    if (!isSupabaseAvailable()) {
+      return { success: true }
+    }
+
+    const { error } = await supabase
+      .from('payment_notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId)
+      .eq('is_read', false)
+
+    if (error) throw error
+    return { success: true }
+  },
+
+  async deleteNotification(notificationId, userId) {
+    if (!isSupabaseAvailable()) {
+      return { success: true }
+    }
+
+    const { error } = await supabase
+      .from('payment_notifications')
+      .delete()
+      .eq('id', notificationId)
+      .eq('user_id', userId)
+
+    if (error) throw error
+    return { success: true }
+  },
+
+  removeChannel(channel) {
+    if (isSupabaseAvailable() && channel) {
+      supabase.removeChannel(channel)
+    }
   }
 }
 

@@ -27,7 +27,7 @@ const ForgotPassword = () => {
 
     const trimmed = email.trim()
     if (!trimmed) {
-      setError(isAr ? 'يرجى إدخال البريد الإلكتروني' : 'Please enter your email')
+      setError(t('forgotPassword.pleaseEnterYourEmail'))
       setIsLoading(false)
       return
     }
@@ -37,21 +37,21 @@ const ForgotPassword = () => {
       if (result.success) {
         setSuccess(true)
       } else {
-        setError(result.error || (isAr ? 'تعذر إرسال الرابط' : 'Could not send reset link'))
+        setError(result.error || (t('forgotPassword.couldNotSendResetLink')))
       }
     } catch {
-      setError(isAr ? 'حدث خطأ غير متوقع' : 'An unexpected error occurred')
+      setError(t('authExtra.unexpectedError'))
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen pt-20 pb-16 flex items-center">
-      <div className="container-custom">
-        <div className="max-w-md mx-auto">
+    <div className="min-h-screen pt-20 pb-16 flex items-center px-4">
+      <div className="container-custom w-full">
+        <div className="max-w-md mx-auto w-full">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">{t('auth.forgot.title')}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t('auth.forgot.title')}</h1>
             <p className="text-secondary-600 dark:text-secondary-400">
               {t('auth.forgot.description')}
             </p>

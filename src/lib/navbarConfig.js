@@ -29,19 +29,19 @@ export function getNavbarContext(pathname = '', search = '') {
   return 'app'
 }
 
-export function getNavbarLinks(context, { language = 'en', isAdmin = false, isTeacher = false, t = (key) => key } = {}) {
+export function getNavbarLinks(context, { isAdmin = false, isTeacher = false, t = (key) => key } = {}) {
   const landingLinks = [
-    { label: 'Financial Markets', href: '/financial-markets', type: 'route' },
-    { label: 'Data Analysis', href: '/data-analysis', type: 'route' },
-    { label: 'IT', href: '/it', type: 'route' },
-    { label: language === 'ar' ? 'Blogs' : 'Blogs', href: '/blogs', type: 'route' },
-    { label: 'Contact', href: '#contact', type: 'hash' },
+    { label: t('navExtra.financialMarkets'), href: '/financial-markets', type: 'route' },
+    { label: t('navExtra.dataAnalysis'), href: '/data-analysis', type: 'route' },
+    { label: t('navExtra.it'), href: '/it', type: 'route' },
+    { label: t('nav.blogs'), href: '/blogs', type: 'route' },
+    { label: t('nav.contact'), href: '#contact', type: 'hash' },
   ]
 
   const appLinks = [
     { label: t('nav.home'), href: '/', type: 'route' },
     { label: t('nav.courses'), href: '/courses', type: 'route' },
-    { label: language === 'ar' ? 'المدونة' : 'Blogs', href: '/blogs', type: 'route' },
+    { label: t('nav.blogs'), href: '/blogs', type: 'route' },
     { label: t('nav.categories'), href: '/categories', type: 'route' },
     { label: t('nav.about'), href: '/about', type: 'route' },
     { label: t('nav.contact'), href: '/contact', type: 'route' },
@@ -50,38 +50,38 @@ export function getNavbarLinks(context, { language = 'en', isAdmin = false, isTe
   const dashboardLinks = [
     { label: t('nav.dashboard'), href: '/dashboard', type: 'route' },
     { label: t('nav.courses'), href: '/courses', type: 'route' },
-    { label: language === 'ar' ? 'المدونة' : 'Blogs', href: '/blogs', type: 'route' },
+    { label: t('nav.blogs'), href: '/blogs', type: 'route' },
     ...(isTeacher
-      ? [{ label: language === 'ar' ? 'إدارة الكورسات' : 'Manage Courses', href: '/dashboard?tab=teacher', type: 'route' }]
+      ? [{ label: t('navExtra.manageCourses'), href: '/dashboard?tab=teacher', type: 'route' }]
       : []),
     ...(isAdmin
-      ? [{ label: language === 'ar' ? 'لوحة الإدارة' : 'Admin Panel', href: '/dashboard?tab=admin', type: 'route' }]
+      ? [{ label: t('navExtra.adminPanel'), href: '/dashboard?tab=admin', type: 'route' }]
       : []),
   ]
 
   const adminLinks = [
-    { label: language === 'ar' ? 'لوحة الإدارة' : 'Admin Panel', href: '/dashboard?tab=admin', type: 'route' },
-    { label: language === 'ar' ? 'إدارة المدونة' : 'Manage Blogs', href: '/admin/blogs', type: 'route' },
-    { label: language === 'ar' ? 'المستخدمون' : 'Users', href: '/dashboard?tab=admin&sub=users', type: 'route' },
-    { label: language === 'ar' ? 'المدفوعات' : 'Payments', href: '/dashboard?tab=admin&sub=payments', type: 'route' },
+    { label: t('navExtra.adminPanel'), href: '/dashboard?tab=admin', type: 'route' },
+    { label: t('navExtra.manageBlogs'), href: '/admin/blogs', type: 'route' },
+    { label: t('navExtra.users'), href: '/dashboard?tab=admin&sub=users', type: 'route' },
+    { label: t('navExtra.payments'), href: '/dashboard?tab=admin&sub=payments', type: 'route' },
     { label: t('nav.courses'), href: '/courses', type: 'route' },
   ]
 
   const teacherLinks = [
-    { label: language === 'ar' ? 'كورساتي' : 'My Courses', href: '/teacher/courses', type: 'route' },
-    { label: language === 'ar' ? 'إنشاء كورس' : 'Create Course', href: '/teacher/create-course', type: 'route' },
-    { label: language === 'ar' ? 'جلسة مباشرة' : 'Live Session', href: '/teacher/live-session', type: 'route' },
+    { label: t('navExtra.myCourses'), href: '/teacher/courses', type: 'route' },
+    { label: t('navExtra.createCourse'), href: '/teacher/create-course', type: 'route' },
+    { label: t('navExtra.liveSession'), href: '/teacher/live-session', type: 'route' },
     { label: t('nav.dashboard'), href: '/dashboard', type: 'route' },
   ]
 
   const marketingLinks = [
-    { label: 'Vision', href: '/#vision-mission', type: 'route' },
-    { label: 'Financial Markets', href: '/financial-markets', type: 'route' },
-    { label: 'Data Analysis', href: '/data-analysis', type: 'route' },
-    { label: 'IT', href: '/it', type: 'route' },
+    { label: t('navExtra.vision'), href: '/#vision-mission', type: 'route' },
+    { label: t('navExtra.financialMarkets'), href: '/financial-markets', type: 'route' },
+    { label: t('navExtra.dataAnalysis'), href: '/data-analysis', type: 'route' },
+    { label: t('navExtra.it'), href: '/it', type: 'route' },
     { label: t('nav.courses'), href: '/courses', type: 'route' },
-    { label: language === 'ar' ? 'المدونة' : 'Blogs', href: '/blogs', type: 'route' },
-    { label: 'Contact', href: '/#contact', type: 'route' },
+    { label: t('nav.blogs'), href: '/blogs', type: 'route' },
+    { label: t('nav.contact'), href: '/#contact', type: 'route' },
   ]
 
   switch (context) {

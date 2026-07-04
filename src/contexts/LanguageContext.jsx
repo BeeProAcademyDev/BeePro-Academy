@@ -3,6 +3,21 @@ import { useTranslation } from 'react-i18next'
 
 const LanguageContext = createContext()
 
+const getStoredLanguage = () => {
+  if (typeof window === 'undefined') return 'ar'
+  return localStorage.getItem('language') || 'ar'
+}
+
+const applyDocumentLanguage = (language) => {
+  if (typeof document === 'undefined') return
+  const rtl = language === 'ar'
+  document.documentElement.dir = rtl ? 'rtl' : 'ltr'
+  document.documentElement.lang = language
+}
+
+// Apply before React mounts to avoid layout flash
+applyDocumentLanguage(getStoredLanguage())
+
 export const useLanguage = () => {
   const context = useContext(LanguageContext)
   if (!context) {
@@ -13,27 +28,20 @@ export const useLanguage = () => {
 
 export const LanguageProvider = ({ children }) => {
   const { i18n } = useTranslation()
-  const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('language') || 'ar'
-  })
-
-  const [isRTL, setIsRTL] = useState(() => {
-    const lang = localStorage.getItem('language') || 'ar'
-    return lang === 'ar'
-  })
+  const [language, setLanguage] = useState(getStoredLanguage)
+  const [isRTL, setIsRTL] = useState(() => getStoredLanguage() === 'ar')
 
   useEffect(() => {
     localStorage.setItem('language', language)
     i18n.changeLanguage(language)
-    
+
     const rtl = language === 'ar'
     setIsRTL(rtl)
-    document.documentElement.dir = rtl ? 'rtl' : 'ltr'
-    document.documentElement.lang = language
+    applyDocumentLanguage(language)
   }, [language, i18n])
 
   const toggleLanguage = () => {
-    setLanguage(prev => prev === 'ar' ? 'en' : 'ar')
+    setLanguage((prev) => (prev === 'ar' ? 'en' : 'ar'))
   }
 
   const changeLanguage = (lang) => {
@@ -44,7 +52,7 @@ export const LanguageProvider = ({ children }) => {
     language,
     isRTL,
     toggleLanguage,
-    changeLanguage
+    changeLanguage,
   }
 
   return (

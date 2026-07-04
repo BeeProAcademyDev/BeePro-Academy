@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { FiMessageCircle, FiSend, FiUser, FiWifi, FiWifiOff } from 'react-icons/fi'
 import { chatService } from '../../services/api'
 import { requireInstructor } from '../../lib/authGuards'
-import supabase from '../../lib/supabase'
 import './CourseChat.css'
+import { useTranslation } from 'react-i18next'
 
 const CourseChat = ({
   courseId,
@@ -12,6 +12,7 @@ const CourseChat = ({
   language = 'ar',
   hasAccess = true
 }) => {
+  const { t } = useTranslation()
   const [roster, setRoster] = useState([])
   const [conversations, setConversations] = useState([])
   const [activeConversation, setActiveConversation] = useState(null)
@@ -94,13 +95,13 @@ const CourseChat = ({
       )
       await loadMessages(conversation.id)
     } catch (err) {
-      setError(err.message || (isAr ? 'تعذر فتح المحادثة' : 'Failed to open conversation'))
+      setError(err.message || (t('courseChat.failedToOpenConversation')))
     }
   }, [courseId, instructorId, isAr, loadMessages])
 
   const initStudentChat = useCallback(async () => {
     if (!courseId || !user?.id || !instructorId) {
-      throw new Error(isAr ? 'بيانات الكورس أو المدرس غير متاحة' : 'Course or instructor data is missing')
+      throw new Error(t('courseChat.courseOrInstructorDataIsMissin'))
     }
 
     const conversation = await chatService.getOrCreateConversation({
@@ -110,7 +111,7 @@ const CourseChat = ({
     })
 
     if (!conversation?.id) {
-      throw new Error(isAr ? 'تعذر فتح محادثة الدردشة' : 'Could not open chat conversation')
+      throw new Error(t('courseChat.couldNotOpenChatConversation'))
     }
 
     setActiveConversation(conversation)
@@ -145,7 +146,7 @@ const CourseChat = ({
       }
     } catch (err) {
       console.error('Chat init error:', err)
-      setError(err.message || (isAr ? 'تعذر تحميل المحادثة' : 'Failed to load chat'))
+      setError(err.message || (t('courseChat.failedToLoadChat')))
     } finally {
       setLoading(false)
     }
@@ -166,7 +167,7 @@ const CourseChat = ({
   }, [courseId, user?.id, instructorId, hasAccess, initChat])
 
   useEffect(() => {
-    if (!courseId || !hasAccess || !supabase) return undefined
+    if (!courseId || !hasAccess) return undefined
 
     const handleIncoming = (incoming) => {
       if (!incoming?.id) return
@@ -198,41 +199,32 @@ const CourseChat = ({
 
     return () => {
       if (wsChannelRef.current) {
-        supabase.removeChannel(wsChannelRef.current)
+        chatService.removeChannel(wsChannelRef.current)
         wsChannelRef.current = null
       }
     }
   }, [courseId, hasAccess, user?.id, isInstructor, appendMessage])
 
   useEffect(() => {
-    if (!activeConversation?.id || !supabase) return undefined
+    if (!activeConversation?.id) return undefined
 
     const conversationId = activeConversation.id
 
-    const dbChannel = supabase
-      .channel(`course-chat-db-${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'course_messages',
-          filter: `conversation_id=eq.${conversationId}`
-        },
-        (payload) => {
-          appendMessage(payload.new)
-          if (payload.new.sender_id !== user?.id) {
-            chatService.markMessagesAsRead(conversationId, user.id)
-          }
+    const dbChannel = chatService.subscribeToConversationMessages(
+      conversationId,
+      (message) => {
+        appendMessage(message)
+        if (message.sender_id !== user?.id) {
+          chatService.markMessagesAsRead(conversationId, user.id)
         }
-      )
-      .subscribe()
+      }
+    )
 
     dbChannelRef.current = dbChannel
 
     return () => {
       if (dbChannelRef.current) {
-        supabase.removeChannel(dbChannelRef.current)
+        chatService.removeChannel(dbChannelRef.current)
         dbChannelRef.current = null
       }
     }
@@ -266,7 +258,7 @@ const CourseChat = ({
       appendMessage(sent)
       setNewMessage('')
     } catch (err) {
-      setError(err.message || (isAr ? 'فشل إرسال الرسالة' : 'Failed to send message'))
+      setError(err.message || (t('courseChat.failedToSendMessage')))
     } finally {
       setSending(false)
     }
@@ -279,9 +271,7 @@ const CourseChat = ({
       <div className="course-chat course-chat--locked">
         <FiMessageCircle className="w-6 h-6" />
         <p>
-          {isAr
-            ? 'يجب تسجيل الدخول كطالب في المنصة لاستخدام الدردشة.'
-            : 'You must be logged in as a registered student to use chat.'}
+          {t('courseChat.youMustBeLoggedInAsARegistered')}
         </p>
       </div>
     )
@@ -310,13 +300,13 @@ const CourseChat = ({
       <div className="course-chat__header">
         <div className="course-chat__header-main">
           <FiMessageCircle className="w-5 h-5 text-primary-500" />
-          <h2>{isAr ? 'الدردشة المباشرة مع المدرس' : 'Real-time chat with instructor'}</h2>
+          <h2>{t('courseChat.realtimeChatWithInstructor')}</h2>
         </div>
         <span className={`course-chat__status ${isConnected ? 'course-chat__status--online' : ''}`}>
           {isConnected ? <FiWifi className="w-4 h-4" /> : <FiWifiOff className="w-4 h-4" />}
           {isConnected
-            ? (isAr ? 'متصل (WebSocket)' : 'Connected (WebSocket)')
-            : (isAr ? 'جاري الاتصال...' : 'Connecting...')}
+            ? (t('courseChat.connectedWebsocket'))
+            : (t('courseChat.connecting'))}
         </span>
       </div>
 
@@ -324,7 +314,7 @@ const CourseChat = ({
         <div className="course-chat__students">
           {rosterItems.length === 0 ? (
             <p className="course-chat__empty-inline">
-              {isAr ? 'لا يوجد طلاب مسجّلون في المنصة بعد.' : 'No registered students on the platform yet.'}
+              {t('courseChat.noRegisteredStudentsOnThePlatf')}
             </p>
           ) : (
             rosterItems.map((entry) => {
@@ -349,7 +339,7 @@ const CourseChat = ({
                   }}
                 >
                   <FiUser className="w-4 h-4" />
-                  <span>{entry.full_name || entry.email || (isAr ? 'طالب' : 'Student')}</span>
+                  <span>{entry.full_name || entry.email || (t('courseChat.student'))}</span>
                   {entry.unread_count > 0 && (
                     <span className="course-chat__badge">{entry.unread_count}</span>
                   )}
@@ -362,17 +352,15 @@ const CourseChat = ({
 
       {!activeConversation && isInstructor && (
         <p className="course-chat__empty">
-          {isAr
-            ? 'اختر طالباً من القائمة لبدء المحادثة المباشرة.'
-            : 'Select a student from the list to start real-time chat.'}
+          {t('courseChat.selectAStudentFromTheListToSta')}
         </p>
       )}
 
       {!activeConversation && !isInstructor && (
         <div className="course-chat__empty">
-          <p>{error || (isAr ? 'تعذر فتح المحادثة.' : 'Could not open the conversation.')}</p>
+          <p>{error || (t('courseChat.couldNotOpenTheConversation'))}</p>
           <button type="button" className="btn btn-primary btn-sm mt-3" onClick={initChat}>
-            {isAr ? 'إعادة المحاولة' : 'Retry'}
+            {t('courseChat.retry')}
           </button>
         </div>
       )}
@@ -382,14 +370,14 @@ const CourseChat = ({
           <div className="course-chat__messages">
             {messages.length === 0 ? (
               <p className="course-chat__empty">
-                {isAr ? 'ابدأ المحادثة الآن...' : 'Start chatting now...'}
+                {t('courseChat.startChattingNow')}
               </p>
             ) : (
               messages.map((msg) => {
                 const isMine = msg.sender_id === user?.id
                 const senderName = isMine
-                  ? (isAr ? 'أنت' : 'You')
-                  : (msg.sender?.full_name || (isInstructor ? (isAr ? 'الطالب' : 'Student') : (isAr ? 'المدرس' : 'Instructor')))
+                  ? (t('courseChat.you'))
+                  : (msg.sender?.full_name || (isInstructor ? t('dashboardExtra.student') : (t('courseChat.instructor'))))
 
                 return (
                   <div
@@ -399,7 +387,7 @@ const CourseChat = ({
                     <span className="course-chat__sender">{senderName}</span>
                     <p>{msg.content}</p>
                     <time>
-                      {new Date(msg.created_at).toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', {
+                      {new Date(msg.created_at).toLocaleTimeString(t('courseChat.enus'), {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
@@ -418,7 +406,7 @@ const CourseChat = ({
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder={isAr ? 'اكتب رسالتك...' : 'Type your message...'}
+              placeholder={t('courseChat.typeYourMessage')}
               disabled={sending}
             />
             <button type="submit" disabled={sending || !newMessage.trim()}>

@@ -9,6 +9,7 @@ import { isStudentUser } from '../lib/roles'
 import { requireInstructor } from '../lib/authGuards'
 import CourseChat from '../components/chat/CourseChat'
 import JitsiMeetingRoom from '../components/jitsi/JitsiMeetingRoom'
+import { useTranslation } from 'react-i18next'
 import {
   FiCalendar,
   FiClock,
@@ -20,6 +21,7 @@ import {
 } from 'react-icons/fi'
 
 const CourseLearn = () => {
+  const { t } = useTranslation()
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const { language } = useLanguage()
@@ -82,7 +84,7 @@ const CourseLearn = () => {
     const joinTarget = resolveJoinTarget(normalized)
 
     if (!joinTarget) {
-      setJoinError(language === 'ar' ? 'تعذر تجهيز رابط الجلسة.' : 'Could not prepare the session link.')
+      setJoinError(t('courseLearn.couldNotPrepareTheSessionLink'))
       return
     }
 
@@ -94,7 +96,7 @@ const CourseLearn = () => {
     setActiveTab('sessions')
     setActiveJitsiRoom({
       ...normalized,
-      title: normalized.title || (language === 'ar' ? 'جلسة مباشرة' : 'Live session'),
+      title: normalized.title || (t('courseLearn.liveSession_32')),
       jitsi_room_name: joinTarget.roomName
     })
 
@@ -111,7 +113,7 @@ const CourseLearn = () => {
 
     openJitsiSession({
       id: null,
-      title: language === 'ar' ? 'جلسة مباشرة' : 'Live session',
+      title: t('courseLearn.liveSession'),
       jitsi_room_name: getCourseLiveRoomName(id),
       platform: 'jitsi'
     })
@@ -129,7 +131,7 @@ const CourseLearn = () => {
       try {
         const courseData = await courseService.getCourseById(id)
         if (!courseData) {
-          setError(language === 'ar' ? 'تعذر العثور على الدورة' : 'Course not found')
+          setError(t('courseLearn.courseNotFound'))
           return
         }
 
@@ -150,13 +152,9 @@ const CourseLearn = () => {
 
         if (!hasCourseAccess) {
           setAccessDeniedReason(
-            language === 'ar'
-              ? isPaidCourse
-                ? 'رابط Google Meet والجلسات المباشرة متاحة بعد قبول الدفع فقط. الدردشة مع المدرس متاحة الآن.'
-                : 'الجلسات المباشرة للمسجّلين في الدورة. الدردشة مع المدرس متاحة الآن.'
-              : isPaidCourse
-                ? 'Google Meet and live sessions are available only after payment is approved. Chat with your instructor is available now.'
-                : 'Live sessions are for enrolled students. Chat with your instructor is available now.'
+            isPaidCourse
+              ? t('courseLearn.accessDeniedPaid')
+              : t('courseLearn.accessDeniedFree')
           )
           return
         }
@@ -165,7 +163,7 @@ const CourseLearn = () => {
         setHasFullAccess(true)
       } catch (err) {
         console.error('Failed to load learning page:', err)
-        setError(err.message || (language === 'ar' ? 'حدث خطأ أثناء تحميل الصفحة' : 'Failed to load learning page'))
+        setError(err.message || (t('courseLearn.failedToLoadLearningPage')))
       } finally {
         setLoading(false)
       }
@@ -259,7 +257,7 @@ const CourseLearn = () => {
             </span>
             {meeting.status === 'live' && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 animate-pulse">
-                {language === 'ar' ? 'مباشر' : 'Live'}
+                {t('courseLearn.live_31')}
               </span>
             )}
           </div>
@@ -270,8 +268,8 @@ const CourseLearn = () => {
             type="button"
             className="shrink-0 w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 hover:scale-105 transition-all shadow-md"
             onClick={() => openJitsiSession(meeting)}
-            title={language === 'ar' ? 'انضم للجلسة المباشرة' : 'Join live session'}
-            aria-label={language === 'ar' ? 'انضم للجلسة المباشرة' : 'Join live session'}
+            title={t('courseLearn.joinLiveSession_30')}
+            aria-label={t('courseLearn.joinLiveSession_29')}
           >
             <FiVideo className="w-6 h-6" />
           </button>
@@ -283,8 +281,8 @@ const CourseLearn = () => {
             target="_blank"
             rel="noopener noreferrer"
             className="shrink-0 w-12 h-12 rounded-full bg-primary-500 text-white flex items-center justify-center hover:bg-primary-600 hover:scale-105 transition-all shadow-md"
-            title={language === 'ar' ? 'انضم إلى الجلسة' : 'Join meeting'}
-            aria-label={language === 'ar' ? 'انضم إلى الجلسة' : 'Join meeting'}
+            title={t('courseLearn.joinMeeting_28')}
+            aria-label={t('courseLearn.joinMeeting')}
           >
             <FiVideo className="w-6 h-6" />
           </a>
@@ -296,11 +294,11 @@ const CourseLearn = () => {
       <div className="flex flex-wrap items-center gap-4 text-sm text-secondary-600 dark:text-secondary-400 mb-3">
         <span className="inline-flex items-center gap-1">
           <FiCalendar className="w-4 h-4" />
-          {meeting.scheduled_at ? new Date(meeting.scheduled_at).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US') : '-'}
+          {meeting.scheduled_at ? new Date(meeting.scheduled_at).toLocaleString(t('courseLearn.enus_27')) : '-'}
         </span>
         <span className="inline-flex items-center gap-1">
           <FiClock className="w-4 h-4" />
-          {meeting.duration_minutes || 0} {language === 'ar' ? 'دقيقة' : 'min'}
+          {meeting.duration_minutes || 0} {t('courseLearn.min_26')}
         </span>
       </div>
 
@@ -318,23 +316,21 @@ const CourseLearn = () => {
       >
         <FiVideo className="w-4 h-4" />
         {canJoinMeet
-          ? (language === 'ar' ? 'انضم عبر Google Meet' : 'Join via Google Meet')
-          : (language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join live session')}
+          ? (t('courseLearn.joinViaGoogleMeet'))
+          : t('dashboardExtra.joinLive')}
       </button>
     </div>
   )
   }
   return (
     <div className={`min-h-screen pt-20 bg-secondary-50 dark:bg-dark-bg ${hasFullAccess && !activeJitsiRoom && activeTab === 'sessions' ? 'pb-28' : 'pb-10'}`}>
-      <div className="container-custom space-y-6">
+      <div className="container-custom space-y-6 min-w-0">
         <div className="card card-body">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">
-            {course?.title || (language === 'ar' ? 'صفحة التعلم' : 'Learning Page')}
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 break-words">
+            {course?.title || (t('courseLearn.learningPage'))}
           </h1>
           <p className="text-secondary-500">
-            {language === 'ar'
-              ? 'جلسات مباشرة عبر Jitsi أو Google Meet، ودردشة فورية مع المدرس.'
-              : 'Live sessions via Jitsi or Google Meet, and real-time chat with your instructor.'}
+            {t('courseLearn.liveSessionsViaJitsiOrGoogleMe')}
           </p>
         </div>
 
@@ -355,7 +351,7 @@ const CourseLearn = () => {
             </div>
             <div className="mt-4">
               <Link to={`/courses/${id}`} className="btn btn-primary">
-                {language === 'ar' ? 'العودة إلى صفحة الدورة' : 'Back to course page'}
+                {t('courseLearn.backToCoursePage')}
               </Link>
             </div>
           </div>
@@ -372,25 +368,25 @@ const CourseLearn = () => {
               </div>
             )}
 
-            <div className="flex gap-2 border-b border-secondary-200 dark:border-dark-border">
+            <div className="flex gap-2 border-b border-secondary-200 dark:border-dark-border overflow-x-auto">
               <button
                 type="button"
-                className={`px-4 py-2 font-medium border-b-2 transition-colors ${activeTab === 'sessions' ? 'border-primary-500 text-primary-500' : 'border-transparent text-secondary-500'}`}
+                className={`px-4 py-2 font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${activeTab === 'sessions' ? 'border-primary-500 text-primary-500' : 'border-transparent text-secondary-500'}`}
                 onClick={() => setActiveTab('sessions')}
               >
                 <span className="inline-flex items-center gap-2">
                   <FiVideo className="w-4 h-4" />
-                  {language === 'ar' ? 'الجلسات المباشرة' : 'Live Sessions'}
+                  {t('courseLearn.liveSessions_25')}
                 </span>
               </button>
               <button
                 type="button"
-                className={`px-4 py-2 font-medium border-b-2 transition-colors ${activeTab === 'chat' ? 'border-primary-500 text-primary-500' : 'border-transparent text-secondary-500'}`}
+                className={`px-4 py-2 font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${activeTab === 'chat' ? 'border-primary-500 text-primary-500' : 'border-transparent text-secondary-500'}`}
                 onClick={() => setActiveTab('chat')}
               >
                 <span className="inline-flex items-center gap-2">
                   <FiMessageCircle className="w-4 h-4" />
-                  {language === 'ar' ? 'الدردشة' : 'Chat'}
+                  {t('courseLearn.chat')}
                 </span>
               </button>
             </div>
@@ -402,7 +398,7 @@ const CourseLearn = () => {
                     <FiLock className="w-10 h-10 mx-auto text-amber-500 mb-3" />
                     <p className="text-secondary-600 dark:text-secondary-400 mb-4">{accessDeniedReason}</p>
                     <Link to={`/courses/${id}`} className="btn btn-primary">
-                      {language === 'ar' ? 'الذهاب لصفحة الدورة والدفع' : 'Go to course page'}
+                      {t('courseLearn.goToCoursePage')}
                     </Link>
                   </div>
                 ) : (
@@ -419,23 +415,21 @@ const CourseLearn = () => {
                       <div>
                         <p className="text-sm font-medium text-green-700 dark:text-green-300 mb-1">
                           {primaryMeeting
-                            ? (language === 'ar' ? 'جلسة مباشرة متاحة الآن' : 'Live session available')
-                            : (language === 'ar' ? 'الجلسات المباشرة مع المدرس' : 'Live sessions with your instructor')}
+                            ? (t('courseLearn.liveSessionAvailable'))
+                            : (t('courseLearn.liveSessionsWithYourInstructor'))}
                         </p>
                         {primaryMeeting ? (
                           <>
                             <h2 className="text-xl font-bold">{primaryMeeting.title}</h2>
                             <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-1">
                               {primaryMeeting.scheduled_at
-                                ? new Date(primaryMeeting.scheduled_at).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US')
+                                ? new Date(primaryMeeting.scheduled_at).toLocaleString(t('courseLearn.enus'))
                                 : ''}
                             </p>
                           </>
                         ) : (
                           <p className="text-sm text-secondary-600 dark:text-secondary-400">
-                            {language === 'ar'
-                              ? 'اضغط الزر للدخول إلى غرفة الجلسة مع المدرس.'
-                              : 'Click the button to enter the live room with your instructor.'}
+                            {t('courseLearn.clickTheButtonToEnterTheLiveRo')}
                           </p>
                         )}
                       </div>
@@ -446,7 +440,7 @@ const CourseLearn = () => {
                           onClick={joinLiveNow}
                         >
                           <FiVideo className="w-6 h-6" />
-                          {language === 'ar' ? 'الانضمام للجلسة الآن' : 'Join Session Now'}
+                          {t('courseLearn.joinSessionNow')}
                         </button>
                         <button
                           type="button"
@@ -455,8 +449,8 @@ const CourseLearn = () => {
                           disabled={refreshingMeetings}
                         >
                           {refreshingMeetings
-                            ? (language === 'ar' ? 'تحديث...' : 'Refreshing...')
-                            : (language === 'ar' ? 'تحديث' : 'Refresh')}
+                            ? (t('courseLearn.refreshing'))
+                            : (t('courseLearn.refresh_24'))}
                         </button>
                       </div>
                     </div>
@@ -474,7 +468,7 @@ const CourseLearn = () => {
                         className="btn btn-outline btn-sm inline-flex items-center gap-2"
                       >
                         <FiExternalLink className="w-4 h-4" />
-                        {language === 'ar' ? 'فتح في نافذة جديدة' : 'Open in new tab'}
+                        {t('courseLearn.openInNewTab')}
                       </a>
                     </div>
                     <JitsiMeetingRoom
@@ -490,13 +484,11 @@ const CourseLearn = () => {
                 <div className="card card-body">
                   <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                     <FiVideo className="w-5 h-5 text-green-500" />
-                    {language === 'ar' ? 'الجلسات المباشرة' : 'Live Sessions'}
+                    {t('courseLearn.liveSessions_23')}
                   </h2>
                   {meetings.length === 0 ? (
                     <p className="text-secondary-500">
-                      {language === 'ar'
-                        ? 'لا توجد جلسات حالياً. اضغط «البحث عن جلسة مباشرة» في الأعلى أو انتظر إشعار المدرس.'
-                        : 'No sessions yet. Click "Find Live Session" above or wait for your instructor notification.'}
+                      {t('courseLearn.noSessionsYetClickFindLiveSess')}
                     </p>
                   ) : (
                     <div className="space-y-4">
@@ -531,7 +523,7 @@ const CourseLearn = () => {
               onClick={joinLiveNow}
             >
               <FiVideo className="w-6 h-6" />
-              {language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join Live Session'}
+              {t('courseLearn.joinLiveSession')}
             </button>
           </div>
         )}

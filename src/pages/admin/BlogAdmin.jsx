@@ -6,6 +6,7 @@ import { blogService, courseService } from '../../services/api'
 import { generateArticleDraft, slugifyArticle } from '../../lib/articleAiGenerator'
 import ArticleSchedulePanel from './ArticleSchedulePanel'
 import { FiCheckCircle, FiEdit3, FiLoader, FiPlus, FiRefreshCw, FiTrash2, FiZap } from 'react-icons/fi'
+import { useTranslation } from 'react-i18next'
 
 const emptyForm = {
   id: null,
@@ -23,6 +24,7 @@ const emptyForm = {
 }
 
 const BlogAdmin = () => {
+  const { t } = useTranslation()
   const { language } = useLanguage()
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('editor')
@@ -55,7 +57,7 @@ const BlogAdmin = () => {
       setCourses(courseRows?.data || [])
     } catch (err) {
       console.error('Error loading blog admin data:', err)
-      setError(isAr ? 'تعذر تحميل بيانات المدونة.' : 'Could not load blog data.')
+      setError(t('blogAdmin.couldNotLoadBlogData'))
     } finally {
       setIsLoading(false)
     }
@@ -118,7 +120,7 @@ const BlogAdmin = () => {
 
     setTimeout(() => {
       setIsGenerating(false)
-      setMessage(isAr ? 'تم توليد مسودة قابلة للتحرير.' : 'Editable draft generated.')
+      setMessage(t('blogAdmin.editableDraftGenerated'))
     }, 250)
   }
 
@@ -146,24 +148,24 @@ const BlogAdmin = () => {
         return [saved, ...withoutSaved]
       })
       setForm({ ...emptyForm, ...saved, course_id: saved.course_id || '' })
-      setMessage(isAr ? 'تم حفظ المقال بنجاح.' : 'Post saved successfully.')
+      setMessage(t('blogAdmin.postSavedSuccessfully'))
     } catch (err) {
       console.error('Error saving blog post:', err)
-      setError(err?.message || (isAr ? 'تعذر حفظ المقال.' : 'Could not save post.'))
+      setError(err?.message || (t('blogAdmin.couldNotSavePost')))
     } finally {
       setIsSaving(false)
     }
   }
 
   const deletePost = async (postId) => {
-    if (!window.confirm(isAr ? 'هل تريد حذف هذا المقال؟' : 'Delete this post?')) return
+    if (!window.confirm(t('blogAdmin.deleteThisPost'))) return
 
     try {
       await blogService.deletePost(postId)
       setPosts((current) => current.filter((post) => post.id !== postId))
       if (form.id === postId) resetForm()
     } catch (err) {
-      setError(err?.message || (isAr ? 'تعذر حذف المقال.' : 'Could not delete post.'))
+      setError(err?.message || (t('blogAdmin.couldNotDeletePost')))
     }
   }
 
@@ -172,17 +174,15 @@ const BlogAdmin = () => {
       <div className="bepro-container">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2">
-              {isAr ? 'إدارة المدونة' : 'Blog Management'}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 break-words">
+              {t('blogAdmin.blogManagement')}
             </h1>
             <p className="text-white/70">
-              {isAr
-                ? 'إنشاء المقالات يدوياً أو جدولة وكيل AI لكتابتها تلقائياً.'
-                : 'Create articles manually or schedule the AI agent to write them automatically.'}
+              {t('blogAdmin.createArticlesManuallyOrSchedu')}
             </p>
           </div>
-          <Link to="/blogs" className="bepro-btn-secondary">
-            {isAr ? 'عرض المدونة' : 'View Blogs'}
+          <Link to="/blogs" className="bepro-btn-secondary w-full sm:w-auto justify-center">
+            {t('blogAdmin.viewBlogs')}
           </Link>
         </div>
 
@@ -198,7 +198,7 @@ const BlogAdmin = () => {
           >
             <span className="inline-flex items-center gap-2">
               <FiEdit3 className="w-4 h-4" />
-              {isAr ? 'تحرير المقالات' : 'Article Editor'}
+              {t('blogAdmin.articleEditor')}
             </span>
           </button>
           <button
@@ -212,7 +212,7 @@ const BlogAdmin = () => {
           >
             <span className="inline-flex items-center gap-2">
               <FiZap className="w-4 h-4" />
-              {isAr ? 'جدول AI Agent' : 'AI Agent Schedule'}
+              {t('blogAdmin.aiAgentSchedule')}
             </span>
           </button>
         </div>
@@ -229,54 +229,54 @@ const BlogAdmin = () => {
             )}
             {error && <div className="mb-6 bepro-card p-4 text-red-200">{error}</div>}
 
-            <div className="grid xl:grid-cols-[minmax(0,1fr)_420px] gap-8 items-start">
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] gap-6 xl:gap-8 items-start">
               <form onSubmit={savePost} className="bepro-card p-6 space-y-5">
                 <div className="flex items-center justify-between gap-4">
                   <h2 className="text-2xl font-bold text-white">
                     {isEditing
-                      ? (isAr ? 'تعديل مقال' : 'Edit Post')
-                      : (isAr ? 'مقال جديد' : 'New Post')}
+                      ? (t('blogAdmin.editPost'))
+                      : (t('blogAdmin.newPost'))}
                   </h2>
                   <button type="button" onClick={resetForm} className="bepro-btn-secondary">
                     <FiPlus className="w-5 h-5" />
-                    {isAr ? 'جديد' : 'New'}
+                    {t('blogAdmin.new')}
                   </button>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <label className="block">
-                    <span className="text-white font-bold mb-2 block">العنوان</span>
+                    <span className="text-white font-bold mb-2 block">{t('blogAdmin.arabicTitle')}</span>
                     <input required value={form.title} onChange={(e) => updateField('title', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
                   </label>
                   <label className="block">
-                    <span className="text-white font-bold mb-2 block">English Title</span>
+                    <span className="text-white font-bold mb-2 block">{t('blogAdmin.englishTitle')}</span>
                     <input value={form.title_en} onChange={(e) => updateField('title_en', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
                   </label>
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-4">
                   <label className="block">
-                    <span className="text-white font-bold mb-2 block">Slug</span>
+                    <span className="text-white font-bold mb-2 block">{t('blogAdmin.slug')}</span>
                     <input required value={form.slug} onChange={(e) => updateField('slug', slugifyArticle(e.target.value))} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
                   </label>
                   <label className="block">
-                    <span className="text-white font-bold mb-2 block">{isAr ? 'التصنيف' : 'Category'}</span>
+                    <span className="text-white font-bold mb-2 block">{t('blogAdmin.category')}</span>
                     <input value={form.category} onChange={(e) => updateField('category', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
                   </label>
                   <label className="block">
-                    <span className="text-white font-bold mb-2 block">{isAr ? 'الحالة' : 'Status'}</span>
+                    <span className="text-white font-bold mb-2 block">{t('dashboardExtra.status')}</span>
                     <select value={form.status} onChange={(e) => updateField('status', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white">
-                      <option className="bg-[#000428]" value="draft">{isAr ? 'مسودة' : 'Draft'}</option>
-                      <option className="bg-[#000428]" value="published">{isAr ? 'منشور' : 'Published'}</option>
+                      <option className="bg-[#000428]" value="draft">{t('dashboardExtra.draft')}</option>
+                      <option className="bg-[#000428]" value="published">{t('dashboardExtra.published')}</option>
                     </select>
                   </label>
                 </div>
 
                 <div className="grid md:grid-cols-[minmax(0,1fr)_auto] gap-4 items-end">
                   <label className="block">
-                    <span className="text-white font-bold mb-2 block">{isAr ? 'الكورس المرتبط' : 'Related Course'}</span>
+                    <span className="text-white font-bold mb-2 block">{t('blogAdmin.relatedCourse')}</span>
                     <select value={form.course_id} onChange={(e) => updateField('course_id', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white">
-                      <option className="bg-[#000428]" value="">{isAr ? 'بدون كورس محدد' : 'No specific course'}</option>
+                      <option className="bg-[#000428]" value="">{t('blogAdmin.noSpecificCourse')}</option>
                       {courses.map((course) => (
                         <option className="bg-[#000428]" key={course.id} value={course.id}>{course.title}</option>
                       ))}
@@ -284,51 +284,51 @@ const BlogAdmin = () => {
                   </label>
                   <button type="button" onClick={generateDraft} disabled={isGenerating || courses.length === 0} className="bepro-btn-primary min-h-[48px]">
                     {isGenerating ? <FiLoader className="w-5 h-5 animate-spin" /> : <FiRefreshCw className="w-5 h-5" />}
-                    {isAr ? 'توليد بالـ AI' : 'AI Draft'}
+                    {t('blogAdmin.aiDraft')}
                   </button>
                 </div>
 
                 <label className="block">
-                  <span className="text-white font-bold mb-2 block">{isAr ? 'رابط صورة الغلاف' : 'Cover Image URL'}</span>
+                  <span className="text-white font-bold mb-2 block">{t('blogAdmin.coverImageUrl')}</span>
                   <input value={form.cover_image_url || ''} onChange={(e) => updateField('cover_image_url', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
                 </label>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <label className="block">
-                    <span className="text-white font-bold mb-2 block">{isAr ? 'ملخص عربي' : 'Arabic Excerpt'}</span>
+                    <span className="text-white font-bold mb-2 block">{t('blogAdmin.arabicExcerpt')}</span>
                     <textarea rows="3" value={form.excerpt || ''} onChange={(e) => updateField('excerpt', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
                   </label>
                   <label className="block">
-                    <span className="text-white font-bold mb-2 block">English Excerpt</span>
+                    <span className="text-white font-bold mb-2 block">{t('blogAdmin.englishExcerpt')}</span>
                     <textarea rows="3" value={form.excerpt_en || ''} onChange={(e) => updateField('excerpt_en', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white" />
                   </label>
                 </div>
 
                 <label className="block">
-                  <span className="text-white font-bold mb-2 block">{isAr ? 'المحتوى العربي' : 'Arabic Content'}</span>
+                  <span className="text-white font-bold mb-2 block">{t('blogAdmin.arabicContent')}</span>
                   <textarea required rows="10" value={form.content || ''} onChange={(e) => updateField('content', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white leading-7" />
                 </label>
                 <label className="block">
-                  <span className="text-white font-bold mb-2 block">English Content</span>
+                  <span className="text-white font-bold mb-2 block">{t('blogAdmin.englishContent')}</span>
                   <textarea rows="8" value={form.content_en || ''} onChange={(e) => updateField('content_en', e.target.value)} className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white leading-7" />
                 </label>
 
                 <button type="submit" disabled={isSaving} className="bepro-btn-primary w-full justify-center min-h-[50px]">
                   {isSaving ? <FiLoader className="w-5 h-5 animate-spin" /> : <FiEdit3 className="w-5 h-5" />}
-                  {isAr ? 'حفظ المقال' : 'Save Post'}
+                  {t('blogAdmin.savePost')}
                 </button>
               </form>
 
               <aside className="bepro-card p-5">
                 <h2 className="text-xl font-bold text-white mb-4">
-                  {isAr ? 'كل المقالات' : 'All Posts'}
+                  {t('blogAdmin.allPosts')}
                 </h2>
                 {isLoading ? (
                   <div className="flex justify-center py-12">
                     <FiLoader className="w-10 h-10 text-[#00D9FF] animate-spin" />
                   </div>
                 ) : posts.length === 0 ? (
-                  <p className="text-white/70">{isAr ? 'لا توجد مقالات بعد.' : 'No posts yet.'}</p>
+                  <p className="text-white/70">{t('blogAdmin.noPostsYet')}</p>
                 ) : (
                   <div className="space-y-3">
                     {posts.map((post) => (
@@ -338,15 +338,15 @@ const BlogAdmin = () => {
                             <h3 className="text-white font-bold">{post.title}</h3>
                             <p className="text-sm text-white/60 mt-1">
                               {post.status === 'published'
-                                ? (isAr ? 'منشور' : 'Published')
-                                : (isAr ? 'مسودة' : 'Draft')}
+                                ? t('dashboardExtra.published')
+                                : t('dashboardExtra.draft')}
                             </p>
                           </div>
                           <div className="flex gap-2">
-                            <button type="button" onClick={() => editPost(post)} className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Edit">
+                            <button type="button" onClick={() => editPost(post)} className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title={t('blogAdmin.edit')}>
                               <FiEdit3 className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={() => deletePost(post.id)} className="p-2 rounded-lg bg-red-500/20 text-red-100 hover:bg-red-500/30" title="Delete">
+                            <button type="button" onClick={() => deletePost(post.id)} className="p-2 rounded-lg bg-red-500/20 text-red-100 hover:bg-red-500/30" title={t('blogAdmin.delete')}>
                               <FiTrash2 className="w-4 h-4" />
                             </button>
                           </div>

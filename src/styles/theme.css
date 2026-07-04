@@ -27,6 +27,8 @@
   flex: 1;
   width: 100%;
   min-height: calc(100vh - 120px);
+  min-width: 0;
+  overflow-x: hidden;
   background: linear-gradient(135deg, rgba(0,4,40,0.95) 0%, rgba(0,78,146,0.95) 100%);
   position: relative;
 }
@@ -53,19 +55,20 @@
 /* Page Header Style */
 .bepro-page-header {
   text-align: center;
-  padding: 40px 20px 60px;
+  padding: 32px 16px 48px;
 }
 
 .bepro-page-header h1 {
-  font-size: 3rem;
+  font-size: clamp(1.75rem, 5vw, 3rem);
   color: #fff;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   font-weight: 900;
   letter-spacing: -1px;
+  word-break: break-word;
 }
 
 .bepro-page-header p {
-  font-size: 1.2rem;
+  font-size: clamp(1rem, 2.5vw, 1.2rem);
   color: rgba(255, 255, 255, 0.9);
   max-width: 600px;
   margin: 0 auto;
@@ -78,9 +81,15 @@
   backdrop-filter: blur(10px);
   border: 1px solid rgba(0, 217, 255, 0.3);
   border-radius: 16px;
-  padding: 30px;
+  padding: 20px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   transition: all 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .bepro-card {
+    padding: 30px;
+  }
 }
 
 .bepro-card:hover {
@@ -95,8 +104,14 @@
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 20px;
-  padding: 40px;
+  padding: 24px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+@media (min-width: 640px) {
+  .bepro-card-white {
+    padding: 40px;
+  }
 }
 
 /* Buttons */
@@ -231,11 +246,12 @@
 
 /* Section Title */
 .bepro-section-title {
-  font-size: 2.5rem;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
   color: #fff;
   margin-bottom: 20px;
   font-weight: 800;
   text-align: center;
+  word-break: break-word;
 }
 
 .bepro-section-subtitle {
@@ -249,11 +265,24 @@
 
 /* Container */
 .bepro-container {
-  max-width: 1200px;
+  max-width: 80rem;
+  width: 100%;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 1rem;
   position: relative;
   z-index: 2;
+}
+
+@media (min-width: 640px) {
+  .bepro-container {
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .bepro-container {
+    padding: 0 2rem;
+  }
 }
 
 /* Grid */
@@ -276,6 +305,10 @@
 }
 
 @media (max-width: 1024px) {
+  .bepro-page {
+    min-height: calc(100vh - 100px);
+  }
+
   .bepro-grid-4 {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -285,18 +318,20 @@
 }
 
 @media (max-width: 768px) {
+  .bepro-page {
+    min-height: calc(100vh - 90px);
+  }
+
   .bepro-grid-2,
   .bepro-grid-3,
   .bepro-grid-4 {
     grid-template-columns: 1fr;
   }
-  
-  .bepro-page-header h1 {
-    font-size: 2rem;
-  }
-  
-  .bepro-section-title {
-    font-size: 1.75rem;
+}
+
+@media (max-width: 360px) {
+  .bepro-page {
+    min-height: calc(100vh - 78px);
   }
 }
 

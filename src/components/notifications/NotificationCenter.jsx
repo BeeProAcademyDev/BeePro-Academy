@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthState } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabase';
+import { paymentNotificationService } from '../../services/paymentAPI';
 import { Card } from '../ui/Card';
 import toast from 'react-hot-toast';
 import { 
@@ -28,7 +28,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       // Set up real-time subscription
       const subscription = setupRealtimeSubscription();
       return () => {
-        if (subscription) subscription.unsubscribe();
+        if (subscription) paymentNotificationService.removeChannel(subscription);
       };
     }
   }, [user, isOpen]);
@@ -36,23 +36,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
   const loadNotifications = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('payment_notifications')
-        .select(`
-          *,
-          payment_submission:payment_submissions(
-            amount,
-            status,
-            student:users!payment_submissions_student_id_fkey(full_name, email),
-            instructor:users!payment_submissions_instructor_id_fkey(full_name),
-            payment_method:instructor_payment_methods(method_name)
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
+      const data = await paymentNotificationService.getUserNotifications(user.id);
       
       setNotifications(data || []);
       setUnreadCount(data?.filter(n => !n.is_read).length || 0);
@@ -65,26 +49,11 @@ const NotificationCenter = ({ isOpen, onClose }) => {
   };
 
   const setupRealtimeSubscription = () => {
-    return supabase
-      .channel('payment-notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'payment_notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          // Add new notification to the list
-          setNotifications(prev => [payload.new, ...prev]);
-          setUnreadCount(prev => prev + 1);
-          
-          // Show toast notification
-          showToastNotification(payload.new);
-        }
-      )
-      .subscribe();
+    return paymentNotificationService.subscribeToUserNotifications(user.id, (notification) => {
+      setNotifications(prev => [notification, ...prev]);
+      setUnreadCount(prev => prev + 1);
+      showToastNotification(notification);
+    });
   };
 
   const showToastNotification = (notification) => {
@@ -107,13 +76,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
 
   const markAsRead = async (notificationId) => {
     try {
-      const { error } = await supabase
-        .from('payment_notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await paymentNotificationService.markAsRead(notificationId, user.id);
 
       // Update local state
       setNotifications(prev => 
@@ -129,13 +92,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
 
   const markAllAsRead = async () => {
     try {
-      const { error } = await supabase
-        .from('payment_notifications')
-        .update({ is_read: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-
-      if (error) throw error;
+      await paymentNotificationService.markAllAsRead(user.id);
 
       // Update local state
       setNotifications(prev => 
@@ -151,13 +108,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
 
   const deleteNotification = async (notificationId) => {
     try {
-      const { error } = await supabase
-        .from('payment_notifications')
-        .delete()
-        .eq('id', notificationId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await paymentNotificationService.deleteNotification(notificationId, user.id);
 
       // Update local state
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
@@ -202,10 +153,10 @@ const NotificationCenter = ({ isOpen, onClose }) => {
         <div className="p-4 border-b border-gray-700">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold text-white flex items-center">
-              <Bell className="w-5 h-5 mr-2" />
+              <Bell className="w-5 h-5 me-2" />
               Notifications
               {unreadCount > 0 && (
-                <span className="ml-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
+                <span className="ms-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
                   {unreadCount}
                 </span>
               )}
@@ -223,7 +174,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
               onClick={markAllAsRead}
               className="mt-2 text-blue-400 hover:text-blue-300 text-sm flex items-center"
             >
-              <MarkAsRead className="w-4 h-4 mr-1" />
+              <MarkAsRead className="w-4 h-4 me-1" />
               Mark all as read
             </button>
           )}
@@ -255,7 +206,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center">
                       {getNotificationIcon(notification.notification_type)}
-                      <span className="ml-2 text-white text-sm font-medium">
+                      <span className="ms-2 text-white text-sm font-medium">
                         {notification.title}
                       </span>
                     </div>
@@ -288,7 +239,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                       onClick={() => markAsRead(notification.id)}
                       className="mt-2 text-blue-400 hover:text-blue-300 text-xs flex items-center"
                     >
-                      <Check className="w-3 h-3 mr-1" />
+                      <Check className="w-3 h-3 me-1" />
                       Mark as read
                     </button>
                   )}

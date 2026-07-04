@@ -20,15 +20,15 @@ const Footer = () => {
   const quickLinks = [
     { to: '/', label: t('nav.home') },
     { to: '/courses', label: t('nav.courses') },
-    { to: '/blogs', label: language === 'ar' ? 'المدونة' : 'Blogs' },
+    { to: '/blogs', label: t('nav.blogs') },
     { to: '/about', label: t('nav.about') },
     { to: '/contact', label: t('nav.contact') },
   ]
 
   const categories = [
-    { to: '/courses?category=financial_markets', label: language === 'ar' ? 'الأسواق المالية' : 'Financial Markets' },
-    { to: '/courses?category=data_analysis', label: language === 'ar' ? 'تحليل البيانات' : 'Data Analysis' },
-    { to: '/courses?category=it', label: language === 'ar' ? 'تكنولوجيا المعلومات' : 'IT' },
+    { to: '/courses?category=financial_markets', label: t('footer.financialMarkets') },
+    { to: '/courses?category=data_analysis', label: t('footer.dataAnalysis') },
+    { to: '/courses?category=it', label: t('footer.it') },
   ]
 
   const socialLinks = [
@@ -46,13 +46,13 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* About Section */}
           <div className="lg:col-span-1">
-            <Link to="/" className="flex items-center gap-2 mb-4">
+            <Link to="/" className="flex items-center gap-2 mb-4 min-w-0">
               <img
                 src="/assets/platform-logo.png"
                 alt="BeePro Academy"
-                className="h-10 w-auto max-w-[180px] object-contain object-left"
+                className="h-10 w-auto max-w-[180px] object-contain object-start shrink-0"
               />
-              <span className="text-xl font-bold text-white">
+              <span className="text-lg sm:text-xl font-bold text-white truncate">
                 BeePro Academy
               </span>
             </Link>
@@ -120,11 +120,11 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-3 text-secondary-400">
                 <FiPhone className="w-5 h-5 text-primary-400 shrink-0" />
-                <span dir="ltr">+966 50 123 4567</span>
+                <span dir="ltr" className="ltr-isolate">+966 50 123 4567</span>
               </li>
               <li className="flex items-start gap-3 text-secondary-400">
                 <FiMapPin className="w-5 h-5 text-primary-400 shrink-0 mt-0.5" />
-                <span>{language === 'ar' ? 'الإمارات العربية المتحدة' : 'United Arab Emirates'}</span>
+                <span>{t('location.uae')}</span>
               </li>
             </ul>
 
@@ -133,15 +133,15 @@ const Footer = () => {
             <p className="text-secondary-400 text-sm mb-3">
               {t('footer.newsletterText')}
             </p>
-            <form className="flex gap-2">
+            <form className="flex flex-col sm:flex-row gap-2">
               <input
                 type="email"
                 placeholder={t('auth.login.email')}
-                className="flex-1 px-4 py-2 bg-secondary-800 border border-secondary-700 rounded-lg text-white placeholder-secondary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full flex-1 px-4 py-2 bg-secondary-800 border border-secondary-700 rounded-lg text-white placeholder-secondary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors"
+                className="w-full sm:w-auto px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors flex items-center justify-center shrink-0"
               >
                 <FiSend className="w-5 h-5" />
               </button>

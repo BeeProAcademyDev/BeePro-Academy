@@ -67,7 +67,10 @@ export const convertFromUsd = (usdAmount, currencyCode) => {
 export const formatPrice = (usdAmount, currencyCode, language = 'ar') => {
   const currency = CURRENCIES[currencyCode] || CURRENCIES.USD
   const converted = convertFromUsd(usdAmount, currency.code)
-  const label = language === 'ar' ? currency.labelAr : currency.labelEn
+  let label = currency.labelEn
+  if (language === 'ar') {
+    label = currency.labelAr
+  }
 
   if (language === 'ar') {
     return {
@@ -100,7 +103,10 @@ export const formatPrice = (usdAmount, currencyCode, language = 'ar') => {
 
 export const formatStoredAmount = (amount, currencyCode, language = 'ar') => {
   const currency = CURRENCIES[currencyCode] || CURRENCIES.USD
-  const label = language === 'ar' ? currency.labelAr : currency.labelEn
+  let label = currency.labelEn
+  if (language === 'ar') {
+    label = currency.labelAr
+  }
   const value = Number(amount) || 0
 
   if (language === 'ar') {

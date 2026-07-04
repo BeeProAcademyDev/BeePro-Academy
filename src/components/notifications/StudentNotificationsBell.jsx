@@ -4,8 +4,8 @@ import { FiBell, FiLoader, FiVideo, FiX } from 'react-icons/fi'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { notificationService } from '../../services/api'
-import supabase from '../../lib/supabase'
 import { isValidGoogleMeetLink } from '../../lib/meetLinks'
+import { useTranslation } from 'react-i18next'
 
 const extractMeetingUrl = (message = '') => {
   const match = message.match(/https:\/\/[^\s]+/gi)
@@ -17,11 +17,11 @@ const extractMeetingUrl = (message = '') => {
   return match[0]
 }
 
-const getMeetingLinkLabel = (url, isAr) => {
+const getMeetingLinkLabel = (url, t) => {
   if (url && isValidGoogleMeetLink(url)) {
-    return isAr ? 'رابط Google Meet' : 'Google Meet link'
+    return t('studentNotificationsBell.googleMeetLink')
   }
-  return isAr ? 'رابط Jitsi' : 'Jitsi link'
+  return t('dashboardExtra.jitsiLink')
 }
 
 const getJoinPath = (notification) => {
@@ -39,9 +39,10 @@ const getJoinPath = (notification) => {
 const isMeetingInvite = (notification) =>
   notification?.type === 'meeting' ||
   notification?._source === 'live_meeting' ||
-  /جلسة|live session/i.test(`${notification?.title || ''} ${notification?.message || ''}`)
+  /\u062c\u0644\u0633\u0629|live session/i.test(`${notification?.title || ''} ${notification?.message || ''}`)
 
 const StudentNotificationsBell = () => {
+  const { t } = useTranslation()
   const { user, isAuthenticated } = useAuth()
   const { language } = useLanguage()
   const navigate = useNavigate()
@@ -139,28 +140,17 @@ const StudentNotificationsBell = () => {
 
     loadNotifications()
 
-    if (!supabase) return undefined
-
-    const channel = supabase
-      .channel(`student-notifications-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          handleIncomingNotification(payload.new)
-        }
-      )
-      .subscribe()
+    const channel = notificationService.subscribeToUserNotifications(
+      user.id,
+      (notification) => {
+        handleIncomingNotification(notification)
+      }
+    )
 
     const pollId = window.setInterval(loadNotifications, 8000)
 
     return () => {
-      supabase.removeChannel(channel)
+      notificationService.removeChannel(channel)
       window.clearInterval(pollId)
       if (alertTimerRef.current) {
         window.clearTimeout(alertTimerRef.current)
@@ -243,12 +233,12 @@ const StudentNotificationsBell = () => {
           if (!open) loadNotifications()
         }}
         className="btn-ghost p-2 rounded-lg relative"
-        title={isAr ? 'الإشعارات' : 'Notifications'}
-        aria-label={isAr ? 'الإشعارات' : 'Notifications'}
+        title={t('studentNotificationsBell.notifications_3')}
+        aria-label={t('studentNotificationsBell.notifications')}
       >
         <FiBell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
+          <span className="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -256,31 +246,28 @@ const StudentNotificationsBell = () => {
 
       {recentAlert && (
         <div
-          className="absolute top-full mt-2 w-[min(20rem,calc(100vw-2rem))] z-[70] animate-slide-down"
-          style={{ right: 0 }}
+          className="absolute top-full end-0 mt-2 w-[min(20rem,calc(100vw-2rem))] z-[70] animate-slide-down"
         >
           <div className="rounded-xl border-2 border-primary-400 dark:border-primary-600 bg-white dark:bg-dark-card shadow-2xl p-4">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-300">
-                  {isAr ? '🔴 جلسة مباشرة الآن' : '🔴 Live session now'}
+                  {t('studentNotificationsBell.liveSessionNow')}
                 </p>
                 <p className="font-semibold text-sm mt-1 truncate">
                   {recentAlert.title?.includes('Live session')
-                    ? (isAr ? recentAlert.title.replace('Live session invitation:', 'دعوة لجلسة مباشرة:') : recentAlert.title)
+                    ? recentAlert.title.replace('Live session invitation:', t('studentNotificationsBell.liveSessionInvitationPrefix'))
                     : recentAlert.title}
                 </p>
                 <p className="text-xs text-secondary-500 mt-1 line-clamp-2">
-                  {isAr
-                    ? 'المعلم يبث الآن. اضغط للدخول إلى الجلسة.'
-                    : 'Your teacher is live. Tap below to join.'}
+                  {t('studentNotificationsBell.yourTeacherIsLiveTapBelowToJoi')}
                 </p>
               </div>
               <button
                 type="button"
                 className="btn-ghost p-1 rounded shrink-0"
                 onClick={() => setRecentAlert(null)}
-                aria-label={isAr ? 'إغلاق' : 'Close'}
+                aria-label={t('studentNotificationsBell.close')}
               >
                 <FiX className="w-4 h-4" />
               </button>
@@ -293,8 +280,8 @@ const StudentNotificationsBell = () => {
               >
                 <FiVideo className="w-4 h-4" />
                 {extractMeetingUrl(recentAlert.message) && isValidGoogleMeetLink(extractMeetingUrl(recentAlert.message))
-                  ? (isAr ? 'فتح Google Meet' : 'Open Google Meet')
-                  : (isAr ? 'دخول الجلسة الآن' : 'Join session now')}
+                  ? (t('studentNotificationsBell.openGoogleMeet_2'))
+                  : (t('studentNotificationsBell.joinSessionNow'))}
               </button>
             )}
           </div>
@@ -303,12 +290,11 @@ const StudentNotificationsBell = () => {
 
       {open && (
         <div
-          className="absolute top-full mt-2 w-[min(22rem,calc(100vw-2rem))] bg-white dark:bg-dark-card rounded-xl shadow-xl border border-secondary-100 dark:border-dark-border overflow-hidden z-[60]"
-          style={{ right: 0 }}
+          className="absolute top-full end-0 mt-2 w-[min(22rem,calc(100vw-2rem))] bg-white dark:bg-dark-card rounded-xl shadow-xl border border-secondary-100 dark:border-dark-border overflow-hidden z-[60]"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-secondary-100 dark:border-dark-border">
             <h3 className="font-semibold text-sm">
-              {isAr ? 'إشعارات الجلسات المباشرة' : 'Live session notifications'}
+              {t('dashboardExtra.liveNotifications')}
             </h3>
             <button type="button" className="btn-ghost p-1 rounded" onClick={() => setOpen(false)}>
               <FiX className="w-4 h-4" />
@@ -319,11 +305,11 @@ const StudentNotificationsBell = () => {
             {loading ? (
               <div className="flex items-center justify-center gap-2 py-8 text-secondary-500">
                 <FiLoader className="w-5 h-5 animate-spin" />
-                {isAr ? 'جاري التحميل...' : 'Loading...'}
+                {t('studentNotificationsBell.loading')}
               </div>
             ) : notifications.length === 0 ? (
               <p className="px-4 py-8 text-sm text-secondary-500 text-center">
-                {isAr ? 'لا توجد جلسات مباشرة الآن' : 'No live sessions right now'}
+                {t('studentNotificationsBell.noLiveSessionsRightNow')}
               </p>
             ) : (
               notifications.map((notification) => {
@@ -359,8 +345,8 @@ const StudentNotificationsBell = () => {
                         >
                           <FiVideo className="w-4 h-4" />
                           {isGoogleMeet
-                            ? (isAr ? 'فتح Google Meet' : 'Open Google Meet')
-                            : (isAr ? 'دخول الجلسة' : 'Join session')}
+                            ? (t('studentNotificationsBell.openGoogleMeet'))
+                            : t('dashboardExtra.joinSession')}
                         </button>
                       )}
                       {meetingUrl && (
@@ -375,7 +361,7 @@ const StudentNotificationsBell = () => {
                             }
                           }}
                         >
-                          {getMeetingLinkLabel(meetingUrl, isAr)}
+                          {getMeetingLinkLabel(meetingUrl, t)}
                         </a>
                       )}
                     </div>
@@ -391,7 +377,7 @@ const StudentNotificationsBell = () => {
               className="text-sm text-primary-600 hover:text-primary-700 font-medium"
               onClick={() => setOpen(false)}
             >
-              {isAr ? 'عرض في لوحة التحكم' : 'View in dashboard'}
+              {t('studentNotificationsBell.viewInDashboard')}
             </Link>
           </div>
         </div>

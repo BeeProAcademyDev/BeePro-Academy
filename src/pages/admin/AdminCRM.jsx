@@ -3,6 +3,7 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { adminService } from '../../services/api'
 import { requireAdmin } from '../../lib/authGuards'
+import { useTranslation } from 'react-i18next'
 import {
   FiLoader,
   FiMessageCircle,
@@ -60,6 +61,7 @@ const toWhatsappPhone = (value) => {
 }
 
 const AdminCRM = () => {
+  const { t } = useTranslation()
   const { language } = useLanguage()
   const { user } = useAuth()
   const [contacts, setContacts] = useState([])
@@ -81,7 +83,7 @@ const AdminCRM = () => {
     } catch (fetchError) {
       setError(
         fetchError.message ||
-          (language === 'ar' ? 'تعذر تحميل بيانات CRM' : 'Unable to load CRM data')
+          (t('adminCRM.unableToLoadCrmData'))
       )
     } finally {
       setLoading(false)
@@ -116,9 +118,7 @@ const AdminCRM = () => {
     const phone = toWhatsappPhone(rawPhone)
     if (!phone) return ''
 
-    const message = language === 'ar'
-      ? `مرحبا ${contact.full_name || ''}، معك فريق BeePro بخصوص حسابك على المنصة.`
-      : `Hi ${contact.full_name || ''}, BeePro team here regarding your platform account.`
+    const message = t('adminCRM.hiContactfullnameBeeproTeamHer')
 
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
   }
@@ -128,7 +128,7 @@ const AdminCRM = () => {
       <div className="text-center py-12">
         <FiUsers className="w-16 h-16 mx-auto mb-4 text-red-400" />
         <h3 className="text-xl font-bold mb-2 text-red-600">
-          {language === 'ar' ? 'غير مصرح' : 'Access Denied'}
+          {t('adminCRM.accessDenied')}
         </h3>
       </div>
     )
@@ -140,21 +140,19 @@ const AdminCRM = () => {
         <div>
           <h2 className="text-2xl font-bold">CRM</h2>
           <p className="text-gray-500">
-            {language === 'ar'
-              ? 'قائمة المسجلين مع حالة شراء الكورسات وإرسال واتساب'
-              : 'Registered users with course payment status and WhatsApp actions'}
+            {t('adminCRM.registeredUsersWithCoursePayme')}
           </p>
         </div>
         <button onClick={fetchContacts} disabled={loading} className="btn btn-secondary">
           {loading ? <FiLoader className="w-5 h-5 animate-spin" /> : <FiRefreshCw className="w-5 h-5" />}
-          {language === 'ar' ? 'تحديث' : 'Refresh'}
+          {t('adminCRM.refresh')}
         </button>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-gray-800 dark:text-white">{contacts.length}</div>
-          <div className="text-sm text-gray-500">{language === 'ar' ? 'إجمالي العملاء' : 'Total contacts'}</div>
+          <div className="text-sm text-gray-500">{t('adminCRM.totalContacts')}</div>
         </div>
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-green-600">{paidCount}</div>
@@ -175,7 +173,7 @@ const AdminCRM = () => {
               className="input ps-10"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder={language === 'ar' ? 'بحث بالاسم أو البريد أو الكورس...' : 'Search name, email, or course...'}
+              placeholder={t('adminCRM.searchNameEmailOrCourse')}
             />
           </div>
           <select
@@ -183,7 +181,7 @@ const AdminCRM = () => {
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           >
-            <option value="all">{language === 'ar' ? 'كل الحالات' : 'All statuses'}</option>
+            <option value="all">{t('adminCRM.allStatuses')}</option>
             <option value="have payment">have payment</option>
             <option value="without payment">without payment</option>
           </select>
@@ -201,19 +199,19 @@ const AdminCRM = () => {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
-                  {language === 'ar' ? 'الشخص' : 'Person'}
+                <th className="text-start py-3 px-4 text-xs font-medium text-gray-500 uppercase">
+                  {t('adminCRM.person')}
                 </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
-                  {language === 'ar' ? 'الحالة' : 'Status'}
+                <th className="text-start py-3 px-4 text-xs font-medium text-gray-500 uppercase">
+                  {t('dashboardExtra.status')}
                 </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
-                  {language === 'ar' ? 'الكورسات المدفوعة' : 'Paid courses'}
+                <th className="text-start py-3 px-4 text-xs font-medium text-gray-500 uppercase">
+                  {t('adminCRM.paidCourses')}
                 </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
-                  {language === 'ar' ? 'آخر دفع' : 'Last payment'}
+                <th className="text-start py-3 px-4 text-xs font-medium text-gray-500 uppercase">
+                  {t('adminCRM.lastPayment')}
                 </th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase">
+                <th className="text-end py-3 px-4 text-xs font-medium text-gray-500 uppercase">
                   WhatsApp
                 </th>
               </tr>
@@ -223,7 +221,7 @@ const AdminCRM = () => {
                 <tr>
                   <td colSpan={5} className="py-10 text-center text-gray-500">
                     <FiLoader className="w-6 h-6 animate-spin mx-auto mb-2 text-primary-500" />
-                    {language === 'ar' ? 'جارٍ التحميل...' : 'Loading...'}
+                    {t('common.loading')}
                   </td>
                 </tr>
               )}
@@ -254,14 +252,14 @@ const AdminCRM = () => {
                     <td className="py-4 px-4 text-sm text-gray-600 dark:text-gray-300">
                       {contact.paid_course_titles?.length
                         ? contact.paid_course_titles.join(', ')
-                        : (language === 'ar' ? 'لا يوجد' : 'None')}
+                        : (t('adminCRM.none'))}
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-600 dark:text-gray-300">
                       {contact.latest_payment_at
                         ? new Date(contact.latest_payment_at).toLocaleDateString()
                         : '-'}
                     </td>
-                    <td className="py-4 px-4 text-right">
+                    <td className="py-4 px-4 text-end">
                       {whatsappUrl ? (
                         <a
                           href={whatsappUrl}
@@ -270,12 +268,12 @@ const AdminCRM = () => {
                           className="inline-flex items-center gap-2 px-3 py-2 bg-green-100 text-green-700 text-sm rounded hover:bg-green-200"
                         >
                           <FiMessageCircle className="w-4 h-4" />
-                          {language === 'ar' ? 'رسالة' : 'Message'}
+                          {t('adminCRM.message')}
                         </a>
                       ) : (
                         <span className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-500 text-sm rounded">
                           <FiMessageCircle className="w-4 h-4" />
-                          {language === 'ar' ? 'لا يوجد رقم' : 'No phone'}
+                          {t('adminCRM.noPhone')}
                         </span>
                       )}
                     </td>
@@ -286,7 +284,7 @@ const AdminCRM = () => {
               {!loading && filteredContacts.length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-10 text-center text-gray-500">
-                    {language === 'ar' ? 'لا توجد نتائج' : 'No contacts found'}
+                    {t('adminCRM.noContactsFound')}
                   </td>
                 </tr>
               )}

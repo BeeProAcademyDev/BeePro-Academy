@@ -28,9 +28,7 @@ const Contact = () => {
     // Simulate form submission
     setTimeout(() => {
       setIsSubmitting(false)
-      setSubmitMessage(language === 'ar' 
-        ? `شكراً ${formData.name}! تم إرسال رسالتك بنجاح.`
-        : `Thank you ${formData.name}! Message sent successfully.`
+      setSubmitMessage(t('contact.thankYouFormdatanameMessageSen')
       )
       setFormData({ name: '', phone: '', email: '', subject: '', message: '' })
       
@@ -41,38 +39,38 @@ const Contact = () => {
   const contactMethods = [
     {
       icon: FiMail,
-      title: language === 'ar' ? 'البريد الإلكتروني' : 'Email',
+      title: t('contact.email_12'),
       value: 'info@beepro-academy.com',
-      description: language === 'ar' ? 'راسلنا في أي وقت' : 'Email us anytime'
+      description: t('contact.emailUsAnytime')
     },
     {
       icon: FiMessageSquare,
-      title: language === 'ar' ? 'الدردشة المباشرة' : 'Live Chat',
-      value: language === 'ar' ? 'متاح الآن' : 'Available Now',
-      description: language === 'ar' ? 'دعم فوري 24/7' : 'Instant support 24/7'
+      title: t('contact.liveChat'),
+      value: t('contact.availableNow'),
+      description: t('contact.instantSupport247')
     },
     {
       icon: FiPhone,
-      title: language === 'ar' ? 'الهاتف' : 'Phone',
+      title: t('contact.phone'),
       value: '+966 538 751 281',
-      description: language === 'ar' ? 'اتصل بنا مباشرة' : 'Call us directly'
+      description: t('contact.callUsDirectly')
     },
     {
       icon: FiMapPin,
-      title: language === 'ar' ? 'الموقع' : 'Location',
-      value: language === 'ar' ? 'الإمارات العربية المتحدة' : 'United Arab Emirates',
-      description: language === 'ar' ? 'مقرنا الرئيسي' : 'Our headquarters'
+      title: t('contact.location'),
+      value: t('location.uae'),
+      description: t('contact.ourHeadquarters')
     }
   ]
 
   const subjectOptions = [
-    { value: '', label: language === 'ar' ? 'اختر موضوعاً' : 'Select a topic' },
-    { value: 'course-types', label: language === 'ar' ? 'أنواع الدورات والمحتوى' : 'Course Types & Content' },
-    { value: 'pricing', label: language === 'ar' ? 'الأسعار وخيارات الدفع' : 'Pricing & Payment Options' },
-    { value: 'schedule', label: language === 'ar' ? 'الجدول والمدة' : 'Schedule & Duration' },
-    { value: 'certification', label: language === 'ar' ? 'تفاصيل الشهادات' : 'Certification Details' },
-    { value: 'prerequisites', label: language === 'ar' ? 'المتطلبات المسبقة' : 'Prerequisites & Requirements' },
-    { value: 'other', label: language === 'ar' ? 'أسئلة أخرى' : 'Other Questions' }
+    { value: '', label: t('contact.selectATopic') },
+    { value: 'course-types', label: t('contact.courseTypesContent') },
+    { value: 'pricing', label: t('contact.pricingPaymentOptions') },
+    { value: 'schedule', label: t('contact.scheduleDuration') },
+    { value: 'certification', label: t('contact.certificationDetails') },
+    { value: 'prerequisites', label: t('contact.prerequisitesRequirements') },
+    { value: 'other', label: t('contact.otherQuestions') }
   ]
 
   return (
@@ -81,12 +79,9 @@ const Contact = () => {
       <section className="py-16">
         <div className="bepro-container">
           <div className="bepro-page-header">
-            <h1>{language === 'ar' ? 'تواصل معنا' : 'Get in Touch'}</h1>
+            <h1>{t('contact.getInTouch_11')}</h1>
             <p>
-              {language === 'ar'
-                ? 'لديك أسئلة حول دوراتنا أو الأسعار أو أي شيء آخر؟ نحن هنا للمساعدة!'
-                : 'Have questions about our courses, pricing, or anything else? We\'re here to help!'
-              }
+              {t('contact.haveQuestionsAboutOurCoursesPr')}
             </p>
           </div>
         </div>
@@ -114,9 +109,9 @@ const Contact = () => {
       <section className="py-16">
         <div className="bepro-container">
           <div className="max-w-3xl mx-auto">
-            <div className="bepro-card-white animate-fadeInUp">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                {language === 'ar' ? 'أرسل لنا رسالة' : 'Send us a Message'}
+            <div className="bepro-card-white animate-fadeInUp p-5 sm:p-8 md:p-10">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 text-center break-words">
+                {t('contact.sendUsAMessage')}
               </h2>
               
               {submitMessage && (
@@ -130,13 +125,13 @@ const Contact = () => {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <label className="bepro-label">
-                      {language === 'ar' ? 'الاسم الكامل *' : 'Full Name *'}
+                      {t('contact.fullName')}
                     </label>
                     <input
                       type="text"
                       name="name"
                       className="bepro-input"
-                      placeholder={language === 'ar' ? 'أدخل اسمك' : 'Enter your name'}
+                      placeholder={t('contact.enterYourName')}
                       value={formData.name}
                       onChange={handleChange}
                       required
@@ -144,7 +139,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <label className="bepro-label">
-                      {language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
+                      {t('contact.phoneNumber')}
                     </label>
                     <input
                       type="tel"
@@ -159,13 +154,13 @@ const Contact = () => {
 
                 <div>
                   <label className="bepro-label">
-                    {language === 'ar' ? 'البريد الإلكتروني *' : 'Email Address *'}
+                    {t('contact.emailAddress')}
                   </label>
                   <input
                     type="email"
                     name="email"
                     className="bepro-input"
-                    placeholder={language === 'ar' ? 'your@email.com' : 'your@email.com'}
+                    placeholder={t('contact.youremailcom')}
                     value={formData.email}
                     onChange={handleChange}
                     required
@@ -174,7 +169,7 @@ const Contact = () => {
 
                 <div>
                   <label className="bepro-label">
-                    {language === 'ar' ? 'ما الذي تود معرفته؟ *' : 'What would you like to know? *'}
+                    {t('contact.whatWouldYouLikeToKnow')}
                   </label>
                   <select
                     name="subject"
@@ -191,12 +186,12 @@ const Contact = () => {
 
                 <div>
                   <label className="bepro-label">
-                    {language === 'ar' ? 'رسالتك *' : 'Your Message *'}
+                    {t('contact.yourMessage')}
                   </label>
                   <textarea
                     name="message"
                     className="bepro-input min-h-[150px] resize-y"
-                    placeholder={language === 'ar' ? 'اكتب رسالتك هنا...' : 'Write your message here...'}
+                    placeholder={t('contact.writeYourMessageHere')}
                     value={formData.message}
                     onChange={handleChange}
                     required
@@ -211,12 +206,12 @@ const Contact = () => {
                   {isSubmitting ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      {language === 'ar' ? 'جاري الإرسال...' : 'Sending...'}
+                      {t('contact.sending_10')}
                     </>
                   ) : (
                     <>
                       <FiSend className="w-5 h-5" />
-                      {language === 'ar' ? 'إرسال الرسالة' : 'Send Message'}
+                      {t('contact.sendMessage_9')}
                     </>
                   )}
                 </button>
@@ -230,7 +225,7 @@ const Contact = () => {
       <section className="py-16">
         <div className="bepro-container text-center">
           <h2 className="bepro-section-title">
-            {language === 'ar' ? 'تابعنا على وسائل التواصل' : 'Follow Us on Social Media'}
+            {t('contact.followUsOnSocialMedia')}
           </h2>
           <div className="flex flex-wrap justify-center gap-4 mt-8">
             <a
@@ -307,7 +302,7 @@ const Contact = () => {
             </a>
           </div>
           <p className="text-white/60 mt-6">
-            {language === 'ar' ? 'تابعنا للحصول على آخر الأخبار والتحديثات' : 'Follow us for the latest news and updates'}
+            {t('contact.followUsForTheLatestNewsAndUpd')}
           </p>
         </div>
       </section>

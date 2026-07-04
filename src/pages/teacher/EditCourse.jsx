@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { courseService, lessonService, meetingService, notificationService } from '../../services/api'
@@ -9,6 +10,7 @@ import { requireOwner } from '../../lib/authGuards'
 import './CreateCourse.css'
 
 const EditCourse = () => {
+  const { t } = useTranslation()
   const { id } = useParams()
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -91,7 +93,7 @@ const EditCourse = () => {
 
   const loadCourseData = async () => {
     if (!id) {
-      setError('معرف الكورس غير موجود')
+      setError(t('teacherWizard.errCourseIdMissing'))
       setIsLoading(false)
       return
     }
@@ -105,7 +107,7 @@ const EditCourse = () => {
       
       // Check if user is the instructor
       if (!requireOwner(user, course.instructor_id)) {
-        setError('ليس لديك صلاحية لتعديل هذا الكورس')
+        setError(t('teacherWizard.errNoPermission'))
         setIsLoading(false)
         return
       }
@@ -144,7 +146,7 @@ const EditCourse = () => {
 
     } catch (err) {
       console.error('Error loading course:', err)
-      setError('فشل تحميل بيانات الكورس')
+      setError(t('teacherWizard.errLoadFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -189,7 +191,7 @@ const EditCourse = () => {
         setUploadProgress(prev => ({ ...prev, thumbnail: null }))
       }, 1000)
     } catch (err) {
-      setError('فشل رفع الصورة')
+      setError(t('teacherWizard.errThumbnailFailed'))
       setUploadProgress(prev => ({ ...prev, thumbnail: null }))
     }
   }
@@ -234,7 +236,7 @@ const EditCourse = () => {
         setUploadProgress(prev => ({ ...prev, video: null }))
       }, 1000)
     } catch (err) {
-      setError('فشل رفع الفيديو')
+      setError(t('teacherWizard.errVideoFailed'))
       setUploadProgress(prev => ({ ...prev, video: null }))
     }
   }
@@ -307,7 +309,7 @@ const EditCourse = () => {
   // Add lesson to list
   const addLesson = () => {
     if (!currentLesson.title) {
-      setError('يرجى إدخال عنوان الدرس')
+      setError(t('teacherWizard.errLessonTitle'))
       return
     }
 
@@ -325,7 +327,7 @@ const EditCourse = () => {
       files: []
     })
     setUploadedFiles([])
-    setSuccess('تمت إضافة الدرس بنجاح!')
+    setSuccess(t('teacherWizard.successLessonAdded'))
     setTimeout(() => setSuccess(null), 3000)
   }
 
@@ -357,7 +359,7 @@ const EditCourse = () => {
 
   const createMeetingSession = async () => {
     if (!meetingData.title || !meetingData.scheduled_at) {
-      setError('يرجى إدخال عنوان الاجتماع والوقت')
+      setError(t('teacherWizard.errMeetingFields'))
       return
     }
 
@@ -427,25 +429,25 @@ const EditCourse = () => {
   // Copy meet link
   const copyMeetLink = (link) => {
     navigator.clipboard.writeText(link)
-    setSuccess('تم نسخ الرابط!')
+    setSuccess(t('teacherWizard.successLinkCopied'))
     setTimeout(() => setSuccess(null), 2000)
   }
 
   // Submit course updates
   const handleSubmit = async () => {
     if (!courseData.title || !courseData.description) {
-      setError('يرجى إدخال جميع البيانات المطلوبة')
+      setError(t('teacherWizard.errRequiredFields'))
       return
     }
 
     if (lessons.length === 0) {
-      setError('يرجى إضافة درس واحد على الأقل')
+      setError(t('teacherWizard.errMinOneLesson'))
       return
     }
 
     const courseMeetLink = normalizeGoogleMeetLink(courseData.google_meet_link)
     if (courseData.google_meet_link?.trim() && !isValidGoogleMeetLink(courseMeetLink)) {
-      setError('رابط Google Meet غير صالح. استخدم رابطاً مثل https://meet.google.com/abc-defg-hij')
+      setError(t('teacherWizard.errInvalidMeetLink'))
       return
     }
 
@@ -546,7 +548,7 @@ const EditCourse = () => {
         type: 'course_update'
       })
 
-      setSuccess('تم تحديث الكورس بنجاح!')
+      setSuccess(t('teacherWizard.successCourseUpdated'))
       setTimeout(() => {
         navigate('/dashboard')
       }, 2000)
@@ -583,7 +585,7 @@ const EditCourse = () => {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-500 mx-auto mb-4"></div>
-            <p className="text-secondary-500">جاري التحميل...</p>
+            <p className="text-secondary-500">{t('common.loading')}</p>
           </div>
         </div>
       </div>
@@ -596,7 +598,7 @@ const EditCourse = () => {
         <div className="create-course-container">
           <div className="alert alert-error">{error}</div>
           <button onClick={() => navigate('/dashboard')} className="btn btn-primary mt-4">
-            العودة للوحة التحكم
+            {t('teacherWizard.backToDashboard')}
           </button>
         </div>
       </div>
@@ -608,25 +610,25 @@ const EditCourse = () => {
       <div className="create-course-container">
         {/* Header */}
         <div className="create-course-header">
-          <h1>✏️ تعديل الكورس</h1>
-          <p>قم بتحديث محتوى الكورس وإضافة دروس جديدة</p>
+          <h1>✏️ {t('teacherWizard.editTitle')}</h1>
+          <p>{t('teacherWizard.editSubtitle')}</p>
         </div>
 
         {/* Progress Steps */}
         <div className="progress-steps">
           <div className={`step ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
             <div className="step-number">{step > 1 ? '✓' : '1'}</div>
-            <span>معلومات الكورس</span>
+            <span>{t('teacherWizard.stepCourseInfo')}</span>
           </div>
           <div className="step-line" />
           <div className={`step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
             <div className="step-number">{step > 2 ? '✓' : '2'}</div>
-            <span>تعديل الدروس</span>
+            <span>{t('teacherWizard.stepEditLessons')}</span>
           </div>
           <div className="step-line" />
           <div className={`step ${step >= 3 ? 'active' : ''}`}>
             <div className="step-number">3</div>
-            <span>المراجعة والحفظ</span>
+            <span>{t('teacherWizard.stepReviewSave')}</span>
           </div>
         </div>
 
@@ -641,19 +643,19 @@ const EditCourse = () => {
               <h2>📝 معلومات الكورس الأساسية</h2>
               
               <div className="form-group">
-                <label>عنوان الكورس *</label>
+                <label>{t('teacherWizard.courseTitle')}</label>
                 <input
                   type="text"
                   name="title"
                   value={courseData.title}
                   onChange={handleCourseChange}
-                  placeholder="مثال: تعلم البرمجة بلغة Python من الصفر"
+                  placeholder={t('teacherWizard.courseTitlePlaceholder')}
                   className="form-control"
                 />
               </div>
 
               <div className="form-group">
-                <label>وصف الكورس *</label>
+                <label>{t('teacherWizard.courseDescription')}</label>
                 <textarea
                   name="description"
                   value={courseData.description}
@@ -682,7 +684,7 @@ const EditCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>المستوى</label>
+                  <label>{t('teacherWizard.level')}</label>
                   <select
                     name="level"
                     value={courseData.level}
@@ -698,7 +700,7 @@ const EditCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>السعر (USD)</label>
+                  <label>{t('teacherWizard.price')}</label>
                   <input
                     type="number"
                     name="price"
@@ -734,14 +736,14 @@ const EditCourse = () => {
                     onChange={(e) => setCourseData(prev => ({ ...prev, is_published: e.target.value === 'true' }))}
                     className="form-control"
                   >
-                    <option value="true">منشور</option>
-                    <option value="false">مسودة</option>
+                    <option value="true">{t('teacherWizard.published')}</option>
+                    <option value="false">{t('teacherWizard.draft')}</option>
                   </select>
                 </div>
               </div>
 
               <div className="form-group">
-                <label>صورة الكورس</label>
+                <label>{t('teacherWizard.thumbnail')}</label>
                 <div 
                   className="thumbnail-upload"
                   onClick={() => document.getElementById('thumbnail-input').click()}
@@ -752,7 +754,7 @@ const EditCourse = () => {
                     <div className="upload-placeholder">
                       <span className="upload-icon">📷</span>
                       <p>انقر لرفع صورة الكورس</p>
-                      <small>PNG, JPG حتى 5MB</small>
+                      <small>{t('teacherWizard.thumbnailHint')}</small>
                     </div>
                   )}
                   {uploadProgress.thumbnail !== null && uploadProgress.thumbnail !== undefined && (
@@ -879,7 +881,7 @@ const EditCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>وصف الدرس</label>
+                  <label>{t('teacherWizard.lessonDescription')}</label>
                   <textarea
                     name="description"
                     value={currentLesson.description}
@@ -891,7 +893,7 @@ const EditCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>نوع المحتوى</label>
+                  <label>{t('teacherWizard.contentType')}</label>
                   <div className="content-type-selector">
                     {contentTypes.map(type => (
                       <button
@@ -1034,14 +1036,14 @@ const EditCourse = () => {
                         <button 
                           className="btn-edit"
                           onClick={() => updateLesson(index)}
-                          title="تعديل الدرس"
+                          title={t('teacherWizard.editLesson')}
                         >
                           ✏️
                         </button>
                         <button 
                           className="btn-remove"
                           onClick={() => removeLesson(index)}
-                          title="حذف الدرس"
+                          title={t('teacherWizard.deleteLesson')}
                         >
                           🗑️
                         </button>
@@ -1095,7 +1097,7 @@ const EditCourse = () => {
                       <span>📊 {levels.find(l => l.value === courseData.level)?.label}</span>
                       <span>💰 ${courseData.price} USD</span>
                       <span className={`badge ${courseData.is_published ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
-                        {courseData.is_published ? 'منشور' : 'مسودة'}
+                        {courseData.is_published ? t('teacherWizard.published') : t('teacherWizard.draft')}
                       </span>
                     </div>
                   </div>
@@ -1234,7 +1236,7 @@ const EditCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>المدة (دقيقة)</label>
+                  <label>{t('teacherWizard.duration')}</label>
                   <input
                     type="number"
                     value={meetingData.duration_minutes}
@@ -1258,7 +1260,7 @@ const EditCourse = () => {
                 onClick={createMeetingSession}
                 disabled={isLoading || !meetingData.title || !meetingData.scheduled_at}
               >
-                {isLoading ? 'جاري الإنشاء...' : (meetingPlatform === 'jitsi' ? '🎥 إنشاء جلسة Jitsi' : '📅 إنشاء الرابط')}
+                {isLoading ? t('teacherWizard.creating') : (meetingPlatform === 'jitsi' ? '🎥 إنشاء جلسة Jitsi' : '📅 إنشاء الرابط')}
               </button>
             </div>
           </div>

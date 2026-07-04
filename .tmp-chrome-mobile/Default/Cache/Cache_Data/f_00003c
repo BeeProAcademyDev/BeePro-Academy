@@ -1,0 +1,175 @@
+import { createHotContext as __vite__createHotContext } from "/@vite/client";import.meta.hot = __vite__createHotContext("/src/components/auth/CountryPhoneInput.jsx");import __vite__cjsImport0_react_jsxDevRuntime from "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=a99526ac"; const jsxDEV = __vite__cjsImport0_react_jsxDevRuntime["jsxDEV"];
+import * as RefreshRuntime from "/@react-refresh";
+const inWebWorker = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope;
+let prevRefreshReg;
+let prevRefreshSig;
+if (import.meta.hot && !inWebWorker) {
+  if (!window.$RefreshReg$) {
+    throw new Error(
+      "@vitejs/plugin-react can't detect preamble. Something is wrong."
+    );
+  }
+  prevRefreshReg = window.$RefreshReg$;
+  prevRefreshSig = window.$RefreshSig$;
+  window.$RefreshReg$ = RefreshRuntime.getRefreshReg("D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx");
+  window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
+}
+var _s = $RefreshSig$();
+import __vite__cjsImport3_react from "/node_modules/.vite/deps/react.js?v=a99526ac"; const useMemo = __vite__cjsImport3_react["useMemo"];
+import { useTranslation } from "/node_modules/.vite/deps/react-i18next.js?v=a99526ac";
+const COUNTRIES = [
+  { iso: "EG", flag: "🇪🇬", dialCode: "+20", nameKey: "countryPhone.countries.eg" },
+  { iso: "SA", flag: "🇸🇦", dialCode: "+966", nameKey: "countryPhone.countries.sa" },
+  { iso: "AE", flag: "🇦🇪", dialCode: "+971", nameKey: "countryPhone.countries.ae" },
+  { iso: "KW", flag: "🇰🇼", dialCode: "+965", nameKey: "countryPhone.countries.kw" },
+  { iso: "QA", flag: "🇶🇦", dialCode: "+974", nameKey: "countryPhone.countries.qa" },
+  { iso: "BH", flag: "🇧🇭", dialCode: "+973", nameKey: "countryPhone.countries.bh" },
+  { iso: "OM", flag: "🇴🇲", dialCode: "+968", nameKey: "countryPhone.countries.om" },
+  { iso: "JO", flag: "🇯🇴", dialCode: "+962", nameKey: "countryPhone.countries.jo" },
+  { iso: "LB", flag: "🇱🇧", dialCode: "+961", nameKey: "countryPhone.countries.lb" },
+  { iso: "US", flag: "🇺🇸", dialCode: "+1", nameKey: "countryPhone.countries.us" }
+];
+const findCountry = (iso) => COUNTRIES.find((country) => country.iso === iso) || COUNTRIES[0];
+const CountryPhoneInput = ({
+  country = "EG",
+  number = "",
+  onChange,
+  required = false,
+  error = ""
+}) => {
+  _s();
+  const { t } = useTranslation();
+  const selectedCountry = useMemo(() => findCountry(country), [country]);
+  const updateCountry = (nextIso) => {
+    const nextCountry = findCountry(nextIso);
+    onChange?.({
+      country: nextCountry.iso,
+      dialCode: nextCountry.dialCode,
+      number,
+      value: `${nextCountry.dialCode}${number}`.replace(/\s+/g, "")
+    });
+  };
+  const updateNumber = (nextNumber) => {
+    const sanitized = nextNumber.replace(/[^\d\s-]/g, "");
+    onChange?.({
+      country: selectedCountry.iso,
+      dialCode: selectedCountry.dialCode,
+      number: sanitized,
+      value: `${selectedCountry.dialCode}${sanitized}`.replace(/\s+/g, "")
+    });
+  };
+  return /* @__PURE__ */ jsxDEV("div", { className: "space-y-2", children: [
+    /* @__PURE__ */ jsxDEV("label", { htmlFor: "phone-number", className: "label", children: t("countryPhone.label") }, void 0, false, {
+      fileName: "D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx",
+      lineNumber: 70,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV("div", { className: "grid grid-cols-[minmax(118px,150px)_minmax(0,1fr)] gap-2", children: [
+      /* @__PURE__ */ jsxDEV("label", { className: "sr-only", htmlFor: "phone-country", children: t("countryPhone.country") }, void 0, false, {
+        fileName: "D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx",
+        lineNumber: 74,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV(
+        "select",
+        {
+          id: "phone-country",
+          value: selectedCountry.iso,
+          onChange: (event) => updateCountry(event.target.value),
+          className: "input px-3",
+          "aria-label": t("countryPhone.country"),
+          children: COUNTRIES.map(
+            (item) => /* @__PURE__ */ jsxDEV("option", { value: item.iso, children: [
+              item.flag,
+              " ",
+              item.dialCode,
+              " ",
+              t(item.nameKey)
+            ] }, item.iso, true, {
+              fileName: "D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx",
+              lineNumber: 85,
+              columnNumber: 11
+            }, this)
+          )
+        },
+        void 0,
+        false,
+        {
+          fileName: "D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx",
+          lineNumber: 77,
+          columnNumber: 9
+        },
+        this
+      ),
+      /* @__PURE__ */ jsxDEV("div", { className: "relative", children: [
+        /* @__PURE__ */ jsxDEV("span", { className: "absolute top-1/2 -translate-y-1/2 start-4 text-sm font-semibold text-secondary-500", children: selectedCountry.dialCode }, void 0, false, {
+          fileName: "D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx",
+          lineNumber: 91,
+          columnNumber: 11
+        }, this),
+        /* @__PURE__ */ jsxDEV(
+          "input",
+          {
+            id: "phone-number",
+            type: "tel",
+            inputMode: "tel",
+            autoComplete: "tel-national",
+            value: number,
+            onChange: (event) => updateNumber(event.target.value),
+            className: `input ps-16 ${error ? "input-error" : ""}`,
+            placeholder: t("countryPhone.placeholder"),
+            required
+          },
+          void 0,
+          false,
+          {
+            fileName: "D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx",
+            lineNumber: 94,
+            columnNumber: 11
+          },
+          this
+        )
+      ] }, void 0, true, {
+        fileName: "D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx",
+        lineNumber: 90,
+        columnNumber: 9
+      }, this)
+    ] }, void 0, true, {
+      fileName: "D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx",
+      lineNumber: 73,
+      columnNumber: 7
+    }, this),
+    error && /* @__PURE__ */ jsxDEV("p", { className: "text-sm text-red-500", children: error }, void 0, false, {
+      fileName: "D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx",
+      lineNumber: 107,
+      columnNumber: 17
+    }, this)
+  ] }, void 0, true, {
+    fileName: "D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx",
+    lineNumber: 69,
+    columnNumber: 5
+  }, this);
+};
+_s(CountryPhoneInput, "7LRV+CXsqIYcqpuPrEPAfU1ffek=", false, function() {
+  return [useTranslation];
+});
+_c = CountryPhoneInput;
+export default CountryPhoneInput;
+var _c;
+$RefreshReg$(_c, "CountryPhoneInput");
+if (import.meta.hot && !inWebWorker) {
+  window.$RefreshReg$ = prevRefreshReg;
+  window.$RefreshSig$ = prevRefreshSig;
+}
+if (import.meta.hot && !inWebWorker) {
+  RefreshRuntime.__hmr_import(import.meta.url).then((currentExports) => {
+    RefreshRuntime.registerExportsForReactRefresh("D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx", currentExports);
+    import.meta.hot.accept((nextExports) => {
+      if (!nextExports) return;
+      const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate("D:/beepro-Academy/beepro-academy/src/components/auth/CountryPhoneInput.jsx", currentExports, nextExports);
+      if (invalidateMessage) import.meta.hot.invalidate(invalidateMessage);
+    });
+  });
+}
+
+//# sourceMappingURL=data:application/json;base64,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QSxXQUEyQztBQUFBLE9BdEN2RDtBQUFBO0FBQUE7QUFBQTtBQUFBLFNBdUNBO0FBRUo7QUFBQ0MsR0F4RUtMLG1CQUFpQjtBQUFBLFVBT1BULGNBQWM7QUFBQTtBQUFBNkIsS0FQeEJwQjtBQTBFTixlQUFlQTtBQUFpQixJQUFBb0I7QUFBQUMsYUFBQUQsSUFBQSIsIm5hbWVzIjpbInVzZU1lbW8iLCJ1c2VUcmFuc2xhdGlvbiIsIkNPVU5UUklFUyIsImlzbyIsImZsYWciLCJkaWFsQ29kZSIsIm5hbWVLZXkiLCJmaW5kQ291bnRyeSIsImZpbmQiLCJjb3VudHJ5IiwiQ291bnRyeVBob25lSW5wdXQiLCJudW1iZXIiLCJvbkNoYW5nZSIsInJlcXVpcmVkIiwiZXJyb3IiLCJfcyIsInQiLCJzZWxlY3RlZENvdW50cnkiLCJ1cGRhdGVDb3VudHJ5IiwibmV4dElzbyIsIm5leHRDb3VudHJ5IiwidmFsdWUiLCJyZXBsYWNlIiwidXBkYXRlTnVtYmVyIiwibmV4dE51bWJlciIsInNhbml0aXplZCIsImV2ZW50IiwidGFyZ2V0IiwibWFwIiwiaXRlbSIsIl9jIiwiJFJlZnJlc2hSZWckIl0sImlnbm9yZUxpc3QiOltdLCJzb3VyY2VzIjpbIkNvdW50cnlQaG9uZUlucHV0LmpzeCJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyB1c2VNZW1vIH0gZnJvbSAncmVhY3QnXG5pbXBvcnQgeyB1c2VUcmFuc2xhdGlvbiB9IGZyb20gJ3JlYWN0LWkxOG5leHQnXG5cbmNvbnN0IENPVU5UUklFUyA9IFtcbiAgeyBpc286ICdFRycsIGZsYWc6ICfwn4eq8J+HrCcsIGRpYWxDb2RlOiAnKzIwJywgbmFtZUtleTogJ2NvdW50cnlQaG9uZS5jb3VudHJpZXMuZWcnIH0sXG4gIHsgaXNvOiAnU0EnLCBmbGFnOiAn8J+HuPCfh6YnLCBkaWFsQ29kZTogJys5NjYnLCBuYW1lS2V5OiAnY291bnRyeVBob25lLmNvdW50cmllcy5zYScgfSxcbiAgeyBpc286ICdBRScsIGZsYWc6ICfwn4em8J+HqicsIGRpYWxDb2RlOiAnKzk3MScsIG5hbWVLZXk6ICdjb3VudHJ5UGhvbmUuY291bnRyaWVzLmFlJyB9LFxuICB7IGlzbzogJ0tXJywgZmxhZzogJ/Cfh7Dwn4e8JywgZGlhbENvZGU6ICcrOTY1JywgbmFtZUtleTogJ2NvdW50cnlQaG9uZS5jb3VudHJpZXMua3cnIH0sXG4gIHsgaXNvOiAnUUEnLCBmbGFnOiAn8J+HtvCfh6YnLCBkaWFsQ29kZTogJys5NzQnLCBuYW1lS2V5OiAnY291bnRyeVBob25lLmNvdW50cmllcy5xYScgfSxcbiAgeyBpc286ICdCSCcsIGZsYWc6ICfwn4en8J+HrScsIGRpYWxDb2RlOiAnKzk3MycsIG5hbWVLZXk6ICdjb3VudHJ5UGhvbmUuY291bnRyaWVzLmJoJyB9LFxuICB7IGlzbzogJ09NJywgZmxhZzogJ/Cfh7Twn4eyJywgZGlhbENvZGU6ICcrOTY4JywgbmFtZUtleTogJ2NvdW50cnlQaG9uZS5jb3VudHJpZXMub20nIH0sXG4gIHsgaXNvOiAnSk8nLCBmbGFnOiAn8J+Hr/Cfh7QnLCBkaWFsQ29kZTogJys5NjInLCBuYW1lS2V5OiAnY291bnRyeVBob25lLmNvdW50cmllcy5qbycgfSxcbiAgeyBpc286ICdMQicsIGZsYWc6ICfwn4ex8J+HpycsIGRpYWxDb2RlOiAnKzk2MScsIG5hbWVLZXk6ICdjb3VudHJ5UGhvbmUuY291bnRyaWVzLmxiJyB9LFxuICB7IGlzbzogJ1VTJywgZmxhZzogJ/Cfh7rwn4e4JywgZGlhbENvZGU6ICcrMScsIG5hbWVLZXk6ICdjb3VudHJ5UGhvbmUuY291bnRyaWVzLnVzJyB9XG5dXG5cbmNvbnN0IGZpbmRDb3VudHJ5ID0gKGlzbykgPT4gQ09VTlRSSUVTLmZpbmQoKGNvdW50cnkpID0+IGNvdW50cnkuaXNvID09PSBpc28pIHx8IENPVU5UUklFU1swXVxuXG5jb25zdCBDb3VudHJ5UGhvbmVJbnB1dCA9ICh7XG4gIGNvdW50cnkgPSAnRUcnLFxuICBudW1iZXIgPSAnJyxcbiAgb25DaGFuZ2UsXG4gIHJlcXVpcmVkID0gZmFsc2UsXG4gIGVycm9yID0gJydcbn0pID0+IHtcbiAgY29uc3QgeyB0IH0gPSB1c2VUcmFuc2xhdGlvbigpXG4gIGNvbnN0IHNlbGVjdGVkQ291bnRyeSA9IHVzZU1lbW8oKCkgPT4gZmluZENvdW50cnkoY291bnRyeSksIFtjb3VudHJ5XSlcblxuICBjb25zdCB1cGRhdGVDb3VudHJ5ID0gKG5leHRJc28pID0+IHtcbiAgICBjb25zdCBuZXh0Q291bnRyeSA9IGZpbmRDb3VudHJ5KG5leHRJc28pXG4gICAgb25DaGFuZ2U/Lih7XG4gICAgICBjb3VudHJ5OiBuZXh0Q291bnRyeS5pc28sXG4gICAgICBkaWFsQ29kZTogbmV4dENvdW50cnkuZGlhbENvZGUsXG4gICAgICBudW1iZXIsXG4gICAgICB2YWx1ZTogYCR7bmV4dENvdW50cnkuZGlhbENvZGV9JHtudW1iZXJ9YC5yZXBsYWNlKC9cXHMrL2csICcnKVxuICAgIH0pXG4gIH1cblxuICBjb25zdCB1cGRhdGVOdW1iZXIgPSAobmV4dE51bWJlcikgPT4ge1xuICAgIGNvbnN0IHNhbml0aXplZCA9IG5leHROdW1iZXIucmVwbGFjZSgvW15cXGRcXHMtXS9nLCAnJylcbiAgICBvbkNoYW5nZT8uKHtcbiAgICAgIGNvdW50cnk6IHNlbGVjdGVkQ291bnRyeS5pc28sXG4gICAgICBkaWFsQ29kZTogc2VsZWN0ZWRDb3VudHJ5LmRpYWxDb2RlLFxuICAgICAgbnVtYmVyOiBzYW5pdGl6ZWQsXG4gICAgICB2YWx1ZTogYCR7c2VsZWN0ZWRDb3VudHJ5LmRpYWxDb2RlfSR7c2FuaXRpemVkfWAucmVwbGFjZSgvXFxzKy9nLCAnJylcbiAgICB9KVxuICB9XG5cbiAgcmV0dXJuIChcbiAgICA8ZGl2IGNsYXNzTmFtZT1cInNwYWNlLXktMlwiPlxuICAgICAgPGxhYmVsIGh0bWxGb3I9XCJwaG9uZS1udW1iZXJcIiBjbGFzc05hbWU9XCJsYWJlbFwiPlxuICAgICAgICB7dCgnY291bnRyeVBob25lLmxhYmVsJyl9XG4gICAgICA8L2xhYmVsPlxuICAgICAgPGRpdiBjbGFzc05hbWU9XCJncmlkIGdyaWQtY29scy1bbWlubWF4KDExOHB4LDE1MHB4KV9taW5tYXgoMCwxZnIpXSBnYXAtMlwiPlxuICAgICAgICA8bGFiZWwgY2xhc3NOYW1lPVwic3Itb25seVwiIGh0bWxGb3I9XCJwaG9uZS1jb3VudHJ5XCI+XG4gICAgICAgICAge3QoJ2NvdW50cnlQaG9uZS5jb3VudHJ5Jyl9XG4gICAgICAgIDwvbGFiZWw+XG4gICAgICAgIDxzZWxlY3RcbiAgICAgICAgICBpZD1cInBob25lLWNvdW50cnlcIlxuICAgICAgICAgIHZhbHVlPXtzZWxlY3RlZENvdW50cnkuaXNvfVxuICAgICAgICAgIG9uQ2hhbmdlPXsoZXZlbnQpID0+IHVwZGF0ZUNvdW50cnkoZXZlbnQudGFyZ2V0LnZhbHVlKX1cbiAgICAgICAgICBjbGFzc05hbWU9XCJpbnB1dCBweC0zXCJcbiAgICAgICAgICBhcmlhLWxhYmVsPXt0KCdjb3VudHJ5UGhvbmUuY291bnRyeScpfVxuICAgICAgICA+XG4gICAgICAgICAge0NPVU5UUklFUy5tYXAoKGl0ZW0pID0+IChcbiAgICAgICAgICAgIDxvcHRpb24ga2V5PXtpdGVtLmlzb30gdmFsdWU9e2l0ZW0uaXNvfT5cbiAgICAgICAgICAgICAge2l0ZW0uZmxhZ30ge2l0ZW0uZGlhbENvZGV9IHt0KGl0ZW0ubmFtZUtleSl9XG4gICAgICAgICAgICA8L29wdGlvbj5cbiAgICAgICAgICApKX1cbiAgICAgICAgPC9zZWxlY3Q+XG4gICAgICAgIDxkaXYgY2xhc3NOYW1lPVwicmVsYXRpdmVcIj5cbiAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9XCJhYnNvbHV0ZSB0b3AtMS8yIC10cmFuc2xhdGUteS0xLzIgc3RhcnQtNCB0ZXh0LXNtIGZvbnQtc2VtaWJvbGQgdGV4dC1zZWNvbmRhcnktNTAwXCI+XG4gICAgICAgICAgICB7c2VsZWN0ZWRDb3VudHJ5LmRpYWxDb2RlfVxuICAgICAgICAgIDwvc3Bhbj5cbiAgICAgICAgICA8aW5wdXRcbiAgICAgICAgICAgIGlkPVwicGhvbmUtbnVtYmVyXCJcbiAgICAgICAgICAgIHR5cGU9XCJ0ZWxcIlxuICAgICAgICAgICAgaW5wdXRNb2RlPVwidGVsXCJcbiAgICAgICAgICAgIGF1dG9Db21wbGV0ZT1cInRlbC1uYXRpb25hbFwiXG4gICAgICAgICAgICB2YWx1ZT17bnVtYmVyfVxuICAgICAgICAgICAgb25DaGFuZ2U9eyhldmVudCkgPT4gdXBkYXRlTnVtYmVyKGV2ZW50LnRhcmdldC52YWx1ZSl9XG4gICAgICAgICAgICBjbGFzc05hbWU9e2BpbnB1dCBwcy0xNiAke2Vycm9yID8gJ2lucHV0LWVycm9yJyA6ICcnfWB9XG4gICAgICAgICAgICBwbGFjZWhvbGRlcj17dCgnY291bnRyeVBob25lLnBsYWNlaG9sZGVyJyl9XG4gICAgICAgICAgICByZXF1aXJlZD17cmVxdWlyZWR9XG4gICAgICAgICAgLz5cbiAgICAgICAgPC9kaXY+XG4gICAgICA8L2Rpdj5cbiAgICAgIHtlcnJvciAmJiA8cCBjbGFzc05hbWU9XCJ0ZXh0LXNtIHRleHQtcmVkLTUwMFwiPntlcnJvcn08L3A+fVxuICAgIDwvZGl2PlxuICApXG59XG5cbmV4cG9ydCBkZWZhdWx0IENvdW50cnlQaG9uZUlucHV0XG4iXSwiZmlsZSI6IkQ6L2JlZXByby1BY2FkZW15L2JlZXByby1hY2FkZW15L3NyYy9jb21wb25lbnRzL2F1dGgvQ291bnRyeVBob25lSW5wdXQuanN4In0=

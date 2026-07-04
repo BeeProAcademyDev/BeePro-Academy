@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>CORS Test</title>
+  </head>
+  <body>
+    <h1>CORS Test Runner</h1>
+    <pre id="out"></pre>
+    <script>
+      (async function () {
+        const out = document.getElementById("out");
+        function log(obj) {
+          const line =
+            typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+          out.textContent += line + "\n";
+          console.log(line);
+        }
+
+        const results = [];
+
+        async function safeFetch(label, url, opts) {
+          try {
+            const res = await fetch(url, opts);
+            const headers = {};
+            for (const [k, v] of res.headers.entries()) headers[k] = v;
+            const text = await res.text();
+            const r = {
+              label,
+              ok: res.ok,
+              status: res.status,
+              headers,
+              body: text.slice(0, 500),
+            };
+            results.push(r);
+            log(r);
+            return r;
+          } catch (e) {
+            const r = { label, error: String(e) };
+            results.push(r);
+            log(r);
+            return r;
+          }
+        }
+
+        const base = "https://beepro-academy-wheat.vercel.app/api/v1/auth";
+
+        // OPTIONS preflights
+        await safeFetch("OPTIONS /login", base + "/login", {
+          method: "OPTIONS",
+          mode: "cors",
+          credentials: "include",
+          headers: {
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "Content-Type, Authorization",
+          },
+        });
+        await safeFetch("OPTIONS /register", base + "/register", {
+          method: "OPTIONS",
+          mode: "cors",
+          credentials: "include",
+          headers: {
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "Content-Type, Authorization",
+          },
+        });
+
+        // POST login
+        await safeFetch("POST /login", base + "/login", {
+          method: "POST",
+          mode: "cors",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "nonexistent@example.com",
+            password: "x",
+          }),
+        });
+
+        // POST register
+        await safeFetch("POST /register", base + "/register", {
+          method: "POST",
+          mode: "cors",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "test+" + Date.now() + "@example.com",
+            password: "x",
+          }),
+        });
+
+        // publish results
+        window.__CORS_TEST_RESULTS = results;
+        window.__CORS_TEST_DONE = true;
+      })();
+    </script>
+  </body>
+</html>

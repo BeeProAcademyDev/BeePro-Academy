@@ -6,12 +6,14 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import { isStudentUser, shouldShowStudentChatBell, resolveUserRole } from '../../lib/roles'
 import { enrollmentService, notificationService, chatService } from '../../services/api'
 import { paymentService } from '../../services/paymentAPI'
+import { useTranslation } from 'react-i18next'
 
 const isChatNotification = (notification) =>
   notification?.action_url?.includes('tab=chat')
   || /رسالة|message|chat/i.test(`${notification?.title || ''} ${notification?.message || ''}`)
 
 const StudentChatBell = () => {
+  const { t } = useTranslation()
   const { user, isAuthenticated } = useAuth()
   const { language } = useLanguage()
   const navigate = useNavigate()
@@ -46,7 +48,7 @@ const StudentChatBell = () => {
         if (row.course_id) {
           courseMap.set(row.course_id, {
             id: row.course_id,
-            title: row.title || (isAr ? 'كورس' : 'Course'),
+            title: row.title || (t('studentChatBell.course_1')),
             thumbnail_url: row.thumbnail_url,
             message_count: row.message_count || 0,
             unread_count: row.unread_count || 0,
@@ -75,7 +77,7 @@ const StudentChatBell = () => {
           const existing = courseMap.get(courseId)
           courseMap.set(courseId, {
             id: courseId,
-            title: row.courses?.title || existing?.title || (isAr ? 'كورس' : 'Course'),
+            title: row.courses?.title || existing?.title || (t('studentChatBell.course')),
             thumbnail_url: row.courses?.thumbnail_url || existing?.thumbnail_url,
             message_count: existing?.message_count || 0,
             unread_count: existing?.unread_count || 0,
@@ -136,12 +138,12 @@ const StudentChatBell = () => {
           if (!open) loadChatData()
         }}
         className="btn-ghost p-2 rounded-lg relative"
-        title={isAr ? 'دردشة المدرس' : 'Instructor chat'}
-        aria-label={isAr ? 'دردشة المدرس' : 'Instructor chat'}
+        title={t('dashboardExtra.instructorChat')}
+        aria-label={t('dashboardExtra.instructorChat')}
       >
         <FiMessageCircle className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
+          <span className="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -149,12 +151,11 @@ const StudentChatBell = () => {
 
       {open && (
         <div
-          className="absolute top-full mt-2 w-[min(20rem,calc(100vw-2rem))] bg-white dark:bg-dark-card rounded-xl shadow-xl border border-secondary-100 dark:border-dark-border overflow-hidden z-[60]"
-          style={{ right: 0 }}
+          className="absolute top-full end-0 mt-2 w-[min(20rem,calc(100vw-2rem))] bg-white dark:bg-dark-card rounded-xl shadow-xl border border-secondary-100 dark:border-dark-border overflow-hidden z-[60]"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-secondary-100 dark:border-dark-border">
             <h3 className="font-semibold text-sm">
-              {isAr ? 'دردشة المدرس' : 'Instructor chat'}
+              {t('dashboardExtra.instructorChat')}
             </h3>
             <button type="button" className="btn-ghost p-1 rounded" onClick={() => setOpen(false)}>
               <FiX className="w-4 h-4" />
@@ -164,14 +165,14 @@ const StudentChatBell = () => {
           <div className="max-h-80 overflow-y-auto">
             {loading ? (
               <p className="px-4 py-6 text-sm text-secondary-500 text-center">
-                {isAr ? 'جاري التحميل...' : 'Loading...'}
+                {t('studentChatBell.loading')}
               </p>
             ) : (
               <>
                 {chatAlerts.length > 0 && (
                   <div className="px-4 py-3 border-b border-secondary-100 dark:border-dark-border">
                     <p className="text-xs font-semibold text-primary-600 mb-2">
-                      {isAr ? 'رسائل جديدة' : 'New messages'}
+                      {t('studentChatBell.newMessages')}
                     </p>
                     {chatAlerts.slice(0, 5).map((alert) => {
                       const courseId = alert.course_id
@@ -180,7 +181,7 @@ const StudentChatBell = () => {
                         <button
                           key={alert.id}
                           type="button"
-                          className={`w-full text-left px-3 py-2 rounded-lg mb-2 last:mb-0 ${
+                          className={`w-full text-start px-3 py-2 rounded-lg mb-2 last:mb-0 ${
                             alert.is_read ? 'bg-secondary-50 dark:bg-dark-border' : 'bg-primary-50 dark:bg-primary-900/20'
                           }`}
                           onClick={() => courseId && openChat(courseId, alert)}
@@ -195,17 +196,15 @@ const StudentChatBell = () => {
 
                 <div className="px-4 py-3">
                   <p className="text-xs font-semibold text-secondary-500 mb-2">
-                    {isAr ? 'افتح دردشة كورس' : 'Open course chat'}
+                    {t('studentChatBell.openCourseChat')}
                   </p>
                   {courses.length === 0 ? (
                     <div className="text-center py-4">
                       <p className="text-sm text-secondary-500 mb-3">
-                        {isAr
-                          ? 'تصفّح الكورسات وافتح «الدردشة مع المدرس» من صفحة أي كورس.'
-                          : 'Browse courses and use "Chat with instructor" on any course page.'}
+                        {t('studentChatBell.browseCoursesAndUseChatWithIns')}
                       </p>
                       <Link to="/courses" className="btn btn-primary btn-sm" onClick={() => setOpen(false)}>
-                        {isAr ? 'تصفح الكورسات' : 'Browse courses'}
+                        {t('dashboardExtra.browseCoursesLink')}
                       </Link>
                     </div>
                   ) : (
@@ -217,7 +216,7 @@ const StudentChatBell = () => {
                         onClick={() => openChat(course.id)}
                       >
                         <FiMessageCircle className="w-4 h-4 text-primary-500 shrink-0" />
-                        <span className="text-sm font-medium truncate flex-1 text-left">{course.title}</span>
+                        <span className="text-sm font-medium truncate flex-1 text-start">{course.title}</span>
                         {(course.unread_count > 0 || course.message_count > 0) && (
                           <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
                             {course.unread_count > 0 ? course.unread_count : course.message_count}

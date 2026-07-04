@@ -1,9 +1,12 @@
+﻿import i18n from '../i18n/i18n'
+
 export const ROLES = {
   STUDENT: 'student',
   PENDING_INSTRUCTOR: 'pending_instructor',
   INSTRUCTOR: 'instructor',
   TEACHER: 'teacher',
-  ADMIN: 'admin'
+  ADMIN: 'admin',
+  SUPER_ADMIN: 'super_admin'
 }
 
 /**
@@ -62,23 +65,27 @@ export function isApprovedInstructor(role) {
 
 export function isAdmin(role) {
   const normalized = normalizeRole(role)
-  return normalized === ROLES.ADMIN
+  return normalized === ROLES.ADMIN || normalized === ROLES.SUPER_ADMIN
+}
+
+export function isSuperAdmin(role) {
+  return normalizeRole(role) === ROLES.SUPER_ADMIN
 }
 
 export function canAccessTeacherFeatures(role) {
   const normalized = normalizeRole(role)
   return normalized === ROLES.INSTRUCTOR
     || normalized === ROLES.TEACHER
-    || normalized === ROLES.ADMIN
+    || isAdmin(normalized)
 }
 
-/** Any logged-in user who is not staff/instructor — defaults missing role to student */
+/** Any logged-in user who is not staff/instructor - defaults missing role to student */
 export function isStudentUser(user) {
   if (!user?.id) return false
   return resolveUserRole(user) === ROLES.STUDENT
 }
 
-/** Navbar chat icon — students only (resolved role, not raw metadata) */
+/** Navbar chat icon - students only (resolved role, not raw metadata) */
 export function shouldShowStudentChatBell(user) {
   if (!user?.id) return false
   const resolved = resolveUserRole(user)
@@ -88,6 +95,7 @@ export function shouldShowStudentChatBell(user) {
 export function resolveUserRole(user) {
   if (!user) return ROLES.STUDENT
   const role = normalizeRole(user.role)
+  if (isSuperAdmin(role)) return ROLES.SUPER_ADMIN
   if (isAdmin(role)) return ROLES.ADMIN
   if (canAccessTeacherFeatures(role)) return role || ROLES.TEACHER
   if (isPendingInstructor(role)) return ROLES.PENDING_INSTRUCTOR
@@ -95,25 +103,9 @@ export function resolveUserRole(user) {
 }
 
 export function getRoleLabel(role, language = 'ar') {
-  const labels = {
-    ar: {
-      student: 'طالب',
-      pending_instructor: 'مدرس (بانتظار الموافقة)',
-      instructor: 'مدرس',
-      teacher: 'مدرس',
-      admin: 'إداري'
-    },
-    en: {
-      student: 'Student',
-      pending_instructor: 'Instructor (Pending)',
-      instructor: 'Instructor',
-      teacher: 'Instructor',
-      admin: 'Admin'
-    }
-  }
-
-  const lang = language === 'ar' ? 'ar' : 'en'
-  return labels[lang][normalizeRole(role)] || role
+  const normalized = normalizeRole(role) || ROLES.STUDENT
+  const key = `roles.${normalized}`
+  return i18n.t(key, { lng: language, defaultValue: role || normalized })
 }
 
 export default {
@@ -126,9 +118,11 @@ export default {
   isPendingInstructor,
   isApprovedInstructor,
   isAdmin,
+  isSuperAdmin,
   canAccessTeacherFeatures,
   isStudentUser,
   shouldShowStudentChatBell,
   resolveUserRole,
   getRoleLabel
 }
+

@@ -24,7 +24,7 @@ import { resolveUserRole, shouldShowStudentChatBell } from '../../lib/roles'
 const Navbar = () => {
   const { t } = useTranslation()
   const { isDarkMode, toggleDarkMode } = useTheme()
-  const { language, toggleLanguage, isRTL } = useLanguage()
+  const { language, toggleLanguage } = useLanguage()
   const { user, isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
   const showChatBell = shouldShowStudentChatBell(user)
@@ -51,9 +51,9 @@ const Navbar = () => {
   const displayEmail = user?.email || ''
   const normalizedRole = resolveUserRole(user)
   const roleLabel = {
-    student: language === 'ar' ? 'طالب' : 'Student',
-    teacher: language === 'ar' ? 'مدرس' : 'Teacher',
-    admin: language === 'ar' ? 'مدير' : 'Admin'
+    student: t('roles.student'),
+    teacher: t('roles.teacher'),
+    admin: t('roles.admin')
   }[normalizedRole] || normalizedRole
 
   const navLinks = [
@@ -66,7 +66,7 @@ const Navbar = () => {
 
   return (
     <nav 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
         isScrolled 
           ? 'bg-white backdrop-blur-md shadow-lg border-b border-white/90' 
           : 'bg-white/95 backdrop-blur-sm shadow-sm border-b border-white/70'
@@ -79,7 +79,7 @@ const Navbar = () => {
             <img
               src="/assets/platform-logo.png"
               alt="BeePro Academy"
-              className="h-12 sm:h-14 md:h-[4.25rem] w-auto max-w-[220px] sm:max-w-[260px] md:max-w-[320px] object-contain object-left"
+              className="h-12 sm:h-14 md:h-[4.25rem] w-auto max-w-[220px] sm:max-w-[260px] md:max-w-[320px] object-contain object-start"
             />
           </Link>
 
@@ -104,7 +104,7 @@ const Navbar = () => {
             <button
               onClick={toggleLanguage}
               className="btn-ghost p-2 rounded-lg hidden sm:inline-flex"
-              title={language === 'ar' ? 'English' : 'العربية'}
+              title={t('language.english')}
             >
               <FiGlobe className="w-5 h-5" />
             </button>
@@ -113,7 +113,7 @@ const Navbar = () => {
             <button
               onClick={toggleDarkMode}
               className="btn-ghost p-2 rounded-lg hidden sm:inline-flex"
-              title={isDarkMode ? 'Light Mode' : 'Dark Mode'}
+              title={isDarkMode ? t('nav.lightMode') : t('nav.darkMode')}
             >
               {isDarkMode ? (
                 <FiSun className="w-5 h-5" />
@@ -153,12 +153,9 @@ const Navbar = () => {
                   </div>
                   <FiChevronDown className={`w-4 h-4 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
                 </button>
-
                 {/* Profile Dropdown */}
                 {isProfileOpen && (
-                  <div className="absolute top-full mt-2 w-48 bg-white dark:bg-dark-card rounded-xl shadow-lg border border-secondary-100 dark:border-dark-border overflow-hidden animate-slide-down"
-                    style={{ [isRTL ? 'left' : 'right']: 0 }}
-                  >
+                  <div className="absolute top-full end-0 mt-2 w-48 bg-white dark:bg-dark-card rounded-xl shadow-lg border border-secondary-100 dark:border-dark-border overflow-hidden animate-slide-down">
                     <div className="px-4 py-3 border-b border-secondary-100 dark:border-dark-border">
                       <p className="text-sm font-semibold truncate">{displayName}</p>
                       {displayEmail && <p className="text-xs text-secondary-500 truncate mt-0.5">{displayEmail}</p>}
@@ -181,7 +178,7 @@ const Navbar = () => {
                         onClick={() => setIsProfileOpen(false)}
                       >
                         <FiMessageCircle className="w-5 h-5" />
-                        <span>{language === 'ar' ? 'دردشة المدرس' : 'Instructor chat'}</span>
+                        <span>{t('dashboardExtra.instructorChat')}</span>
                       </Link>
                     )}
                     <Link
@@ -209,7 +206,7 @@ const Navbar = () => {
                   {t('nav.login')}
                 </Link>
                 <Link to="/register?role=teacher" className="btn-ghost px-4 py-2 rounded-lg">
-                  {language === 'ar' ? 'سجّل كمدرس' : 'Teach'}
+                  {t('nav.teach')}
                 </Link>
                 <Link to="/register" className="btn btn-primary">
                   {t('nav.register')}
@@ -230,17 +227,16 @@ const Navbar = () => {
             </button>
           </div>
         </div>
-
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 right-0 bg-white dark:bg-dark-card border-t border-secondary-100 dark:border-dark-border shadow-lg animate-slide-down">
+          <div className="lg:hidden absolute top-full inset-x-0 bg-white dark:bg-dark-card border-t border-secondary-100 dark:border-dark-border shadow-lg animate-slide-down">
             <div className="container-custom py-4">
               {isAuthenticated && (
                 <div className="md:hidden flex items-center gap-4 px-4 py-3 mb-3 border-b border-secondary-100 dark:border-dark-border">
                   <StudentNotificationsBell />
                   {showChatBell && <StudentChatBell />}
                   <span className="text-sm text-secondary-500">
-                    {language === 'ar' ? 'الإشعارات والدردشة' : 'Alerts & chat'}
+                    {t('navExtra.alertsAndChat')}
                   </span>
                 </div>
               )}
@@ -270,7 +266,7 @@ const Navbar = () => {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <FiMessageCircle className="w-5 h-5 text-primary-500" />
-                    <span>{language === 'ar' ? 'دردشة المدرس' : 'Instructor chat'}</span>
+                    <span>{t('dashboardExtra.instructorChat')}</span>
                   </Link>
                 </div>
               )}

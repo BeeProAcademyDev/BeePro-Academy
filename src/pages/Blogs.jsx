@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { blogService } from '../services/api'
 import { FiArrowRight, FiBookOpen, FiCalendar, FiLoader, FiSearch, FiUser } from 'react-icons/fi'
+import { useTranslation } from 'react-i18next'
 
 const formatDate = (value, language) => {
   if (!value) return ''
-  return new Intl.DateTimeFormat(language === 'ar' ? 'ar' : 'en', {
+  return new Intl.DateTimeFormat(language === 'ar' ? 'ar-EG' : 'en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
@@ -14,7 +15,8 @@ const formatDate = (value, language) => {
 }
 
 const getExcerpt = (post, language) => {
-  const text = language === 'ar'
+  const isArabic = language === 'ar'
+  const text = isArabic
     ? post.excerpt || post.content
     : post.excerpt_en || post.excerpt || post.content_en || post.content
 
@@ -27,7 +29,9 @@ const getPostTitle = (post, language) => {
 }
 
 const Blogs = () => {
+  const { t } = useTranslation()
   const { language } = useLanguage()
+  const isArabic = language === 'ar'
   const [posts, setPosts] = useState([])
   const [selectedPost, setSelectedPost] = useState(null)
   const [search, setSearch] = useState('')
@@ -44,9 +48,7 @@ const Blogs = () => {
         setSelectedPost(data?.[0] || null)
       } catch (err) {
         console.error('Error loading blog posts:', err)
-        setError(language === 'ar'
-          ? 'تعذر تحميل المقالات حالياً.'
-          : 'Could not load blog posts right now.')
+        setError(t('blogs.couldNotLoadBlogPostsRightNow'))
       } finally {
         setIsLoading(false)
       }
@@ -75,7 +77,7 @@ const Blogs = () => {
   }, [posts, search])
 
   const activePost = selectedPost || filteredPosts[0]
-  const activeContent = language === 'ar'
+  const activeContent = isArabic
     ? activePost?.content || activePost?.content_en
     : activePost?.content_en || activePost?.content
 
@@ -84,11 +86,9 @@ const Blogs = () => {
       <section className="py-14">
         <div className="bepro-container">
           <div className="bepro-page-header">
-            <h1>{language === 'ar' ? 'المدونة' : 'Blogs'}</h1>
+            <h1>{t('nav.blogs')}</h1>
             <p>
-              {language === 'ar'
-                ? 'مقالات تعليمية مرتبطة بالكورسات تساعدك على فهم المهارات والأسواق قبل أن تبدأ التعلم.'
-                : 'Course-aware articles that help learners understand skills, markets, and learning paths before they enroll.'}
+              {t('blogs.courseawareArticlesThatHelpLea')}
             </p>
           </div>
         </div>
@@ -103,7 +103,7 @@ const Blogs = () => {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder={language === 'ar' ? 'ابحث داخل المقالات...' : 'Search articles...'}
+                placeholder={t('blogs.searchArticles')}
                 className="w-full ps-12 py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-[#00D9FF]"
               />
             </div>
@@ -121,17 +121,15 @@ const Blogs = () => {
             <div className="bepro-card text-center p-10">
               <FiBookOpen className="w-14 h-14 mx-auto text-[#00D9FF] mb-4" />
               <h2 className="text-2xl font-bold text-white mb-2">
-                {language === 'ar' ? 'لا توجد مقالات منشورة بعد' : 'No published posts yet'}
+                {t('blogs.noPublishedPostsYet')}
               </h2>
               <p className="text-white/70">
-                {language === 'ar'
-                  ? 'عند نشر الأدمن لمقال جديد سيظهر هنا مباشرة.'
-                  : 'New admin-published articles will appear here.'}
+                {t('blogs.newAdminpublishedArticlesWillA')}
               </p>
             </div>
           ) : (
-            <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-8 items-start">
-              <article className="bepro-card p-6 md:p-8">
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-6 xl:gap-8 items-start">
+              <article className="bepro-card p-4 sm:p-6 md:p-8 min-w-0">
                 {activePost?.cover_image_url && (
                   <img
                     src={activePost.cover_image_url}
@@ -146,14 +144,14 @@ const Blogs = () => {
                   </span>
                   <span className="inline-flex items-center gap-2">
                     <FiUser className="w-4 h-4" />
-                    {activePost?.author?.full_name || (language === 'ar' ? 'إدارة المنصة' : 'Platform Admin')}
+                    {activePost?.author?.full_name || (t('blogs.platformAdmin_8'))}
                   </span>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 break-words">
                   {getPostTitle(activePost, language)}
                 </h2>
                 <p className="text-[#00D9FF] font-bold mb-6">
-                  {language === 'ar' ? activePost?.excerpt : activePost?.excerpt_en || activePost?.excerpt}
+                  {isArabic ? activePost?.excerpt : activePost?.excerpt_en || activePost?.excerpt}
                 </p>
                 <div className="prose prose-invert max-w-none">
                   {(activeContent || '').split('\n').filter(Boolean).map((paragraph, index) => (
@@ -164,13 +162,13 @@ const Blogs = () => {
                 </div>
                 {activePost?.course_id && (
                   <Link to={`/courses/${activePost.course_id}`} className="bepro-btn-primary mt-8 inline-flex">
-                    {language === 'ar' ? 'اذهب للكورس المرتبط' : 'Open related course'}
+                    {t('blogs.openRelatedCourse')}
                     <FiArrowRight className="w-5 h-5" />
                   </Link>
                 )}
               </article>
 
-              <aside className="space-y-4">
+              <aside className="space-y-4 min-w-0 xl:max-w-[360px]">
                 {filteredPosts.map((post) => {
                   const isActive = post.id === activePost?.id
                   return (
@@ -181,7 +179,7 @@ const Blogs = () => {
                       className={`w-full text-start bepro-card p-4 transition-all ${isActive ? 'ring-2 ring-[#00D9FF]' : 'hover:translate-y-[-2px]'}`}
                     >
                       <span className="text-xs font-bold uppercase tracking-wide text-[#00D9FF]">
-                        {post.category || (language === 'ar' ? 'تعليم' : 'Education')}
+                        {post.category || (t('blogs.education_7'))}
                       </span>
                       <h3 className="text-white font-bold mt-2 mb-2">{getPostTitle(post, language)}</h3>
                       <p className="text-white/65 text-sm leading-6">{getExcerpt(post, language)}...</p>

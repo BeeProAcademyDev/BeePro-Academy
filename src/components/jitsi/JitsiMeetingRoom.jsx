@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { JitsiMeeting } from '@jitsi/react-sdk'
 import { getJitsiConfigurationIssue, getJitsiDomain } from '../../lib/jitsi'
 import './JitsiMeetingRoom.css'
+import { useTranslation } from 'react-i18next'
 
 const JitsiMeetingRoom = ({
   roomName,
@@ -10,6 +11,7 @@ const JitsiMeetingRoom = ({
   onClose,
   language = 'ar'
 }) => {
+  const { t } = useTranslation()
   const domain = getJitsiDomain()
   const configurationIssue = getJitsiConfigurationIssue()
 
@@ -29,7 +31,7 @@ const JitsiMeetingRoom = ({
     SHOW_WATERMARK_FOR_GUESTS: false,
     MOBILE_APP_PROMO: false,
     LANG_DETECTION: true,
-    DEFAULT_LANGUAGE: language === 'ar' ? 'ar' : 'en',
+    DEFAULT_LANGUAGE: t('jitsiMeetingRoom.en'),
     TOOLBAR_BUTTONS: [
       'microphone',
       'camera',
@@ -46,10 +48,8 @@ const JitsiMeetingRoom = ({
       <div className="jitsi-room jitsi-room--error">
         <p>
           {configurationIssue
-            ? (language === 'ar'
-                ? 'Jitsi غير مضبوط للمنصة. استخدم دومين Jitsi خاص أو JaaS بدلاً من meet.jit.si حتى لا تظهر شاشة تسجيل Google.'
-                : configurationIssue)
-            : (language === 'ar' ? 'غرفة الاجتماع غير متاحة' : 'Meeting room is not available')}
+            ? configurationIssue
+            : t('jitsiMeetingRoom.meetingRoomIsNotAvailable')}
         </p>
       </div>
     )
@@ -59,7 +59,7 @@ const JitsiMeetingRoom = ({
     <div className="jitsi-room">
       {onClose && (
         <button type="button" className="jitsi-room__close" onClick={onClose}>
-          {language === 'ar' ? 'إغلاق الجلسة' : 'Close session'}
+          {t('jitsiMeetingRoom.closeSession')}
         </button>
       )}
       <div className="jitsi-room__frame">

@@ -49,10 +49,10 @@ const CourseDetails = () => {
       <div className="min-h-screen pt-24 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">
-            {language === 'ar' ? 'الدورة غير موجودة' : 'Course Not Found'}
+            {t('courseDetails.courseNotFound')}
           </h2>
           <Button to="/courses" variant="primary">
-            {language === 'ar' ? 'تصفح الدورات' : 'Browse Courses'}
+            {t('dashboardExtra.browseCourses')}
           </Button>
         </div>
       </div>
@@ -62,13 +62,14 @@ const CourseDetails = () => {
   const isEnrolled = isAuthenticated && user?.enrolledCourses?.includes(course.id)
   const progress = user?.progress?.[course.id] || 0
 
-  const title = language === 'ar' ? course.title : course.titleEn
-  const description = language === 'ar' ? course.description : course.descriptionEn
-  const instructorName = language === 'ar' ? course.instructor.name : course.instructor.nameEn
-  const instructorTitle = language === 'ar' ? course.instructor.title : course.instructor.titleEn
+  const isArabic = language === 'ar'
+  const title = isArabic ? course.title : course.titleEn
+  const description = isArabic ? course.description : course.descriptionEn
+  const instructorName = isArabic ? course.instructor.name : course.instructor.nameEn
+  const instructorTitle = isArabic ? course.instructor.title : course.instructor.titleEn
 
   const tabs = [
-    { id: 'overview', label: language === 'ar' ? 'نظرة عامة' : 'Overview' },
+    { id: 'overview', label: t('courseDetails.overview') },
     { id: 'curriculum', label: t('course.curriculum') },
     { id: 'instructor', label: t('course.instructor') },
     { id: 'reviews', label: t('course.reviews') },
@@ -83,10 +84,10 @@ const CourseDetails = () => {
   }
 
   const courseFeatures = [
-    { icon: FiClock, label: language === 'ar' ? `${course.duration} ساعة محتوى` : `${course.duration} hours of content` },
-    { icon: FiBookOpen, label: language === 'ar' ? `${course.lessons} درس` : `${course.lessons} lessons` },
-    { icon: FiGlobe, label: language === 'ar' ? 'الوصول مدى الحياة' : 'Lifetime access' },
-    { icon: FiAward, label: language === 'ar' ? 'شهادة إتمام' : 'Certificate of completion' },
+    { icon: FiClock, label: t('courseDetails.coursedurationHoursOfContent') },
+    { icon: FiBookOpen, label: t('courseDetails.courselessonsLessons') },
+    { icon: FiGlobe, label: t('courseDetails.lifetimeAccess') },
+    { icon: FiAward, label: t('courseDetails.certificateOfCompletion') },
   ]
 
   return (
@@ -217,11 +218,11 @@ const CourseDetails = () => {
                   <div className="flex items-center gap-4 mt-6 pt-6 border-t border-secondary-200 dark:border-dark-border">
                     <button className="flex-1 btn btn-secondary flex items-center justify-center gap-2">
                       <FiShare2 className="w-5 h-5" />
-                      {language === 'ar' ? 'مشاركة' : 'Share'}
+                      {t('courseDetails.share')}
                     </button>
                     <button className="flex-1 btn btn-secondary flex items-center justify-center gap-2">
                       <FiHeart className="w-5 h-5" />
-                      {language === 'ar' ? 'المفضلة' : 'Wishlist'}
+                      {t('courseDetails.wishlist')}
                     </button>
                   </div>
                 </div>
@@ -284,7 +285,7 @@ const CourseDetails = () => {
               <div className="space-y-8">
                 <div>
                   <h2 className="text-2xl font-bold mb-4">
-                    {language === 'ar' ? 'ماذا ستتعلم' : 'What You Will Learn'}
+                    {t('courseDetails.whatYouWillLearn')}
                   </h2>
                   <div className="grid md:grid-cols-2 gap-3">
                     {course.tags.map((tag, index) => (
@@ -310,7 +311,7 @@ const CourseDetails = () => {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-2xl font-bold">{t('course.curriculum')}</h2>
                   <span className="text-sm text-secondary-500">
-                    {course.lessons} {t('course.lessons')} • {course.duration} {t('course.hours')}
+                    {course.lessons} {t('course.lessons')} " {course.duration} {t('course.hours')}
                   </span>
                 </div>
 
@@ -329,7 +330,7 @@ const CourseDetails = () => {
                             <FiChevronDown className="w-5 h-5" />
                           )}
                           <span className="font-medium">
-                            {language === 'ar' ? `القسم ${section}: المقدمة` : `Section ${section}: Introduction`}
+                            {t('courseDetails.sectionSectionIntroduction')}
                           </span>
                         </div>
                         <span className="text-sm text-secondary-500">
@@ -351,7 +352,7 @@ const CourseDetails = () => {
                                   <FiLock className="w-5 h-5 text-secondary-400" />
                                 )}
                                 <span className={!lesson.isFree && !isEnrolled ? 'text-secondary-400' : ''}>
-                                  {language === 'ar' ? lesson.title : lesson.titleEn}
+                                  {isArabic ? lesson.title : lesson.titleEn}
                                 </span>
                                 {lesson.isFree && (
                                   <span className="badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs">
@@ -360,7 +361,7 @@ const CourseDetails = () => {
                                 )}
                               </div>
                               <span className="text-sm text-secondary-500">
-                                {lesson.duration} {language === 'ar' ? 'د' : 'min'}
+                                {lesson.duration} {t('courseDetails.min')}
                               </span>
                             </div>
                           ))}
@@ -387,7 +388,7 @@ const CourseDetails = () => {
                     <div className="flex items-center gap-6 text-sm text-secondary-600 dark:text-secondary-400">
                       <div className="flex items-center gap-2">
                         <FiStar className="w-4 h-4 text-yellow-500" />
-                        <span>4.9 {language === 'ar' ? 'تقييم المدرب' : 'Instructor Rating'}</span>
+                        <span>4.9 {t('courseDetails.instructorRating')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <FiUsers className="w-4 h-4" />
@@ -408,7 +409,7 @@ const CourseDetails = () => {
                 <h2 className="text-2xl font-bold mb-6">{t('course.reviews')}</h2>
                 <div className="text-center py-8">
                   <p className="text-secondary-500">
-                    {language === 'ar' ? 'لا توجد تقييمات حتى الآن' : 'No reviews yet'}
+                    {t('courseDetails.noReviewsYet')}
                   </p>
                 </div>
               </div>

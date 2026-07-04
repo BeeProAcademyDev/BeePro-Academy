@@ -535,3 +535,13 @@
     font-size: 0.8rem;
   }
 }
+
+@media (max-width: 360px) {
+  .category-hero-content {
+    padding: 78px 14px 40px;
+  }
+
+  .category-hero-title {
+    font-size: 1.5rem;
+  }
+}

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { articleScheduleService } from '../../services/api'
+import { useTranslation } from 'react-i18next'
 import {
   FiCalendar,
   FiCheckCircle,
@@ -25,12 +26,12 @@ const emptyScheduleForm = {
 }
 
 const STATUS_LABELS = {
-  pending: { ar: 'قيد الانتظار', en: 'Pending' },
-  generating: { ar: 'جاري التوليد', en: 'Generating' },
-  ready: { ar: 'مسودة جاهزة', en: 'Draft Ready' },
-  published: { ar: 'منشور', en: 'Published' },
-  failed: { ar: 'فشل', en: 'Failed' },
-  cancelled: { ar: 'ملغي', en: 'Cancelled' }
+  pending: 'articleSchedulePanel.status.pending',
+  generating: 'articleSchedulePanel.status.generating',
+  ready: 'articleSchedulePanel.status.ready',
+  published: 'articleSchedulePanel.status.published',
+  failed: 'articleSchedulePanel.status.failed',
+  cancelled: 'articleSchedulePanel.status.cancelled'
 }
 
 const STATUS_COLORS = {
@@ -49,14 +50,19 @@ const toLocalDateTimeInput = (date = new Date()) => {
 }
 
 const formatScheduleDate = (value, language) => {
-  if (!value) return '—'
-  return new Date(value).toLocaleString(language === 'ar' ? 'ar-AE' : 'en-US', {
+  if (!value) return '-'
+  let locale = 'en-US'
+  if (language === 'ar') {
+    locale = 'ar-EG'
+  }
+  return new Date(value).toLocaleString(locale, {
     dateStyle: 'medium',
     timeStyle: 'short'
   })
 }
 
 const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
+  const { t } = useTranslation()
   const { language } = useLanguage()
   const { user } = useAuth()
   const isAr = language === 'ar'
@@ -80,7 +86,7 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
       const rows = await articleScheduleService.getSchedules()
       setSchedules(rows || [])
     } catch (err) {
-      setError(isAr ? 'تعذر تحميل جدول AI.' : 'Could not load AI schedule.')
+      setError(t('articleSchedulePanel.couldNotLoadAiSchedule'))
     } finally {
       setIsLoading(false)
     }
@@ -103,9 +109,7 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
           const successCount = results.filter((item) => item.success).length
           if (successCount > 0) {
             setMessage(
-              isAr
-                ? `تم توليد ${successCount} مقال تلقائياً.`
-                : `${successCount} article(s) generated automatically.`
+              t('articleSchedulePanel.successcountArticlesGeneratedA')
             )
           }
         }
@@ -156,7 +160,7 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
     try {
       const scheduledAt = new Date(form.scheduled_at)
       if (Number.isNaN(scheduledAt.getTime())) {
-        throw new Error(isAr ? 'التاريخ غير صالح.' : 'Invalid schedule date.')
+        throw new Error(t('articleSchedulePanel.invalidScheduleDate'))
       }
 
       const created = await articleScheduleService.createSchedule({
@@ -173,9 +177,9 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
         (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
       ))
       resetForm()
-      setMessage(isAr ? 'تمت إضافة المهمة إلى الجدول الزمني.' : 'Task added to the schedule.')
+      setMessage(t('articleSchedulePanel.taskAddedToTheSchedule'))
     } catch (err) {
-      setError(err?.message || (isAr ? 'تعذر إضافة المهمة.' : 'Could not add schedule.'))
+      setError(err?.message || (t('articleSchedulePanel.couldNotAddSchedule')))
     } finally {
       setIsSaving(false)
     }
@@ -193,9 +197,9 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
       })
       await loadSchedules()
       onPostGenerated?.()
-      setMessage(isAr ? 'تم توليد المقال بنجاح.' : 'Article generated successfully.')
+      setMessage(t('articleSchedulePanel.articleGeneratedSuccessfully'))
     } catch (err) {
-      setError(err?.message || (isAr ? 'فشل توليد المقال.' : 'Article generation failed.'))
+      setError(err?.message || (t('articleSchedulePanel.articleGenerationFailed')))
       await loadSchedules()
     } finally {
       setProcessingId(null)
@@ -216,17 +220,15 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
       onPostGenerated?.()
 
       if (results.length === 0) {
-        setMessage(isAr ? 'لا توجد مهام مستحقة الآن.' : 'No due tasks right now.')
+        setMessage(t('articleSchedulePanel.noDueTasksRightNow'))
       } else {
         const successCount = results.filter((item) => item.success).length
         setMessage(
-          isAr
-            ? `تم تنفيذ ${successCount} من ${results.length} مهمة.`
-            : `Executed ${successCount} of ${results.length} task(s).`
+          t('articleSchedulePanel.executedSuccesscountOfResultsl')
         )
       }
     } catch (err) {
-      setError(err?.message || (isAr ? 'تعذر تنفيذ المهام.' : 'Could not run due tasks.'))
+      setError(err?.message || (t('articleSchedulePanel.couldNotRunDueTasks')))
     } finally {
       setIsRunningDue(false)
     }
@@ -239,18 +241,18 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
         (row) => (row.id === scheduleId ? { ...row, status: 'cancelled' } : row)
       ))
     } catch (err) {
-      setError(err?.message || (isAr ? 'تعذر إلغاء المهمة.' : 'Could not cancel task.'))
+      setError(err?.message || (t('articleSchedulePanel.couldNotCancelTask')))
     }
   }
 
   const deleteSchedule = async (scheduleId) => {
-    if (!window.confirm(isAr ? 'حذف هذه المهمة من الجدول؟' : 'Delete this scheduled task?')) return
+    if (!window.confirm(t('articleSchedulePanel.deleteThisScheduledTask'))) return
 
     try {
       await articleScheduleService.deleteSchedule(scheduleId)
       setSchedules((current) => current.filter((row) => row.id !== scheduleId))
     } catch (err) {
-      setError(err?.message || (isAr ? 'تعذر حذف المهمة.' : 'Could not delete task.'))
+      setError(err?.message || (t('articleSchedulePanel.couldNotDeleteTask')))
     }
   }
 
@@ -258,15 +260,15 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
     <div className="space-y-6">
       <div className="grid md:grid-cols-3 gap-4">
         <div className="bepro-card p-5">
-          <p className="text-white/60 text-sm mb-1">{isAr ? 'مهام قادمة' : 'Upcoming'}</p>
+          <p className="text-white/60 text-sm mb-1">{t('articleSchedulePanel.upcoming')}</p>
           <p className="text-3xl font-bold text-white">{stats.pending}</p>
         </div>
         <div className="bepro-card p-5">
-          <p className="text-white/60 text-sm mb-1">{isAr ? 'مقالات مُولَّدة' : 'Generated'}</p>
+          <p className="text-white/60 text-sm mb-1">{t('articleSchedulePanel.generated')}</p>
           <p className="text-3xl font-bold text-green-400">{stats.ready}</p>
         </div>
         <div className="bepro-card p-5">
-          <p className="text-white/60 text-sm mb-1">{isAr ? 'فشل' : 'Failed'}</p>
+          <p className="text-white/60 text-sm mb-1">{t('articleSchedulePanel.failed')}</p>
           <p className="text-3xl font-bold text-red-300">{stats.failed}</p>
         </div>
       </div>
@@ -279,38 +281,36 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
       )}
       {error && <div className="bepro-card p-4 text-red-200">{error}</div>}
 
-      <div className="grid xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)] gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] gap-6 items-start">
         <form onSubmit={addSchedule} className="bepro-card p-6 space-y-4">
           <div className="flex items-center gap-2 text-white">
             <FiZap className="w-5 h-5 text-[#00D9FF]" />
             <h2 className="text-xl font-bold">
-              {isAr ? 'جدولة مقال AI' : 'Schedule AI Article'}
+              {t('articleSchedulePanel.scheduleAiArticle')}
             </h2>
           </div>
           <p className="text-white/60 text-sm">
-            {isAr
-              ? 'حدد موعداً وسيقوم الوكيل بكتابة المقال تلقائياً بناءً على الكورس المختار.'
-              : 'Pick a time and the agent will write the article automatically based on the selected course.'}
+            {t('articleSchedulePanel.pickATimeAndTheAgentWillWriteT')}
           </p>
 
           <label className="block">
-            <span className="text-white font-bold mb-2 block">{isAr ? 'موضوع المقال (اختياري)' : 'Topic (optional)'}</span>
+            <span className="text-white font-bold mb-2 block">{t('articleSchedulePanel.topicOptional')}</span>
             <input
               value={form.title_hint}
               onChange={(e) => updateField('title_hint', e.target.value)}
-              placeholder={isAr ? 'مثال: دليل المبتدئين في التحليل الفني' : 'e.g. Beginner guide to technical analysis'}
+              placeholder={t('articleSchedulePanel.egBeginnerGuideToTechnicalAnal')}
               className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white"
             />
           </label>
 
           <label className="block">
-            <span className="text-white font-bold mb-2 block">{isAr ? 'الكورس المرتبط' : 'Related Course'}</span>
+            <span className="text-white font-bold mb-2 block">{t('articleSchedulePanel.relatedCourse')}</span>
             <select
               value={form.course_id}
               onChange={(e) => updateField('course_id', e.target.value)}
               className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white"
             >
-              <option className="bg-[#000428]" value="">{isAr ? 'اختيار تلقائي' : 'Auto select'}</option>
+              <option className="bg-[#000428]" value="">{t('articleSchedulePanel.autoSelect')}</option>
               {courses.map((course) => (
                 <option className="bg-[#000428]" key={course.id} value={course.id}>{course.title}</option>
               ))}
@@ -318,7 +318,7 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
           </label>
 
           <label className="block">
-            <span className="text-white font-bold mb-2 block">{isAr ? 'الموعد المجدول' : 'Scheduled At'}</span>
+            <span className="text-white font-bold mb-2 block">{t('articleSchedulePanel.scheduledAt')}</span>
             <input
               required
               type="datetime-local"
@@ -329,12 +329,12 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
           </label>
 
           <label className="block">
-            <span className="text-white font-bold mb-2 block">{isAr ? 'تعليمات إضافية للـ AI' : 'Extra AI Instructions'}</span>
+            <span className="text-white font-bold mb-2 block">{t('articleSchedulePanel.extraAiInstructions')}</span>
             <textarea
               rows="3"
               value={form.prompt_notes}
               onChange={(e) => updateField('prompt_notes', e.target.value)}
-              placeholder={isAr ? 'ركز على الفوائد العملية للطالب...' : 'Focus on practical benefits for students...'}
+              placeholder={t('articleSchedulePanel.focusOnPracticalBenefitsForStu')}
               className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white"
             />
           </label>
@@ -346,12 +346,12 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
               onChange={(e) => updateField('auto_publish', e.target.checked)}
               className="w-4 h-4 rounded"
             />
-            <span>{isAr ? 'نشر تلقائي بعد التوليد' : 'Auto-publish after generation'}</span>
+            <span>{t('articleSchedulePanel.autopublishAfterGeneration')}</span>
           </label>
 
           <button type="submit" disabled={isSaving} className="bepro-btn-primary w-full justify-center min-h-[48px]">
             {isSaving ? <FiLoader className="w-5 h-5 animate-spin" /> : <FiPlus className="w-5 h-5" />}
-            {isAr ? 'إضافة للجدول' : 'Add to Schedule'}
+            {t('articleSchedulePanel.addToSchedule')}
           </button>
         </form>
 
@@ -360,20 +360,20 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
             <div>
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <FiCalendar className="w-5 h-5 text-[#00D9FF]" />
-                {isAr ? 'جدول AI Agent' : 'AI Agent Timeline'}
+                {t('articleSchedulePanel.aiAgentTimeline')}
               </h2>
               <p className="text-white/60 text-sm mt-1">
-                {isAr ? 'يتم فحص المهام المستحقة كل دقيقة تلقائياً.' : 'Due tasks are checked automatically every minute.'}
+                {t('articleSchedulePanel.dueTasksAreCheckedAutomaticall')}
               </p>
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={loadSchedules} className="bepro-btn-secondary">
                 <FiRefreshCw className="w-4 h-4" />
-                {isAr ? 'تحديث' : 'Refresh'}
+                {t('articleSchedulePanel.refresh')}
               </button>
               <button type="button" onClick={runDueSchedules} disabled={isRunningDue} className="bepro-btn-primary">
                 {isRunningDue ? <FiLoader className="w-4 h-4 animate-spin" /> : <FiPlay className="w-4 h-4" />}
-                {isAr ? 'تنفيذ المستحق' : 'Run Due'}
+                {t('articleSchedulePanel.runDue')}
               </button>
             </div>
           </div>
@@ -384,19 +384,19 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
             </div>
           ) : schedules.length === 0 ? (
             <p className="text-white/70 text-center py-12">
-              {isAr ? 'لا توجد مهام مجدولة بعد. أضف أول مقال AI.' : 'No scheduled tasks yet. Add your first AI article.'}
+              {t('articleSchedulePanel.noScheduledTasksYetAddYourFirs')}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-white/60 border-b border-white/10">
-                    <th className="text-start py-3 px-2 font-semibold">{isAr ? 'الموعد' : 'Schedule'}</th>
-                    <th className="text-start py-3 px-2 font-semibold">{isAr ? 'الموضوع / الكورس' : 'Topic / Course'}</th>
-                    <th className="text-start py-3 px-2 font-semibold">{isAr ? 'الحالة' : 'Status'}</th>
-                    <th className="text-start py-3 px-2 font-semibold">{isAr ? 'النشر' : 'Publish'}</th>
-                    <th className="text-start py-3 px-2 font-semibold">{isAr ? 'المقال' : 'Article'}</th>
-                    <th className="text-end py-3 px-2 font-semibold">{isAr ? 'إجراءات' : 'Actions'}</th>
+                    <th className="text-start py-3 px-2 font-semibold">{t('articleSchedulePanel.schedule')}</th>
+                    <th className="text-start py-3 px-2 font-semibold">{t('articleSchedulePanel.topicCourse')}</th>
+                    <th className="text-start py-3 px-2 font-semibold">{t('dashboardExtra.status')}</th>
+                    <th className="text-start py-3 px-2 font-semibold">{t('articleSchedulePanel.publish')}</th>
+                    <th className="text-start py-3 px-2 font-semibold">{t('articleSchedulePanel.article')}</th>
+                    <th className="text-end py-3 px-2 font-semibold">{t('articleSchedulePanel.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -413,13 +413,13 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
                             <div>
                               <p className="font-medium">{formatScheduleDate(row.scheduled_at, language)}</p>
                               {isDue && (
-                                <span className="text-xs text-amber-300">{isAr ? 'مستحق الآن' : 'Due now'}</span>
+                                <span className="text-xs text-amber-300">{t('articleSchedulePanel.dueNow')}</span>
                               )}
                             </div>
                           </div>
                         </td>
                         <td className="py-4 px-2 align-top">
-                          <p className="font-medium">{row.title_hint || row.course?.title || (isAr ? 'موضوع عام' : 'General topic')}</p>
+                          <p className="font-medium">{row.title_hint || row.course?.title || (t('articleSchedulePanel.generalTopic'))}</p>
                           {row.course?.title && row.title_hint && (
                             <p className="text-white/50 text-xs mt-1">{row.course.title}</p>
                           )}
@@ -429,25 +429,25 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
                         </td>
                         <td className="py-4 px-2 align-top">
                           <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[row.status] || STATUS_COLORS.pending}`}>
-                            {isAr ? statusLabel.ar : statusLabel.en}
+                            {t(statusLabel)}
                           </span>
                           {row.error_message && (
-                            <p className="text-red-300 text-xs mt-1 max-w-[180px]">{row.error_message}</p>
+                            <p className="text-red-300 text-xs mt-1 break-words">{row.error_message}</p>
                           )}
                         </td>
                         <td className="py-4 px-2 align-top">
                           {row.auto_publish
-                            ? (isAr ? 'تلقائي' : 'Auto')
-                            : (isAr ? 'مسودة' : 'Draft')}
+                            ? (t('articleSchedulePanel.auto'))
+                            : t('dashboardExtra.draft')}
                         </td>
                         <td className="py-4 px-2 align-top">
                           {row.blog_post ? (
                             <Link to="/blogs" className="text-[#00D9FF] hover:underline inline-flex items-center gap-1">
                               <FiEdit3 className="w-3.5 h-3.5" />
-                              {row.blog_post.title?.slice(0, 28) || (isAr ? 'عرض' : 'View')}
+                              {row.blog_post.title?.slice(0, 28) || t('dashboardExtra.view')}
                             </Link>
                           ) : (
-                            <span className="text-white/40">—</span>
+                            <span className="text-white/40">-</span>
                           )}
                         </td>
                         <td className="py-4 px-2 align-top">
@@ -458,7 +458,7 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
                                 onClick={() => runSchedule(row)}
                                 disabled={isProcessing}
                                 className="p-2 rounded-lg bg-[#00D9FF]/20 text-[#00D9FF] hover:bg-[#00D9FF]/30"
-                                title={isAr ? 'توليد الآن' : 'Generate now'}
+                                title={t('articleSchedulePanel.generateNow')}
                               >
                                 {isProcessing ? <FiLoader className="w-4 h-4 animate-spin" /> : <FiZap className="w-4 h-4" />}
                               </button>
@@ -469,14 +469,14 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
                                 onClick={() => cancelSchedule(row.id)}
                                 className="p-2 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 text-xs px-2"
                               >
-                                {isAr ? 'إلغاء' : 'Cancel'}
+                                {t('articleSchedulePanel.cancel')}
                               </button>
                             )}
                             <button
                               type="button"
                               onClick={() => deleteSchedule(row.id)}
                               className="p-2 rounded-lg bg-red-500/20 text-red-100 hover:bg-red-500/30"
-                              title={isAr ? 'حذف' : 'Delete'}
+                              title={t('articleSchedulePanel.delete')}
                             >
                               <FiTrash2 className="w-4 h-4" />
                             </button>
@@ -496,3 +496,4 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
 }
 
 export default ArticleSchedulePanel
+

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useTranslation } from 'react-i18next'
 import {
   courseService,
   meetingService,
@@ -39,6 +40,7 @@ const defaultForm = {
 }
 
 const TeacherLiveSession = () => {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const { language } = useLanguage()
   const [searchParams] = useSearchParams()
@@ -107,7 +109,7 @@ const TeacherLiveSession = () => {
       setCopyFeedback(label)
       window.setTimeout(() => setCopyFeedback(''), 2500)
     } catch {
-      setError(isAr ? 'تعذر نسخ الرابط' : 'Could not copy the link')
+      setError(t('teacherLiveSession.couldNotCopyTheLink'))
     }
   }
 
@@ -115,16 +117,16 @@ const TeacherLiveSession = () => {
     const { silent = false } = options
 
     if (!selectedCourseId || !session) {
-      setError(isAr ? 'اختر كورساً وجلسة أولاً' : 'Select a course and session first')
+      setError(t('teacherLiveSession.selectACourseAndSessionFirst'))
       return null
     }
 
     const shareInfo = buildSessionShareInfo(session)
     if (!shareInfo.shareUrl) {
       setError(
-        isAr
-          ? (shareInfo.platform === 'google_meet' ? 'رابط Google Meet غير متاح' : 'رابط Jitsi غير متاح')
-          : (shareInfo.platform === 'google_meet' ? 'Google Meet link is not available' : 'Jitsi link is not available')
+        shareInfo.platform === 'google_meet'
+          ? t('teacherLiveSession.googleMeetLinkNotAvailable')
+          : t('teacherLiveSession.jitsiLinkNotAvailable')
       )
       return null
     }
@@ -136,34 +138,28 @@ const TeacherLiveSession = () => {
     }
 
     try {
-      const sessionTitle = session.title || (isAr ? 'جلسة مباشرة' : 'Live session')
+      const sessionTitle = session.title || (t('teacherLiveSession.liveSession_38'))
       const platformLabel = shareInfo.platform === 'google_meet' ? 'Google Meet' : 'Jitsi'
       const notifyResult = await notificationService.notifyEligibleStudents({
         course_id: selectedCourseId,
-        title: isAr ? `دعوة لجلسة مباشرة: ${sessionTitle}` : `Live session invitation: ${sessionTitle}`,
-        message: isAr
-          ? `تمت دعوتك لجلسة مباشرة في "${selectedCourse?.title}".\n\nاضغط «دخول الجلسة» من الإشعار 🔔 للانضمام فوراً.\n\nرابط ${platformLabel}:\n${shareInfo.shareUrl}`
-          : `You are invited to a live session in "${selectedCourse?.title}".\n\nTap "Join session" in the notification bell to enter.\n\n${platformLabel} link:\n${shareInfo.shareUrl}`,
+        title: t('teacherLiveSession.liveSessionInvitationSessionti'),
+        message: t('teacherLiveSession.youAreInvitedToALiveSessionInS'),
         type: 'meeting',
         action_url: shareInfo.learnUrl
       })
 
       if (!silent) {
         const audienceText = Number(selectedCourse?.price || 0) > 0
-          ? (isAr ? 'الذين دفعوا وتم قبول دفعهم' : 'with approved payment')
-          : (isAr ? 'المسجلين في الكورس' : 'enrolled in the course')
+          ? (t('teacherLiveSession.withApprovedPayment'))
+          : (t('teacherLiveSession.enrolledInTheCourse'))
 
         if ((notifyResult?.count ?? 0) === 0) {
           setError(
-            isAr
-              ? 'لم يُرسل الإشعار لأي طالب. تأكد أن الطلاب مسجّلون أو أن دفعاتهم مقبولة، ثم شغّل migration 029 في Supabase.'
-              : 'No students received the notification. Ensure students are enrolled or have approved payments, and run migration 029 in Supabase.'
+            t('teacherLiveSession.noStudentsReceivedTheNotificat')
           )
         } else {
           setSuccess(
-            isAr
-              ? `تم إرسال رابط ${platformLabel} إلى ${notifyResult.count} طالب/ة (${audienceText}).`
-              : `${platformLabel} link sent to ${notifyResult.count} student(s) ${audienceText}.`
+            t('teacherLiveSession.platformlabelLinkSentToNotifyr')
           )
         }
       }
@@ -171,7 +167,7 @@ const TeacherLiveSession = () => {
       return notifyResult
     } catch (err) {
       if (!silent) {
-        setError(err.message || (isAr ? 'فشل إرسال الرابط للطلاب' : 'Failed to send link to students'))
+        setError(err.message || (t('teacherLiveSession.failedToSendLinkToStudents')))
       }
       throw err
     } finally {
@@ -183,11 +179,11 @@ const TeacherLiveSession = () => {
 
   const startLiveSession = async (startNow = true, titleOverride = '') => {
     if (!selectedCourseId || !user?.id) {
-      setError(isAr ? 'اختر كورساً أولاً' : 'Select a course first')
+      setError(t('teacherLiveSession.selectACourseFirst'))
       return
     }
 
-    const sessionTitle = (titleOverride || form.title).trim() || (isAr ? 'جلسة مباشرة' : 'Live session')
+    const sessionTitle = (titleOverride || form.title).trim() || (t('teacherLiveSession.liveSession_37'))
     const scheduledAt = form.scheduled_at || new Date().toISOString().slice(0, 16)
     const isManualGoogleMeet = sessionPlatform === 'google_meet' && googleMeetLinkMode === 'manual'
 
@@ -195,15 +191,13 @@ const TeacherLiveSession = () => {
       const meetLink = normalizeGoogleMeetLink(form.manual_meet_link)
       if (!isValidGoogleMeetLink(meetLink)) {
         setError(
-          isAr
-            ? 'يرجى إدخال رابط Google Meet صالح (مثال: https://meet.google.com/abc-defg-hij)'
-            : 'Please enter a valid Google Meet link (e.g. https://meet.google.com/abc-defg-hij)'
+          t('teacherLiveSession.pleaseEnterAValidGoogleMeetLin')
         )
         return
       }
     } else if (sessionPlatform === 'google_meet' && googleMeetLinkMode === 'calendar') {
       if (!sessionTitle || !scheduledAt) {
-        setError(isAr ? 'يرجى إدخال عنوان الجلسة والموعد' : 'Please enter session title and scheduled time')
+        setError(t('teacherLiveSession.pleaseEnterSessionTitleAndSche'))
         return
       }
     }
@@ -282,12 +276,8 @@ const TeacherLiveSession = () => {
 
       setSuccess(
         (notifyResult?.count ?? 0) === 0
-          ? (isAr
-              ? `تم فتح الجلسة، لكن لم يُرسل إشعار لأي طالب. سيظهر للطلاب تنبيه الجلسة المباشرة تلقائياً عند فتح الصفحة.`
-              : 'Session opened, but no notification was sent. Students will still see a live session alert when they open the site.')
-          : (isAr
-              ? `تم فتح الجلسة وإرسال رابط ${platformLabel} إلى ${notifyResult.count} طالب/ة.`
-              : `Session opened and ${platformLabel} link sent to ${notifyResult.count} student(s).`)
+          ? (t('teacherLiveSession.sessionOpenedButNoNotification'))
+          : (t('teacherLiveSession.sessionOpenedAndPlatformlabelL'))
       )
 
       setForm(defaultForm)
@@ -296,7 +286,7 @@ const TeacherLiveSession = () => {
       const refreshed = await meetingService.getMeetingsByCourse(selectedCourseId, { instructorView: true })
       setSessions(refreshed || [])
     } catch (err) {
-      setError(err.message || (isAr ? 'فشل إنشاء الجلسة' : 'Failed to create session'))
+      setError(err.message || (t('teacherLiveSession.failedToCreateSession')))
     } finally {
       setSubmitting(false)
     }
@@ -311,7 +301,7 @@ const TeacherLiveSession = () => {
 
     const virtualSession = {
       id: null,
-      title: isAr ? 'جلسة مباشرة للكورس' : 'Course live session',
+      title: t('teacherLiveSession.courseLiveSession'),
       jitsi_room_name: getCourseLiveRoomName(selectedCourseId),
       platform: 'jitsi'
     }
@@ -333,7 +323,7 @@ const TeacherLiveSession = () => {
           setSelectedCourseId(data[0].id)
         }
       } catch (err) {
-        setError(err.message || (isAr ? 'تعذر تحميل الكورسات' : 'Failed to load courses'))
+        setError(err.message || (t('teacherLiveSession.failedToLoadCourses')))
       } finally {
         setLoadingCourses(false)
       }
@@ -354,7 +344,7 @@ const TeacherLiveSession = () => {
         const data = await meetingService.getMeetingsByCourse(selectedCourseId, { instructorView: true })
         setSessions(data || [])
       } catch (err) {
-        setError(err.message || (isAr ? 'تعذر تحميل الجلسات' : 'Failed to load sessions'))
+        setError(err.message || (t('teacherLiveSession.failedToLoadSessions')))
       } finally {
         setLoadingSessions(false)
       }
@@ -375,7 +365,7 @@ const TeacherLiveSession = () => {
     }
 
     autoStartedRef.current = true
-    startLiveSession(true, isAr ? 'جلسة مباشرة' : 'Live session')
+    startLiveSession(true, t('teacherLiveSession.liveSession'))
   }, [instantMode, loadingCourses, selectedCourseId, submitting, isAr])
 
   const renderShareLinkCard = (session, compact = false) => {
@@ -387,7 +377,7 @@ const TeacherLiveSession = () => {
     return (
       <div className={`rounded-lg border border-green-200 dark:border-green-800 bg-green-50/80 dark:bg-green-900/20 ${compact ? 'p-3' : 'p-4'} space-y-3`}>
         <p className="text-sm font-medium text-green-800 dark:text-green-200">
-          {isAr ? `رابط ${platformLabel} للطلاب` : `${platformLabel} link for students`}
+          {t('teacherLiveSession.platformlabelLinkForStudents')}
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
@@ -399,10 +389,10 @@ const TeacherLiveSession = () => {
             <button
               type="button"
               className="btn btn-outline btn-sm inline-flex items-center gap-2"
-              onClick={() => copyText(shareInfo.shareUrl, isAr ? `تم نسخ رابط ${platformLabel}` : `${platformLabel} link copied`)}
+              onClick={() => copyText(shareInfo.shareUrl, t('teacherLiveSession.platformlabelLinkCopied'))}
             >
               <FiCopy className="w-4 h-4" />
-              {isAr ? 'نسخ' : 'Copy'}
+              {t('teacherLiveSession.copy_36')}
             </button>
             <a
               href={shareInfo.shareUrl}
@@ -411,7 +401,7 @@ const TeacherLiveSession = () => {
               className="btn btn-outline btn-sm inline-flex items-center gap-2"
             >
               <FiExternalLink className="w-4 h-4" />
-              {isAr ? 'فتح' : 'Open'}
+              {t('teacherLiveSession.open')}
             </a>
             <button
               type="button"
@@ -420,7 +410,7 @@ const TeacherLiveSession = () => {
               onClick={() => sendSessionLinkToStudents(session)}
             >
               {sendingLink ? <FiLoader className="w-4 h-4 animate-spin" /> : <FiSend className="w-4 h-4" />}
-              {isAr ? 'إرسال للطلاب' : 'Send to students'}
+              {t('teacherLiveSession.sendToStudents')}
             </button>
           </div>
         </div>
@@ -433,8 +423,8 @@ const TeacherLiveSession = () => {
 
   const renderPlatformPicker = () => (
     <div className="space-y-3">
-      <label className="label">{isAr ? 'منصة الجلسة' : 'Session platform'}</label>
-      <div className="grid grid-cols-2 gap-2" role="group" aria-label={isAr ? 'منصة الجلسة' : 'Session platform'}>
+      <label className="label">{t('teacherLiveSession.sessionPlatform_35')}</label>
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label={t('teacherLiveSession.sessionPlatform')}>
         <button
           type="button"
           className={`rounded-xl border-2 px-4 py-3 font-semibold transition ${
@@ -461,7 +451,7 @@ const TeacherLiveSession = () => {
 
       {sessionPlatform === 'google_meet' && (
         <>
-          <div className="grid grid-cols-2 gap-2" role="group" aria-label={isAr ? 'مصدر رابط Google Meet' : 'Google Meet link source'}>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label={t('teacherLiveSession.googleMeetLinkSource')}>
             <button
               type="button"
               className={`rounded-xl border-2 px-3 py-2 text-sm font-medium transition ${
@@ -471,7 +461,7 @@ const TeacherLiveSession = () => {
               }`}
               onClick={() => setGoogleMeetLinkMode('manual')}
             >
-              {isAr ? 'رابط يدوي' : 'Manual link'}
+              {t('teacherLiveSession.manualLink')}
             </button>
             <button
               type="button"
@@ -482,13 +472,13 @@ const TeacherLiveSession = () => {
               }`}
               onClick={() => setGoogleMeetLinkMode('calendar')}
             >
-              {isAr ? 'Google Calendar' : 'Google Calendar'}
+              {t('teacherLiveSession.googleCalendar')}
             </button>
           </div>
 
           {googleMeetLinkMode === 'manual' && (
             <div>
-              <label className="label">{isAr ? 'رابط Google Meet' : 'Google Meet link'}</label>
+              <label className="label">{t('teacherLiveSession.googleMeetLink')}</label>
               <input
                 className="input"
                 value={form.manual_meet_link}
@@ -496,9 +486,7 @@ const TeacherLiveSession = () => {
                 placeholder="https://meet.google.com/abc-defg-hij"
               />
               <p className="text-xs text-secondary-500 mt-1">
-                {isAr
-                  ? 'الصق رابط Google Meet الذي أنشأته مسبقاً.'
-                  : 'Paste a Google Meet link you created beforehand.'}
+                {t('teacherLiveSession.pasteAGoogleMeetLinkYouCreated')}
               </p>
             </div>
           )}
@@ -514,15 +502,13 @@ const TeacherLiveSession = () => {
           <div>
             <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm text-secondary-500 hover:text-primary-500 mb-2">
               <FiArrowLeft className="w-4 h-4" />
-              {isAr ? 'العودة للوحة التحكم' : 'Back to dashboard'}
+              {t('teacherLiveSession.backToDashboard')}
             </Link>
             <h1 className="text-2xl md:text-3xl font-bold">
-              {isAr ? 'جلسة مباشرة' : 'Live Session'}
+              {t('dashboardExtra.liveSession')}
             </h1>
             <p className="text-secondary-500 mt-1">
-              {isAr
-                ? 'أنشئ جلسة عبر Jitsi أو Google Meet، وشارك الرابط مع الطلاب الذين دفعوا وتم قبول دفعهم.'
-                : 'Create a session via Jitsi or Google Meet, and share the link with students who have approved payment.'}
+              {t('teacherLiveSession.createASessionViaJitsiOrGoogle')}
             </p>
           </div>
         </div>
@@ -557,14 +543,14 @@ const TeacherLiveSession = () => {
                   className="btn btn-primary inline-flex items-center gap-2"
                 >
                   <FiExternalLink className="w-4 h-4" />
-                  {isAr ? 'فتح Google Meet' : 'Open Google Meet'}
+                  {t('teacherLiveSession.openGoogleMeet')}
                 </a>
                 <button
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setActiveSession(null)}
                 >
-                  {isAr ? 'إغلاق' : 'Close'}
+                  {t('teacherLiveSession.close')}
                 </button>
               </div>
             ) : activeSession.jitsi_room_name ? (
@@ -580,20 +566,20 @@ const TeacherLiveSession = () => {
         )}
 
         <div className="card card-body space-y-4">
-          <h2 className="text-lg font-bold">{isAr ? 'اختر الكورس' : 'Select course'}</h2>
+          <h2 className="text-lg font-bold">{t('dashboardExtra.selectCourse')}</h2>
 
           {loadingCourses ? (
             <div className="flex items-center gap-2 text-secondary-500">
               <FiLoader className="w-5 h-5 animate-spin" />
-              {isAr ? 'جاري التحميل...' : 'Loading...'}
+              {t('teacherLiveSession.loading_34')}
             </div>
           ) : courses.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-secondary-500 mb-4">
-                {isAr ? 'لا توجد كورسات بعد. أنشئ كورساً أولاً.' : 'No courses yet. Create a course first.'}
+                {t('teacherLiveSession.noCoursesYetCreateACourseFirst')}
               </p>
               <Link to="/teacher/create-course" className="btn btn-primary">
-                {isAr ? 'إنشاء كورس' : 'Create course'}
+                {t('teacherLiveSession.createCourse')}
               </Link>
             </div>
           ) : (
@@ -602,10 +588,10 @@ const TeacherLiveSession = () => {
               value={selectedCourseId}
               onChange={(e) => setSelectedCourseId(e.target.value)}
             >
-              <option value="">{isAr ? '-- اختر كورس --' : '-- Select course --'}</option>
+              <option value="">{t('teacherLiveSession.selectCourse')}</option>
               {courses.map((course) => (
                 <option key={course.id} value={course.id}>
-                  {course.title} {Number(course.price || 0) > 0 ? `($${course.price})` : `(${isAr ? 'مجاني' : 'Free'})`}
+                  {course.title} {Number(course.price || 0) > 0 ? `($${course.price})` : `(${t('teacherLiveSession.free')})`}
                 </option>
               ))}
             </select>
@@ -617,19 +603,17 @@ const TeacherLiveSession = () => {
             <div className="card card-body space-y-4 border-2 border-green-200 dark:border-green-800">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <FiVideo className="w-5 h-5 text-green-500" />
-                {isAr ? 'بدء جلسة ومشاركة الرابط' : 'Start session & share link'}
+                {t('teacherLiveSession.startSessionShareLink')}
               </h2>
               <p className="text-sm text-secondary-500">
-                {isAr
-                  ? 'اختر Jitsi أو Google Meet، ثم افتح الجلسة وأرسل الرابط تلقائياً للطلاب المؤهلين.'
-                  : 'Choose Jitsi or Google Meet, then open the session and automatically send the link to eligible students.'}
+                {t('teacherLiveSession.chooseJitsiOrGoogleMeetThenOpe')}
               </p>
 
               {renderPlatformPicker()}
 
               {sessionPlatform === 'jitsi' && selectedCourseId && renderShareLinkCard({
                 id: null,
-                title: isAr ? 'رابط الكورس المباشر' : 'Course live link',
+                title: t('teacherLiveSession.courseLiveLink'),
                 jitsi_room_name: getCourseLiveRoomName(selectedCourseId),
                 platform: 'jitsi'
               }, true)}
@@ -642,7 +626,7 @@ const TeacherLiveSession = () => {
                   onClick={() => startLiveSession(true)}
                 >
                   {submitting ? <FiLoader className="w-4 h-4 animate-spin" /> : <FiVideo className="w-4 h-4" />}
-                  {isAr ? 'فتح جلسة وإرسال الرابط' : 'Open session & send link'}
+                  {t('teacherLiveSession.openSessionSendLink')}
                 </button>
                 {sessionPlatform === 'jitsi' && (
                   <button
@@ -652,7 +636,7 @@ const TeacherLiveSession = () => {
                     onClick={handleSendCourseLiveLink}
                   >
                     {sendingLink ? <FiLoader className="w-4 h-4 animate-spin" /> : <FiSend className="w-4 h-4" />}
-                    {isAr ? 'إرسال الرابط فقط' : 'Send link only'}
+                    {t('teacherLiveSession.sendLinkOnly')}
                   </button>
                 )}
               </div>
@@ -660,42 +644,42 @@ const TeacherLiveSession = () => {
               <p className="text-sm text-secondary-500 flex items-center gap-2">
                 <FiUsers className="w-4 h-4" />
                 {Number(selectedCourse?.price || 0) > 0
-                  ? (isAr ? 'يُرسل فقط للطلاب الذين دفعوا وتم قبول دفعهم.' : 'Sent only to students with approved payment.')
-                  : (isAr ? 'يُرسل للطلاب المسجلين في الكورس.' : 'Sent to enrolled students.')}
+                  ? (t('teacherLiveSession.sentOnlyToStudentsWithApproved'))
+                  : (t('teacherLiveSession.sentToEnrolledStudents'))}
               </p>
             </div>
 
             <div className="card card-body space-y-4">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <FiVideo className="w-5 h-5 text-green-500" />
-                {isAr ? 'جدولة جلسة' : 'Schedule session'}
+                {t('teacherLiveSession.scheduleSession')}
               </h2>
 
               {renderPlatformPicker()}
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="label">{isAr ? 'عنوان الجلسة' : 'Session title'}</label>
+                  <label className="label">{t('teacherLiveSession.sessionTitle')}</label>
                   <input
                     className="input"
                     value={form.title}
                     onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                    placeholder={isAr ? 'مثال: مراجعة الدرس الأول' : 'Example: Lesson 1 review'}
+                    placeholder={t('teacherLiveSession.exampleLesson1Review')}
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="label">{isAr ? 'الوصف (اختياري)' : 'Description (optional)'}</label>
+                  <label className="label">{t('teacherLiveSession.descriptionOptional')}</label>
                   <textarea
                     className="input min-h-[90px]"
                     value={form.description}
                     onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder={isAr ? 'ملاحظات للطلاب...' : 'Notes for students...'}
+                    placeholder={t('teacherLiveSession.notesForStudents')}
                   />
                 </div>
 
                 <div>
-                  <label className="label">{isAr ? 'موعد الجلسة' : 'Scheduled time'}</label>
+                  <label className="label">{t('teacherLiveSession.scheduledTime')}</label>
                   <input
                     type="datetime-local"
                     className="input"
@@ -705,7 +689,7 @@ const TeacherLiveSession = () => {
                 </div>
 
                 <div>
-                  <label className="label">{isAr ? 'المدة (دقيقة)' : 'Duration (minutes)'}</label>
+                  <label className="label">{t('teacherLiveSession.durationMinutes')}</label>
                   <input
                     type="number"
                     min={15}
@@ -725,24 +709,24 @@ const TeacherLiveSession = () => {
                   onClick={() => handleCreateAndNotify(false)}
                 >
                   {submitting ? <FiLoader className="w-4 h-4 animate-spin" /> : <FiSend className="w-4 h-4" />}
-                  {isAr ? 'جدولة وإرسال الرابط' : 'Schedule & send link'}
+                  {t('teacherLiveSession.scheduleSendLink')}
                 </button>
               </div>
             </div>
 
             <div className="card card-body">
               <h2 className="text-lg font-bold mb-4">
-                {isAr ? 'جلسات هذا الكورس' : 'Sessions for this course'}
+                {t('teacherLiveSession.sessionsForThisCourse')}
               </h2>
 
               {loadingSessions ? (
                 <div className="flex items-center gap-2 text-secondary-500">
                   <FiLoader className="w-5 h-5 animate-spin" />
-                  {isAr ? 'جاري التحميل...' : 'Loading...'}
+                  {t('teacherLiveSession.loading')}
                 </div>
               ) : liveSessions.length === 0 ? (
                 <p className="text-secondary-500">
-                  {isAr ? 'لا توجد جلسات بعد.' : 'No sessions yet.'}
+                  {t('teacherLiveSession.noSessionsYet')}
                 </p>
               ) : (
                 <div className="space-y-4">
@@ -766,12 +750,12 @@ const TeacherLiveSession = () => {
                               <span className="inline-flex items-center gap-1">
                                 <FiCalendar className="w-4 h-4" />
                                 {session.scheduled_at
-                                  ? new Date(session.scheduled_at).toLocaleString(isAr ? 'ar-EG' : 'en-US')
+                                  ? new Date(session.scheduled_at).toLocaleString(t('teacherLiveSession.enus'))
                                   : '-'}
                               </span>
                               <span className="inline-flex items-center gap-1">
                                 <FiClock className="w-4 h-4" />
-                                {session.duration_minutes || 60} {isAr ? 'د' : 'min'}
+                                {session.duration_minutes || 60} {t('teacherLiveSession.min')}
                               </span>
                             </div>
                           </div>
@@ -788,7 +772,7 @@ const TeacherLiveSession = () => {
                             )}
                           >
                             <FiVideo className="w-4 h-4" />
-                            {isAr ? 'بدء/انضمام' : 'Start / Join'}
+                            {t('teacherLiveSession.startJoin')}
                           </button>
                         </div>
 
@@ -803,10 +787,10 @@ const TeacherLiveSession = () => {
                               <button
                                 type="button"
                                 className="btn btn-outline btn-sm inline-flex items-center gap-1"
-                                onClick={() => copyText(shareInfo.shareUrl, isAr ? 'تم النسخ' : 'Copied')}
+                                onClick={() => copyText(shareInfo.shareUrl, t('teacherLiveSession.copied'))}
                               >
                                 <FiCopy className="w-4 h-4" />
-                                {isAr ? 'نسخ' : 'Copy'}
+                                {t('teacherLiveSession.copy')}
                               </button>
                               <button
                                 type="button"
@@ -815,7 +799,7 @@ const TeacherLiveSession = () => {
                                 onClick={() => sendSessionLinkToStudents(session)}
                               >
                                 <FiSend className="w-4 h-4" />
-                                {isAr ? 'إرسال للطلاب' : 'Send'}
+                                {t('teacherLiveSession.send')}
                               </button>
                             </div>
                           </div>

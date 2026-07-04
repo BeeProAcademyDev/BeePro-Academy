@@ -6,11 +6,12 @@ import { useAuth } from '../contexts/AuthContext'
 import { formatStoredAmount } from '../lib/currency'
 import CourseCard from '../components/ui/CourseCard'
 import CourseChat from '../components/chat/CourseChat'
+import HomeworkPanel from '../components/dashboard/HomeworkPanel'
 import { courseService, enrollmentService, notificationService, chatService } from '../services/api'
 import { paymentService, PAYMENT_TYPES } from '../services/paymentAPI'
 import UserManagement from './admin/UserManagement'
 import AdminCRM from './admin/AdminCRM'
-import { getRoleLabel, isPendingInstructor, shouldShowStudentChatBell, resolveUserRole } from '../lib/roles'
+import { getRoleLabel, isAdmin as isAdminRole, isPendingInstructor, shouldShowStudentChatBell, resolveUserRole } from '../lib/roles'
 import {
   FiBook,
   FiAward,
@@ -40,7 +41,8 @@ import {
 const Dashboard = () => {
   const { t } = useTranslation()
   const { language, isRTL } = useLanguage()
-  const { user, updateProfile, uploadAvatar } = useAuth()
+  const isArabic = language === 'ar'
+  const { user, updatePassword, updateProfile, uploadAvatar } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const normalizedUserRole = resolveUserRole(user)
@@ -61,7 +63,7 @@ const Dashboard = () => {
     const params = new URLSearchParams(location.search)
     const tab = params.get('tab')
     const sub = params.get('sub')
-    const validTabs = ['courses', 'teacher', 'admin', 'progress', 'certificates', 'settings']
+    const validTabs = ['courses', 'teacher', 'admin', 'homework', 'progress', 'certificates', 'settings']
     const validAdminSubs = ['users', 'payments', 'crm']
 
     if (tab && validTabs.includes(tab)) {
@@ -100,6 +102,12 @@ const Dashboard = () => {
   const [profileStatus, setProfileStatus] = useState({ type: '', message: '' })
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({
+    password: '',
+    confirmPassword: ''
+  })
+  const [passwordStatus, setPasswordStatus] = useState({ type: '', message: '' })
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
   
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight
 
@@ -159,16 +167,16 @@ const Dashboard = () => {
     {
       icon: FiClock,
       value: enrolledCourses.reduce((acc, course) => acc + (user?.progress?.[course.id] || 0) * course.duration / 100, 0).toFixed(0),
-      label: language === 'ar' ? 'ساعات التعلم' : 'Learning Hours',
+      label: t('dashboardExtra.learningHours'),
       color: 'from-purple-500 to-pink-600'
     }
   ]
 
   // Check if user is a teacher/instructor
-  const isTeacher = normalizedUserRole === 'teacher' || normalizedUserRole === 'instructor' || normalizedUserRole === 'admin'
+  const isTeacher = normalizedUserRole === 'teacher' || normalizedUserRole === 'instructor' || isAdminRole(normalizedUserRole)
   
   // Check if user is an admin
-  const isAdmin = normalizedUserRole === 'admin'
+  const isAdmin = isAdminRole(normalizedUserRole)
 
   useEffect(() => {
     setProfileForm({
@@ -242,15 +250,16 @@ const Dashboard = () => {
     })
   }, [studentChatInbox, studentEnrollments, studentPayments])
 
-  const displayName = user?.full_name || user?.name || user?.email?.split('@')[0] || (language === 'ar' ? 'مستخدم' : 'User')
+  const displayName = user?.full_name || user?.name || user?.email?.split('@')[0] || t('roles.user')
   const displayEmail = user?.email || ''
   const normalizedRole = normalizedUserRole === 'instructor' ? 'teacher' : (normalizedUserRole || 'student')
   const roleLabel = isPendingTeacher
     ? getRoleLabel('pending_instructor', language)
     : ({
-      student: language === 'ar' ? 'طالب' : 'Student',
-      teacher: language === 'ar' ? 'مدرس' : 'Teacher',
-      admin: language === 'ar' ? 'مدير' : 'Admin'
+      student: t('roles.student'),
+      teacher: t('roles.teacher'),
+      admin: t('roles.admin'),
+      super_admin: t('roles.super_admin')
     }[normalizedRole] || getRoleLabel(normalizedUserRole, language))
 
   const parsePaymentDetailsInput = (paymentType, input) => {
@@ -302,7 +311,7 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error('Error fetching my courses:', error)
-        setCourseActionError(language === 'ar' ? 'فشل تحميل الكورسات' : 'Failed to load courses')
+        setCourseActionError(t('dashboardExtra.loadCoursesFailed'))
       } finally {
         setIsLoadingCourses(false)
       }
@@ -436,9 +445,7 @@ const Dashboard = () => {
         instructions: ''
       })
     } catch (error) {
-      const defaultMessage = language === 'ar'
-        ? 'فشل حفظ وسيلة الدفع. يمكنك إدخال نص عادي أو JSON صحيح.'
-        : 'Failed to save payment method. Enter plain text or valid JSON object.'
+      const defaultMessage = t('dashboard.failedToSavePaymentMethodEnter')
       setPaymentError(error.message || defaultMessage)
     }
   }
@@ -446,9 +453,7 @@ const Dashboard = () => {
   const handlePaymentReview = async (submissionId, action) => {
     if (!user?.id) {
       setPaymentError(
-        language === 'ar'
-          ? 'يجب تسجيل الدخول لتنفيذ هذا الإجراء'
-          : 'You must be signed in to review payments'
+        t('dashboard.youMustBeSignedInToReviewPayme')
       )
       return
     }
@@ -473,14 +478,12 @@ const Dashboard = () => {
       }
 
       setPaymentSuccess(
-        language === 'ar'
-          ? (action === 'approve' ? 'تم قبول الدفع بنجاح' : 'تم رفض الدفع بنجاح')
-          : (action === 'approve' ? 'Payment approved successfully' : 'Payment rejected successfully')
+        action === 'approve' ? t('dashboardExtra.paymentApprovedSuccess') : t('dashboardExtra.paymentRejectedSuccess')
       )
       paymentFeedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     } catch (error) {
       setPaymentError(
-        error.message || (language === 'ar' ? 'فشل تحديث حالة الدفع' : 'Failed to update payment status')
+        error.message || t('dashboardExtra.paymentUpdateFailed')
       )
       paymentFeedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     } finally {
@@ -501,14 +504,12 @@ const Dashboard = () => {
 
   const handleDeleteCourse = async (course) => {
     if (!course?.id || !isAdmin) {
-      setCourseActionError(language === 'ar' ? 'هذا الإجراء متاح للأدمن فقط' : 'Only admins can delete courses')
+      setCourseActionError(t('dashboardExtra.adminOnlyDelete'))
       return
     }
 
     const confirmed = window.confirm(
-      language === 'ar'
-        ? `هل تريد حذف كورس "${course.title}" نهائيا؟`
-        : `Delete course "${course.title}" permanently?`
+      t('dashboard.deleteCourseCoursetitlePermane')
     )
 
     if (!confirmed) return
@@ -519,9 +520,9 @@ const Dashboard = () => {
       setCourseActionLoadingId(course.id)
       await courseService.deleteCourse(course.id)
       setMyCourses((prev) => prev.filter((item) => item.id !== course.id))
-      setCourseActionSuccess(language === 'ar' ? 'تم حذف الكورس بنجاح' : 'Course deleted successfully')
+      setCourseActionSuccess(t('dashboardExtra.courseDeleted'))
     } catch (error) {
-      setCourseActionError(error.message || (language === 'ar' ? 'فشل حذف الكورس' : 'Failed to delete course'))
+      setCourseActionError(error.message || t('dashboardExtra.courseDeleteFailed'))
     } finally {
       setCourseActionLoadingId(null)
     }
@@ -545,12 +546,12 @@ const Dashboard = () => {
 
       setProfileStatus({
         type: 'success',
-        message: language === 'ar' ? 'تم حفظ بيانات الملف الشخصي' : 'Profile saved successfully'
+        message: t('dashboardExtra.profileSaved')
       })
     } catch (error) {
       setProfileStatus({
         type: 'error',
-        message: error.message || (language === 'ar' ? 'تعذر حفظ الملف الشخصي' : 'Failed to save profile')
+        message: error.message || t('dashboardExtra.profileSaveFailed')
       })
     } finally {
       setIsSavingProfile(false)
@@ -572,12 +573,12 @@ const Dashboard = () => {
 
       setProfileStatus({
         type: 'success',
-        message: language === 'ar' ? 'تم تحديث صورة الملف الشخصي' : 'Profile photo updated'
+        message: t('dashboardExtra.photoUpdated')
       })
     } catch (error) {
       setProfileStatus({
         type: 'error',
-        message: error.message || (language === 'ar' ? 'تعذر رفع الصورة' : 'Failed to upload photo')
+        message: error.message || t('dashboardExtra.photoUploadFailed')
       })
     } finally {
       setIsUploadingAvatar(false)
@@ -585,10 +586,40 @@ const Dashboard = () => {
     }
   }
 
+  const handlePasswordSave = async (event) => {
+    event.preventDefault()
+    setPasswordStatus({ type: '', message: '' })
+
+    if (passwordForm.password.length < 8) {
+      setPasswordStatus({ type: 'error', message: t('profileSettings.passwordTooShort') })
+      return
+    }
+
+    if (passwordForm.password !== passwordForm.confirmPassword) {
+      setPasswordStatus({ type: 'error', message: t('register.passwordsDoNotMatch') })
+      return
+    }
+
+    try {
+      setIsSavingPassword(true)
+      const result = await updatePassword(passwordForm.password)
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+      setPasswordForm({ password: '', confirmPassword: '' })
+      setPasswordStatus({ type: 'success', message: t('profileSettings.passwordUpdated') })
+    } catch (error) {
+      setPasswordStatus({ type: 'error', message: error.message || t('profileSettings.passwordUpdateFailed') })
+    } finally {
+      setIsSavingPassword(false)
+    }
+  }
+
   const sidebarLinks = [
     { id: 'courses', icon: FiBook, label: t('dashboard.myCourses') },
-    ...(isTeacher ? [{ id: 'teacher', icon: FiPlusCircle, label: language === 'ar' ? 'إدارة الكورسات' : 'Manage Courses' }] : []),
-    ...(isAdmin ? [{ id: 'admin', icon: FiShield, label: language === 'ar' ? 'لوحة الإدارة' : 'Admin Panel' }] : []),
+    ...(isTeacher ? [{ id: 'teacher', icon: FiPlusCircle, label: t('dashboardExtra.manageCourses') }] : []),
+    ...(isAdmin ? [{ id: 'admin', icon: FiShield, label: t('dashboardExtra.adminPanel') }] : []),
+    ...(!isAdmin ? [{ id: 'homework', icon: FiBookOpen, label: t('homework.navLabel') }] : []),
     { id: 'progress', icon: FiTrendingUp, label: t('dashboard.progress') },
     { id: 'certificates', icon: FiAward, label: t('dashboard.certificates') },
     { id: 'settings', icon: FiSettings, label: t('dashboard.settings') },
@@ -601,9 +632,7 @@ const Dashboard = () => {
           <div className="mb-6 card card-body border border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-200">
             <p>
               {location.state?.registrationNotice || (
-                language === 'ar'
-                  ? 'حسابك مسجّل كمدرس بانتظار موافقة الإدارة. لا يمكنك إنشاء كورسات حتى يتم قبولك.'
-                  : 'Your instructor account is pending admin approval. You cannot create courses until approved.'
+                t('dashboard.yourInstructorAccountIsPending')
               )}
             </p>
           </div>
@@ -639,29 +668,26 @@ const Dashboard = () => {
                 </span>
               </div>
               <p className="text-white/80">
-                {language === 'ar' 
-                  ? 'استمر في التعلم وحقق أهدافك'
-                  : 'Keep learning and achieve your goals'
-                }
+                {t('dashboard.keepLearningAndAchieveYourGoal')}
               </p>
             </div>
 
             {/* Quick Actions */}
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3 w-full md:w-auto">
               {isTeacher && (
                 <Link
                   to="/teacher/create-course"
-                  className="btn bg-green-500 hover:bg-green-600 text-white"
+                  className="btn bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
                 >
                   <FiPlusCircle className="w-5 h-5" />
-                  {language === 'ar' ? 'إنشاء كورس' : 'Create Course'}
+                  {t('dashboardExtra.createCourse')}
                 </Link>
               )}
               <Link
                 to="/courses"
-                className="btn bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+                className="btn bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm w-full sm:w-auto"
               >
-                {language === 'ar' ? 'تصفح الدورات' : 'Browse Courses'}
+                {t('dashboardExtra.browseCourses')}
                 <ArrowIcon className="w-5 h-5" />
               </Link>
             </div>
@@ -685,13 +711,14 @@ const Dashboard = () => {
 
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 min-w-0">
             <div className="card overflow-hidden">
+              <div className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible">
               {sidebarLinks.map((link) => (
                 <button
                   key={link.id}
                   onClick={() => setActiveTab(link.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-4 transition-colors ${
+                  className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-4 transition-colors whitespace-nowrap lg:whitespace-normal ${
                     activeTab === link.id
                       ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 border-s-4 border-primary-500'
                       : 'hover:bg-secondary-50 dark:hover:bg-dark-border'
@@ -701,11 +728,12 @@ const Dashboard = () => {
                   <span className="font-medium">{link.label}</span>
                 </button>
               ))}
+              </div>
             </div>
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 min-w-0">
             {/* My Courses Tab */}
             {activeTab === 'courses' && (
               <div>
@@ -723,7 +751,7 @@ const Dashboard = () => {
                       <div className="card card-body">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                           <FiMessageCircle className="w-5 h-5 text-primary-500" />
-                          {language === 'ar' ? 'دردشة المدرس' : 'Instructor chat'}
+                          {t('dashboardExtra.instructorChat')}
                         </h3>
                         {studentChatCoursesList.length > 0 ? (
                           <div className="space-y-3">
@@ -741,10 +769,8 @@ const Dashboard = () => {
                                   <p className="font-semibold truncate">{course.title || 'Course'}</p>
                                   <p className="text-sm text-secondary-500">
                                     {(course.message_count || 0) > 0
-                                      ? (language === 'ar'
-                                        ? `${course.message_count} رسالة`
-                                        : `${course.message_count} message(s)`)
-                                      : (language === 'ar' ? 'تواصل مع المدرس مباشرة' : 'Message your instructor')}
+                                      ? (t('dashboard.coursemessagecountMessages'))
+                                      : t('dashboardExtra.messageInstructor')}
                                   </p>
                                 </div>
                                 <Link
@@ -752,7 +778,7 @@ const Dashboard = () => {
                                   className="btn btn-primary btn-sm inline-flex items-center gap-1 shrink-0"
                                 >
                                   <FiMessageCircle className="w-4 h-4" />
-                                  {language === 'ar' ? 'فتح الدردشة' : 'Open chat'}
+                                  {t('dashboardExtra.openChat')}
                                 </Link>
                               </div>
                             ))}
@@ -760,12 +786,10 @@ const Dashboard = () => {
                         ) : (
                           <div className="text-center py-4">
                             <p className="text-sm text-secondary-500 mb-3">
-                              {language === 'ar'
-                                ? 'افتح صفحة أي كورس واضغط «الدردشة مع المدرس»، أو استخدم أيقونة الدردشة في الشريط العلوي.'
-                                : 'Open any course page and tap "Chat with instructor", or use the chat icon in the top bar.'}
+                              {t('dashboard.openAnyCoursePageAndTapChatWit')}
                             </p>
                             <Link to="/courses" className="btn btn-primary btn-sm">
-                              {language === 'ar' ? 'تصفح الكورسات' : 'Browse courses'}
+                              {t('dashboardExtra.browseCoursesLink')}
                             </Link>
                           </div>
                         )}
@@ -776,7 +800,7 @@ const Dashboard = () => {
                       <div className="card card-body">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                           <FiBell className="w-5 h-5 text-primary-500" />
-                          {language === 'ar' ? 'إشعارات الجلسات المباشرة' : 'Live session notifications'}
+                          {t('dashboardExtra.liveNotifications')}
                         </h3>
                         <div className="space-y-3">
                           {studentNotifications.map((notification) => {
@@ -800,7 +824,7 @@ const Dashboard = () => {
                                       onClick={() => handleStudentNotificationJoin(notification)}
                                     >
                                       <FiVideo className="w-4 h-4" />
-                                      {language === 'ar' ? 'دخول الجلسة' : 'Join session'}
+                                      {t('dashboardExtra.joinSession')}
                                     </button>
                                   )}
                                   {jitsiUrl && (
@@ -811,7 +835,7 @@ const Dashboard = () => {
                                       className="btn btn-outline btn-sm inline-flex items-center gap-1"
                                     >
                                       <FiVideo className="w-4 h-4" />
-                                      {language === 'ar' ? 'رابط Jitsi' : 'Jitsi link'}
+                                      {t('dashboardExtra.jitsiLink')}
                                     </a>
                                   )}
                                 </div>
@@ -824,7 +848,7 @@ const Dashboard = () => {
 
                     <div className="card card-body">
                       <h3 className="text-lg font-bold mb-4">
-                        {language === 'ar' ? 'الدورات التي تم شراؤها' : 'Purchased Courses'}
+                        {t('dashboardExtra.purchasedCourses')}
                       </h3>
 
                       {studentEnrollments.length > 0 ? (
@@ -839,28 +863,28 @@ const Dashboard = () => {
                               <div className="flex-1">
                                 <p className="font-semibold">{enrollment.course?.title || 'Course'}</p>
                                 <p className="text-sm text-secondary-500">
-                                  {language === 'ar' ? 'تاريخ الشراء:' : 'Purchased on:'} {new Date(enrollment.enrolled_at).toLocaleDateString()}
+                                  {t('dashboardExtra.purchasedOn')} {new Date(enrollment.enrolled_at).toLocaleDateString()}
                                 </p>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <Link
                                   to={`/courses/${enrollment.course?.id}/learn?tab=chat`}
                                   className="btn btn-sm inline-flex items-center gap-1 btn-secondary"
-                                  title={language === 'ar' ? 'الدردشة مع المدرس' : 'Chat with instructor'}
+                                  title={t('dashboardExtra.chatWithInstructor')}
                                 >
                                   <FiMessageCircle className="w-4 h-4" />
-                                  {language === 'ar' ? 'دردشة' : 'Chat'}
+                                  {t('dashboardExtra.chat')}
                                 </Link>
                                 <Link
                                   to={`/courses/${enrollment.course?.id}/learn?session=live`}
                                   className="btn btn-sm inline-flex items-center gap-1 bg-green-500 text-white hover:bg-green-600 border-0"
-                                  title={language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join live session'}
+                                  title={t('dashboardExtra.joinLive')}
                                 >
                                   <FiVideo className="w-4 h-4" />
-                                  {language === 'ar' ? 'جلسة مباشرة' : 'Live'}
+                                  {t('dashboardExtra.live')}
                                 </Link>
                                 <Link to={`/courses/${enrollment.course?.id}/learn`} className="btn btn-primary btn-sm">
-                                  {language === 'ar' ? 'دخول الدورة' : 'Open Course'}
+                                  {t('dashboardExtra.openCourse')}
                                 </Link>
                               </div>
                             </div>
@@ -868,14 +892,14 @@ const Dashboard = () => {
                         </div>
                       ) : (
                         <p className="text-secondary-500 text-sm">
-                          {language === 'ar' ? 'لا توجد دورات تم شراؤها بعد' : 'No purchased courses yet'}
+                          {t('dashboardExtra.noPurchasedCourses')}
                         </p>
                       )}
                     </div>
 
                     <div className="card card-body">
                       <h3 className="text-lg font-bold mb-4">
-                        {language === 'ar' ? 'سجل المدفوعات' : 'Payment History'}
+                        {t('dashboardExtra.paymentHistory')}
                       </h3>
 
                       {studentPayments.length > 0 ? (
@@ -883,15 +907,15 @@ const Dashboard = () => {
                           <table className="w-full">
                             <thead>
                               <tr className="border-b border-gray-200 dark:border-gray-700">
-                                <th className="text-left py-2 px-2">{language === 'ar' ? 'التاريخ' : 'Date'}</th>
-                                <th className="text-left py-2 px-2">{language === 'ar' ? 'الدورة' : 'Course'}</th>
-                                <th className="text-left py-2 px-2">{language === 'ar' ? 'المبلغ' : 'Amount'}</th>
-                                <th className="text-left py-2 px-2">{language === 'ar' ? 'الطريقة' : 'Method'}</th>
-                                <th className="text-left py-2 px-2">{language === 'ar' ? 'مرجع العملية' : 'Reference'}</th>
-                                <th className="text-left py-2 px-2">{language === 'ar' ? 'تفاصيل الدفع' : 'Payment Details'}</th>
-                                <th className="text-left py-2 px-2">{language === 'ar' ? 'الحالة' : 'Status'}</th>
-                                <th className="text-left py-2 px-2">{language === 'ar' ? 'ملاحظات المراجعة' : 'Review Notes'}</th>
-                                <th className="text-left py-2 px-2">{language === 'ar' ? 'الإيصال' : 'Proof'}</th>
+                                <th className="text-start py-2 px-2">{t('dashboardExtra.date')}</th>
+                                <th className="text-start py-2 px-2">{t('dashboardExtra.course')}</th>
+                                <th className="text-start py-2 px-2">{t('dashboardExtra.amount')}</th>
+                                <th className="text-start py-2 px-2">{t('dashboardExtra.method')}</th>
+                                <th className="text-start py-2 px-2">{t('dashboardExtra.reference')}</th>
+                                <th className="text-start py-2 px-2">{t('dashboardExtra.paymentDetails')}</th>
+                                <th className="text-start py-2 px-2">{t('dashboardExtra.status')}</th>
+                                <th className="text-start py-2 px-2">{t('dashboardExtra.reviewNotes')}</th>
+                                <th className="text-start py-2 px-2">{t('dashboardExtra.proof')}</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -904,7 +928,7 @@ const Dashboard = () => {
                                   <td className="py-2 px-2">{formatPaymentAmount(payment)}</td>
                                   <td className="py-2 px-2">{payment.payment_method?.display_name || payment.payment_method_id}</td>
                                   <td className="py-2 px-2">{payment.transaction_reference || '-'}</td>
-                                  <td className="py-2 px-2 max-w-[260px]">
+                                  <td className="py-2 px-2 max-w-[260px] break-words">
                                     <div className="text-xs text-secondary-600 dark:text-secondary-300 whitespace-pre-wrap">
                                       {payment.payment_method?.payment_details
                                         ? JSON.stringify(payment.payment_method.payment_details)
@@ -932,7 +956,7 @@ const Dashboard = () => {
                                       onClick={() => handleOpenPaymentProof(payment.payment_screenshot_url)}
                                       className="text-blue-600 hover:underline"
                                     >
-                                      {language === 'ar' ? 'عرض' : 'View'}
+                                      {t('dashboardExtra.view')}
                                     </button>
                                   </td>
                                 </tr>
@@ -942,7 +966,7 @@ const Dashboard = () => {
                         </div>
                       ) : (
                         <p className="text-secondary-500 text-sm">
-                          {language === 'ar' ? 'لا توجد عمليات دفع بعد' : 'No payment transactions yet'}
+                          {t('dashboardExtra.noPayments')}
                         </p>
                       )}
                     </div>
@@ -959,16 +983,13 @@ const Dashboard = () => {
                       <FiBook className="w-10 h-10 text-secondary-400" />
                     </div>
                     <h3 className="text-xl font-bold mb-2">
-                      {language === 'ar' ? 'لا توجد دورات مسجلة' : 'No Enrolled Courses'}
+                      {t('dashboardExtra.noEnrolledCourses')}
                     </h3>
                     <p className="text-secondary-500 mb-6">
-                      {language === 'ar' 
-                        ? 'ابدأ رحلة التعلم الآن واشترك في الدورات المميزة'
-                        : 'Start your learning journey now and enroll in featured courses'
-                      }
+                      {t('dashboard.startYourLearningJourneyNowAnd')}
                     </p>
                     <Link to="/courses" className="btn btn-primary mx-auto">
-                      {language === 'ar' ? 'تصفح الدورات' : 'Browse Courses'}
+                      {t('dashboardExtra.browseCourses')}
                     </Link>
                   </div>
                 )}
@@ -980,11 +1001,11 @@ const Dashboard = () => {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold">
-                    {language === 'ar' ? 'إدارة الكورسات' : 'Manage Courses'}
+                    {t('dashboardExtra.manageCourses')}
                   </h2>
                   <Link to="/teacher/create-course" className="btn btn-primary">
                     <FiPlusCircle className="w-5 h-5" />
-                    {language === 'ar' ? 'إنشاء كورس جديد' : 'Create New Course'}
+                    {t('dashboardExtra.createNewCourse')}
                   </Link>
                 </div>
 
@@ -998,7 +1019,7 @@ const Dashboard = () => {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {language === 'ar' ? 'الكورسات' : 'Courses'}
+                    {t('dashboardExtra.coursesTab')}
                   </button>
                   <button
                     type="button"
@@ -1009,8 +1030,8 @@ const Dashboard = () => {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    <FiDollarSign className="w-4 h-4 inline mr-2" />
-                    {language === 'ar' ? 'مدفوعات الكورسات' : 'Course Payments'}
+                    <FiDollarSign className="w-4 h-4 inline me-2" />
+                    {t('dashboardExtra.coursePayments')}
                   </button>
                   <button
                     type="button"
@@ -1021,8 +1042,8 @@ const Dashboard = () => {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    <FiMessageCircle className="w-4 h-4 inline mr-2" />
-                    {language === 'ar' ? 'دردشة الطلاب' : 'Student Chat'}
+                    <FiMessageCircle className="w-4 h-4 inline me-2" />
+                    {t('dashboardExtra.studentChat')}
                   </button>
                 </div>
 
@@ -1044,13 +1065,13 @@ const Dashboard = () => {
                         <div className="text-2xl font-bold text-yellow-600">
                           {teacherPaymentSubmissions.filter((s) => s.status === 'pending').length}
                         </div>
-                        <div className="text-sm text-gray-500">{language === 'ar' ? 'معلقة' : 'Pending'}</div>
+                        <div className="text-sm text-gray-500">{t('dashboardExtra.pending')}</div>
                       </div>
                       <div className="card card-body text-center">
                         <div className="text-2xl font-bold text-green-600">
                           {teacherPaymentSubmissions.filter((s) => s.status === 'approved').length}
                         </div>
-                        <div className="text-sm text-gray-500">{language === 'ar' ? 'مقبولة' : 'Approved'}</div>
+                        <div className="text-sm text-gray-500">{t('dashboardExtra.approved')}</div>
                       </div>
                       <div className="card card-body text-center">
                         <div className="text-2xl font-bold text-blue-600">
@@ -1059,30 +1080,30 @@ const Dashboard = () => {
                             .reduce((sum, s) => sum + Number(s.amount || 0), 0)
                             .toFixed(2)}
                         </div>
-                        <div className="text-sm text-gray-500">{language === 'ar' ? 'إجمالي المقبول' : 'Approved total'}</div>
+                        <div className="text-sm text-gray-500">{t('dashboardExtra.approvedTotal')}</div>
                       </div>
                     </div>
 
                     <div className="card card-body">
                       <h3 className="text-lg font-bold mb-4">
-                        {language === 'ar' ? 'طلبات الدفع لكورساتي' : 'Payment requests for my courses'}
+                        {t('dashboardExtra.paymentRequests')}
                       </h3>
                       <div className="overflow-x-auto">
                         <table className="w-full">
                           <thead>
                             <tr className="border-b border-gray-200 dark:border-gray-700">
-                              <th className="text-left py-3 px-4 font-medium">{language === 'ar' ? 'الكورس' : 'Course'}</th>
-                              <th className="text-left py-3 px-4 font-medium">{language === 'ar' ? 'الطالب' : 'Student'}</th>
-                              <th className="text-left py-3 px-4 font-medium">{language === 'ar' ? 'المبلغ' : 'Amount'}</th>
-                              <th className="text-left py-3 px-4 font-medium">{language === 'ar' ? 'الحالة' : 'Status'}</th>
-                              <th className="text-left py-3 px-4 font-medium">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                              <th className="text-start py-3 px-4 font-medium">{t('dashboard.course')}</th>
+                              <th className="text-start py-3 px-4 font-medium">{t('dashboardExtra.student')}</th>
+                              <th className="text-start py-3 px-4 font-medium">{t('dashboardExtra.amount')}</th>
+                              <th className="text-start py-3 px-4 font-medium">{t('dashboardExtra.status')}</th>
+                              <th className="text-start py-3 px-4 font-medium">{t('dashboardExtra.actions')}</th>
                             </tr>
                           </thead>
                           <tbody>
                             {isLoadingTeacherPayments && (
                               <tr>
                                 <td colSpan={5} className="py-6 text-center text-gray-500">
-                                  {language === 'ar' ? 'جارٍ التحميل...' : 'Loading...'}
+                                  {t('common.loading')}
                                 </td>
                               </tr>
                             )}
@@ -1114,8 +1135,8 @@ const Dashboard = () => {
                                         className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200 disabled:opacity-60"
                                       >
                                         {paymentActionLoadingId === submission.id
-                                          ? (language === 'ar' ? 'جارٍ...' : 'Processing...')
-                                          : (language === 'ar' ? 'قبول' : 'Approve')}
+                                          ? t('dashboardExtra.processing')
+                                          : t('dashboardExtra.approve')}
                                       </button>
                                       <button
                                         type="button"
@@ -1123,7 +1144,7 @@ const Dashboard = () => {
                                         disabled={paymentActionLoadingId === submission.id}
                                         className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 disabled:opacity-60"
                                       >
-                                        {language === 'ar' ? 'رفض' : 'Reject'}
+                                        {t('dashboardExtra.reject')}
                                       </button>
                                     </div>
                                   ) : (
@@ -1132,7 +1153,7 @@ const Dashboard = () => {
                                       onClick={() => handleOpenPaymentProof(submission.payment_screenshot_url)}
                                       className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200"
                                     >
-                                      {language === 'ar' ? 'عرض الإيصال' : 'View Proof'}
+                                      {t('dashboardExtra.viewProof')}
                                     </button>
                                   )}
                                 </td>
@@ -1141,7 +1162,7 @@ const Dashboard = () => {
                             {!isLoadingTeacherPayments && teacherPaymentSubmissions.length === 0 && (
                               <tr>
                                 <td colSpan={5} className="py-6 text-center text-gray-500">
-                                  {language === 'ar' ? 'لا توجد طلبات دفع بعد' : 'No payment requests yet'}
+                                  {t('dashboardExtra.noPaymentRequests')}
                                 </td>
                               </tr>
                             )}
@@ -1155,15 +1176,15 @@ const Dashboard = () => {
                 {teacherSubTab === 'chat' && (
                   <div className="card card-body">
                     <h3 className="text-lg font-bold mb-4">
-                      {language === 'ar' ? 'الدردشة مع جميع الطلاب المسجّلين' : 'Chat with all registered students'}
+                      {t('dashboardExtra.chatAllStudents')}
                     </h3>
                     {myCourses.length === 0 ? (
                       <p className="text-secondary-500 text-sm">
-                        {language === 'ar' ? 'أنشئ كورساً أولاً لبدء الدردشة.' : 'Create a course first to start chatting.'}
+                        {t('dashboardExtra.createCourseFirst')}
                       </p>
                     ) : (
                       <>
-                        <label className="label">{language === 'ar' ? 'اختر الكورس' : 'Select course'}</label>
+                        <label className="label">{t('dashboardExtra.selectCourse')}</label>
                         <select
                           className="input mb-4 max-w-md"
                           value={teacherChatCourseId || myCourses[0]?.id || ''}
@@ -1193,15 +1214,15 @@ const Dashboard = () => {
                     <div className="text-3xl font-bold">{myCourses.length}</div>
                     <div className="text-white/80">
                       {isAdmin
-                        ? (language === 'ar' ? 'كل الكورسات' : 'All Courses')
-                        : (language === 'ar' ? 'كورساتي' : 'My Courses')
+                        ? t('dashboardExtra.allCourses')
+                        : t('dashboardExtra.myCourses')
                       }
                     </div>
                   </div>
                   <div className="card card-body bg-gradient-to-br from-green-500 to-teal-600 text-white">
                     <FiUser className="w-10 h-10 mb-3" />
                     <div className="text-3xl font-bold">0</div>
-                    <div className="text-white/80">{language === 'ar' ? 'الطلاب المسجلين' : 'Enrolled Students'}</div>
+                    <div className="text-white/80">{t('dashboardExtra.enrolledStudents')}</div>
                   </div>
                 </div>
 
@@ -1209,8 +1230,8 @@ const Dashboard = () => {
                 <div className="card card-body mb-8">
                   <h3 className="text-lg font-bold mb-4">
                     {isAdmin
-                      ? (language === 'ar' ? 'كل كورسات المنصة' : 'All Platform Courses')
-                      : (language === 'ar' ? 'كورساتي' : 'My Courses')
+                      ? t('dashboardExtra.allPlatformCourses')
+                      : t('dashboardExtra.myCourses')
                     }
                   </h3>
 
@@ -1242,12 +1263,12 @@ const Dashboard = () => {
                           <div className="flex-1">
                             <h4 className="font-bold mb-1">{course.title}</h4>
                             <div className="flex items-center gap-4 text-sm text-secondary-500">
-                              <span>{course.lessonsCount || 0} {language === 'ar' ? 'دروس' : 'lessons'}</span>
+                              <span>{course.lessonsCount || 0} {t('dashboardExtra.lessons')}</span>
                               <span className={`flex items-center gap-1 ${course.is_published ? 'text-green-500' : 'text-orange-500'}`}>
                                 {course.is_published ? <FiEye className="w-4 h-4" /> : <FiEyeOff className="w-4 h-4" />}
                                 {course.is_published
-                                  ? (language === 'ar' ? 'منشور' : 'Published')
-                                  : (language === 'ar' ? 'مسودة' : 'Draft')
+                                  ? t('dashboardExtra.published')
+                                  : t('dashboardExtra.draft')
                                 }
                               </span>
                             </div>
@@ -1256,14 +1277,14 @@ const Dashboard = () => {
                             <Link
                               to={`/courses/${course.id}`}
                               className="btn btn-sm btn-secondary"
-                              title={language === 'ar' ? 'عرض' : 'View'}
+                              title={t('dashboardExtra.view')}
                             >
                               <FiEye className="w-4 h-4" />
                             </Link>
                             <Link
                               to={`/teacher/edit-course/${course.id}`}
                               className="btn btn-sm btn-secondary"
-                              title={language === 'ar' ? 'تعديل' : 'Edit'}
+                              title={t('dashboardExtra.edit')}
                             >
                               <FiEdit className="w-4 h-4" />
                             </Link>
@@ -1273,7 +1294,7 @@ const Dashboard = () => {
                                 onClick={() => handleDeleteCourse(course)}
                                 disabled={courseActionLoadingId === course.id}
                                 className="btn btn-sm bg-red-500 text-white hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed"
-                                title={language === 'ar' ? 'حذف الكورس' : 'Delete course'}
+                                title={t('dashboardExtra.deleteCourse')}
                               >
                                 {courseActionLoadingId === course.id ? (
                                   <FiLoader className="w-4 h-4 animate-spin" />
@@ -1292,11 +1313,11 @@ const Dashboard = () => {
                         <FiBook className="w-8 h-8 text-secondary-400" />
                       </div>
                       <p className="text-secondary-500 mb-4">
-                        {language === 'ar' ? 'لم تقم بإنشاء أي كورسات بعد' : "You haven't created any courses yet"}
+                        {t('dashboard.youHaventCreatedAnyCoursesYet')}
                       </p>
                       <Link to="/teacher/create-course" className="btn btn-primary">
                         <FiPlusCircle className="w-5 h-5" />
-                        {language === 'ar' ? 'إنشاء كورس' : 'Create Course'}
+                        {t('dashboardExtra.createCourse')}
                       </Link>
                     </div>
                   )}
@@ -1305,7 +1326,7 @@ const Dashboard = () => {
                 {/* Quick Actions */}
                 <div className="card card-body">
                   <h3 className="text-lg font-bold mb-4">
-                    {language === 'ar' ? 'إجراءات سريعة' : 'Quick Actions'}
+                    {t('dashboardExtra.quickActions')}
                   </h3>
                   <div className="grid md:grid-cols-3 gap-4">
                     <Link
@@ -1313,21 +1334,21 @@ const Dashboard = () => {
                       className="p-4 border-2 border-dashed border-primary-300 rounded-xl text-center hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
                     >
                       <FiPlusCircle className="w-8 h-8 mx-auto mb-2 text-primary-500" />
-                      <div className="font-medium">{language === 'ar' ? 'إنشاء كورس' : 'Create Course'}</div>
+                      <div className="font-medium">{t('dashboardExtra.createCourse')}</div>
                     </Link>
                     <Link
                       to="/teacher/live-session?instant=1"
                       className="p-4 border-2 border-dashed border-green-300 rounded-xl text-center hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
                     >
                       <FiVideo className="w-8 h-8 mx-auto mb-2 text-green-500" />
-                      <div className="font-medium">{language === 'ar' ? 'جلسة مباشرة' : 'Live Session'}</div>
+                      <div className="font-medium">{t('dashboardExtra.liveSession')}</div>
                     </Link>
                     <Link
                       to="/courses"
                       className="p-4 border-2 border-dashed border-orange-300 rounded-xl text-center hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
                     >
                       <FiBook className="w-8 h-8 mx-auto mb-2 text-orange-500" />
-                      <div className="font-medium">{language === 'ar' ? 'السوق' : 'Marketplace'}</div>
+                      <div className="font-medium">{t('dashboardExtra.marketplace')}</div>
                     </Link>
                   </div>
                 </div>
@@ -1341,7 +1362,7 @@ const Dashboard = () => {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold">
-                    {language === 'ar' ? 'لوحة الإدارة' : 'Admin Panel'}
+                    {t('dashboardExtra.adminPanel')}
                   </h2>
                 </div>
 
@@ -1355,8 +1376,8 @@ const Dashboard = () => {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    <FiUsers className="w-4 h-4 inline mr-2" />
-                    {language === 'ar' ? 'إدارة المستخدمين' : 'User Management'}
+                    <FiUsers className="w-4 h-4 inline me-2" />
+                    {t('dashboardExtra.userManagement')}
                   </button>
                   <button
                     onClick={() => setAdminSubTab('payments')}
@@ -1366,8 +1387,8 @@ const Dashboard = () => {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    <FiDollarSign className="w-4 h-4 inline mr-2" />
-                    {language === 'ar' ? 'إدارة المدفوعات' : 'Payment Management'}
+                    <FiDollarSign className="w-4 h-4 inline me-2" />
+                    {t('dashboardExtra.paymentManagement')}
                   </button>
                   <button
                     onClick={() => setAdminSubTab('crm')}
@@ -1377,7 +1398,7 @@ const Dashboard = () => {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    <FiMessageCircle className="w-4 h-4 inline mr-2" />
+                    <FiMessageCircle className="w-4 h-4 inline me-2" />
                     CRM
                   </button>
                 </div>
@@ -1401,19 +1422,19 @@ const Dashboard = () => {
                             .reduce((sum, s) => sum + Number(s.amount || 0), 0)
                             .toFixed(2)}
                         </div>
-                        <div className="text-white/80">{language === 'ar' ? 'إجمالي المدفوعات' : 'Total Payments'}</div>
+                        <div className="text-white/80">{t('dashboardExtra.totalPayments')}</div>
                       </div>
                       <div className="card card-body bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                         <FiClock className="w-10 h-10 mb-3" />
                         <div className="text-3xl font-bold">
                           {paymentSubmissions.filter((s) => s.status === 'pending').length}
                         </div>
-                        <div className="text-white/80">{language === 'ar' ? 'المدفوعات المعلقة' : 'Pending Payments'}</div>
+                        <div className="text-white/80">{t('dashboardExtra.pendingPayments')}</div>
                       </div>
                       <div className="card card-body bg-gradient-to-br from-purple-500 to-pink-600 text-white">
                         <FiCreditCard className="w-10 h-10 mb-3" />
                         <div className="text-3xl font-bold">{paymentMethods.length}</div>
-                        <div className="text-white/80">{language === 'ar' ? 'طرق الدفع النشطة' : 'Active Payment Methods'}</div>
+                        <div className="text-white/80">{t('dashboardExtra.activePaymentMethods')}</div>
                       </div>
                     </div>
 
@@ -1434,12 +1455,12 @@ const Dashboard = () => {
                     {/* Create Payment Method */}
                     <div className="card card-body mb-8">
                       <h3 className="text-lg font-bold mb-4">
-                        {language === 'ar' ? 'إضافة وسيلة دفع' : 'Add Payment Method'}
+                        {t('dashboardExtra.addPaymentMethod')}
                       </h3>
 
                       <form onSubmit={handlePaymentMethodCreate} className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="label">{language === 'ar' ? 'نوع الدفع' : 'Payment Type'}</label>
+                          <label className="label">{t('dashboardExtra.paymentType')}</label>
                           <select
                             value={paymentForm.payment_type}
                             onChange={(e) => {
@@ -1459,7 +1480,7 @@ const Dashboard = () => {
                         </div>
 
                         <div>
-                          <label className="label">{language === 'ar' ? 'الاسم المعروض' : 'Display Name'}</label>
+                          <label className="label">{t('dashboardExtra.displayName')}</label>
                           <input
                             className="input"
                             value={paymentForm.display_name}
@@ -1471,32 +1492,30 @@ const Dashboard = () => {
 
                         <div className="md:col-span-2">
                           <label className="label">
-                            {language === 'ar' ? 'تفاصيل الدفع' : 'Payment Details'}
+                            {t('dashboardExtra.paymentDetails')}
                           </label>
                           <textarea
                             className="input min-h-[100px]"
                             value={paymentForm.payment_details}
                             onChange={(e) => setPaymentForm((prev) => ({ ...prev, payment_details: e.target.value }))}
-                            placeholder={language === 'ar'
-                              ? 'مثال: +2010xxxxxxx أو pay@paypal.com أو 0x.... ويمكنك أيضا إدخال JSON'
-                              : 'Example: +2010xxxxxxx or pay@paypal.com or 0x.... You can also enter JSON'}
+                            placeholder={t('dashboard.example2010xxxxxxxOrPaypaypalc')}
                             required
                           />
                         </div>
 
                         <div className="md:col-span-2">
-                          <label className="label">{language === 'ar' ? 'تعليمات التحويل' : 'Payment Instructions'}</label>
+                          <label className="label">{t('dashboardExtra.paymentInstructions')}</label>
                           <textarea
                             className="input min-h-[100px]"
                             value={paymentForm.instructions}
                             onChange={(e) => setPaymentForm((prev) => ({ ...prev, instructions: e.target.value }))}
-                            placeholder={language === 'ar' ? 'مثال: اكتب اسمك في ملاحظات التحويل' : 'Example: add your name in transfer note'}
+                            placeholder={t('dashboardExtra.instructionsPlaceholder')}
                           />
                         </div>
 
                         <div className="md:col-span-2">
                           <button type="submit" className="btn btn-primary">
-                            {language === 'ar' ? 'حفظ وسيلة الدفع' : 'Save Payment Method'}
+                            {t('dashboardExtra.savePaymentMethod')}
                           </button>
                         </div>
                       </form>
@@ -1505,7 +1524,7 @@ const Dashboard = () => {
                     {/* Active Payment Methods */}
                     <div className="card card-body mb-8">
                       <h3 className="text-lg font-bold mb-4">
-                        {language === 'ar' ? 'وسائل الدفع المتاحة' : 'Active Payment Methods'}
+                        {t('dashboard.activePaymentMethods')}
                       </h3>
                       <div className="space-y-3">
                         {paymentMethods.map((method) => (
@@ -1519,7 +1538,7 @@ const Dashboard = () => {
                         ))}
                         {paymentMethods.length === 0 && (
                           <p className="text-sm text-gray-500">
-                            {language === 'ar' ? 'لا توجد وسائل دفع بعد' : 'No payment methods yet'}
+                            {t('dashboardExtra.noPaymentMethods')}
                           </p>
                         )}
                       </div>
@@ -1528,27 +1547,27 @@ const Dashboard = () => {
                     {/* Recent Payment Submissions */}
                     <div className="card card-body">
                       <h3 className="text-lg font-bold mb-4">
-                        {language === 'ar' ? 'طلبات الدفع الأخيرة' : 'Recent Payment Submissions'}
+                        {t('dashboardExtra.recentSubmissions')}
                       </h3>
                       
                       <div className="overflow-x-auto">
                         <table className="w-full">
                           <thead>
                             <tr className="border-b border-gray-200 dark:border-gray-700">
-                              <th className="text-left py-3 px-4 font-medium">
-                                {language === 'ar' ? 'الطالب' : 'Student'}
+                              <th className="text-start py-3 px-4 font-medium">
+                                {t('dashboardExtra.student')}
                               </th>
-                              <th className="text-left py-3 px-4 font-medium">
-                                {language === 'ar' ? 'المبلغ' : 'Amount'}
+                              <th className="text-start py-3 px-4 font-medium">
+                                {t('dashboardExtra.amount')}
                               </th>
-                              <th className="text-left py-3 px-4 font-medium">
-                                {language === 'ar' ? 'طريقة الدفع' : 'Payment Method'}
+                              <th className="text-start py-3 px-4 font-medium">
+                                {t('dashboardExtra.paymentMethod')}
                               </th>
-                              <th className="text-left py-3 px-4 font-medium">
-                                {language === 'ar' ? 'الحالة' : 'Status'}
+                              <th className="text-start py-3 px-4 font-medium">
+                                {t('dashboardExtra.status')}
                               </th>
-                              <th className="text-left py-3 px-4 font-medium">
-                                {language === 'ar' ? 'الإجراءات' : 'Actions'}
+                              <th className="text-start py-3 px-4 font-medium">
+                                {t('dashboardExtra.actions')}
                               </th>
                             </tr>
                           </thead>
@@ -1556,7 +1575,7 @@ const Dashboard = () => {
                             {isLoadingPayments && (
                               <tr>
                                 <td colSpan={5} className="py-6 text-center text-gray-500">
-                                  {language === 'ar' ? 'جارٍ التحميل...' : 'Loading...'}
+                                  {t('common.loading')}
                                 </td>
                               </tr>
                             )}
@@ -1591,8 +1610,8 @@ const Dashboard = () => {
                                         className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200 disabled:opacity-60"
                                       >
                                         {paymentActionLoadingId === submission.id
-                                          ? (language === 'ar' ? 'جارٍ التنفيذ...' : 'Processing...')
-                                          : (language === 'ar' ? 'قبول' : 'Approve')}
+                                          ? t('dashboardExtra.executing')
+                                          : t('dashboardExtra.approve')}
                                       </button>
                                       <button
                                         type="button"
@@ -1601,8 +1620,8 @@ const Dashboard = () => {
                                         className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 disabled:opacity-60"
                                       >
                                         {paymentActionLoadingId === submission.id
-                                          ? (language === 'ar' ? 'جارٍ التنفيذ...' : 'Processing...')
-                                          : (language === 'ar' ? 'رفض' : 'Reject')}
+                                          ? t('dashboardExtra.executing')
+                                          : t('dashboardExtra.reject')}
                                       </button>
                                     </div>
                                   ) : (
@@ -1611,7 +1630,7 @@ const Dashboard = () => {
                                       onClick={() => handleOpenPaymentProof(submission.payment_screenshot_url)}
                                       className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200 inline-block"
                                     >
-                                      {language === 'ar' ? 'عرض الإيصال' : 'View Proof'}
+                                      {t('dashboardExtra.viewProof')}
                                     </button>
                                   )}
                                 </td>
@@ -1621,7 +1640,7 @@ const Dashboard = () => {
                             {!isLoadingPayments && paymentSubmissions.length === 0 && (
                               <tr>
                                 <td colSpan={5} className="py-6 text-center text-gray-500">
-                                  {language === 'ar' ? 'لا توجد طلبات دفع بعد' : 'No payment submissions yet'}
+                                  {t('dashboardExtra.noSubmissions')}
                                 </td>
                               </tr>
                             )}
@@ -1643,7 +1662,7 @@ const Dashboard = () => {
                   <div className="space-y-4">
                     {enrolledCourses.map((course) => {
                       const progress = user?.progress?.[course.id] || 0
-                      const title = language === 'ar' ? course.title : course.titleEn
+                      const title = isArabic ? course.title : course.titleEn
                       
                       return (
                         <div key={course.id} className="card card-body">
@@ -1690,7 +1709,7 @@ const Dashboard = () => {
                 ) : (
                   <div className="card card-body text-center py-12">
                     <p className="text-secondary-500">
-                      {language === 'ar' ? 'لا توجد بيانات تقدم' : 'No progress data available'}
+                      {t('dashboardExtra.noProgressData')}
                     </p>
                   </div>
                 )}
@@ -1705,21 +1724,21 @@ const Dashboard = () => {
                 {completedCourses.length > 0 ? (
                   <div className="grid md:grid-cols-2 gap-6">
                     {completedCourses.map((course) => {
-                      const title = language === 'ar' ? course.title : course.titleEn
+                      const title = isArabic ? course.title : course.titleEn
                       
                       return (
                         <div key={course.id} className="card overflow-hidden">
                           <div className="bg-gradient-to-br from-yellow-500 to-orange-600 p-6 text-white text-center">
                             <FiAward className="w-16 h-16 mx-auto mb-4" />
-                            <h3 className="text-xl font-bold">{language === 'ar' ? 'شهادة إتمام' : 'Certificate of Completion'}</h3>
+                            <h3 className="text-xl font-bold">{t('dashboardExtra.certificateOfCompletion')}</h3>
                           </div>
                           <div className="p-6">
                             <h4 className="font-bold mb-2">{title}</h4>
                             <p className="text-sm text-secondary-500 mb-4">
-                              {language === 'ar' ? 'تم الإتمام بنجاح' : 'Successfully Completed'}
+                              {t('dashboardExtra.successfullyCompleted')}
                             </p>
                             <button className="btn btn-primary w-full">
-                              {language === 'ar' ? 'تحميل الشهادة' : 'Download Certificate'}
+                              {t('dashboardExtra.downloadCertificate')}
                             </button>
                           </div>
                         </div>
@@ -1732,17 +1751,18 @@ const Dashboard = () => {
                       <FiAward className="w-10 h-10 text-secondary-400" />
                     </div>
                     <h3 className="text-xl font-bold mb-2">
-                      {language === 'ar' ? 'لا توجد شهادات' : 'No Certificates Yet'}
+                      {t('dashboardExtra.noCertificates')}
                     </h3>
                     <p className="text-secondary-500">
-                      {language === 'ar' 
-                        ? 'أكمل دوراتك للحصول على شهادات معتمدة'
-                        : 'Complete your courses to earn certificates'
-                      }
+                      {t('dashboardExtra.completeForCertificates')}
                     </p>
                   </div>
                 )}
               </div>
+            )}
+
+            {activeTab === 'homework' && !isAdmin && (
+              <HomeworkPanel />
             )}
 
             {/* Settings Tab */}
@@ -1779,12 +1799,10 @@ const Dashboard = () => {
                           disabled={isUploadingAvatar}
                         >
                           {isUploadingAvatar && <FiLoader className="w-4 h-4 animate-spin" />}
-                          {language === 'ar' ? 'رفع صورة شخصية' : 'Upload Profile Photo'}
+                          {t('dashboardExtra.uploadPhoto')}
                         </button>
                         <p className="text-sm text-secondary-500 mt-2">
-                          {language === 'ar'
-                            ? 'ستظهر الصورة للزوار في صفحة الكورس.'
-                            : 'This photo appears to visitors on course pages.'}
+                          {t('dashboardExtra.photoHint')}
                         </p>
                       </div>
                     </div>
@@ -1817,19 +1835,20 @@ const Dashboard = () => {
                         value={user?.email || ''}
                         disabled
                       />
+                      <p className="text-sm text-secondary-500 mt-2">
+                        {t('profileSettings.emailReadOnly')}
+                      </p>
                     </div>
                     {isTeacher && (
                       <div>
                         <label className="label">
-                          {language === 'ar' ? 'وصف المعلم' : 'Instructor Bio'}
+                          {t('dashboardExtra.instructorBio')}
                         </label>
                         <textarea
                           className="input min-h-[140px]"
                           value={profileForm.bio}
                           onChange={(event) => setProfileForm((prev) => ({ ...prev, bio: event.target.value }))}
-                          placeholder={language === 'ar'
-                            ? 'اكتب نبذة قصيرة عن خبرتك وما سيستفيده الطلاب من دوراتك'
-                            : 'Write a short bio about your experience and what students can expect from your courses'}
+                          placeholder={t('dashboardExtra.bioPlaceholder')}
                           maxLength={1000}
                         />
                         <p className="text-xs text-secondary-500 mt-2">
@@ -1840,6 +1859,67 @@ const Dashboard = () => {
                     <button type="submit" className="btn btn-primary" disabled={isSavingProfile}>
                       {isSavingProfile && <FiLoader className="w-4 h-4 animate-spin" />}
                       {t('common.save')}
+                    </button>
+                  </form>
+                </div>
+
+                <div className="card card-body mt-6">
+                  <form className="space-y-6" onSubmit={handlePasswordSave}>
+                    <div>
+                      <h3 className="text-xl font-bold mb-2">{t('profileSettings.securityTitle')}</h3>
+                      <p className="text-secondary-600 dark:text-secondary-400">
+                        {t('profileSettings.securitySubtitle')}
+                      </p>
+                    </div>
+
+                    {passwordStatus.message && (
+                      <div className={`rounded-lg px-4 py-3 text-sm ${
+                        passwordStatus.type === 'success'
+                          ? 'border border-green-300 bg-green-50 text-green-700'
+                          : 'border border-red-300 bg-red-50 text-red-700'
+                      }`}>
+                        {passwordStatus.message}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="label" htmlFor="profile-password">
+                          {t('profileSettings.newPassword')}
+                        </label>
+                        <input
+                          id="profile-password"
+                          type="password"
+                          className="input"
+                          value={passwordForm.password}
+                          onChange={(event) => setPasswordForm((prev) => ({ ...prev, password: event.target.value }))}
+                          placeholder={t('authUnified.passwordPlaceholder')}
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      <div>
+                        <label className="label" htmlFor="profile-confirm-password">
+                          {t('profileSettings.confirmNewPassword')}
+                        </label>
+                        <input
+                          id="profile-confirm-password"
+                          type="password"
+                          className="input"
+                          value={passwordForm.confirmPassword}
+                          onChange={(event) => setPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+                          placeholder={t('authUnified.passwordPlaceholder')}
+                          autoComplete="new-password"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={isSavingPassword || !passwordForm.password || !passwordForm.confirmPassword}
+                    >
+                      {isSavingPassword && <FiLoader className="w-4 h-4 animate-spin" />}
+                      {t('profileSettings.updatePassword')}
                     </button>
                   </form>
                 </div>

@@ -2,13 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* RTL Support */
-[dir="rtl"] {
+/* RTL / LTR — driven by document.documentElement.dir from LanguageContext */
+[dir='rtl'] {
   text-align: right;
 }
 
-[dir="ltr"] {
+[dir='ltr'] {
   text-align: left;
+}
+
+[dir='ltr'] .gradient-text {
+  @apply bg-gradient-to-r from-primary-500 to-primary-700;
+}
+
+[dir='rtl'] .gradient-text {
+  @apply bg-gradient-to-l from-primary-500 to-primary-700;
+}
+
+/* Preserve LTR for numbers, emails, URLs inside RTL pages */
+[dir='rtl'] .ltr-isolate {
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 /* Base Styles */
@@ -19,10 +33,11 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
 
   body {
-    @apply font-tajawal text-secondary-800 bg-white dark:bg-dark-bg dark:text-dark-text transition-colors duration-300;
+    @apply font-tajawal text-secondary-800 bg-white dark:bg-dark-bg dark:text-dark-text transition-colors duration-300 overflow-x-hidden min-w-0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -54,7 +69,7 @@
 @layer components {
   /* Buttons */
   .btn {
-    @apply px-6 py-3 rounded-lg font-medium transition-all duration-300 cursor-pointer inline-flex items-center justify-center gap-2;
+    @apply px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg font-medium transition-all duration-300 cursor-pointer inline-flex items-center justify-center gap-2 text-sm sm:text-base;
   }
 
   .btn-primary {
@@ -79,7 +94,7 @@
   }
 
   .card-body {
-    @apply p-6;
+    @apply p-4 sm:p-6;
   }
 
   /* Form Elements */
@@ -137,7 +152,7 @@
 
   /* Gradient Text */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent;
+    @apply bg-clip-text text-transparent;
   }
 
   /* Glass Effect */

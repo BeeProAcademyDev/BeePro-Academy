@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useCurrency } from '../contexts/CurrencyContext'
 import { useAuth } from '../contexts/AuthContext'
-import { supabase } from '../lib/supabase'
-import { enrollmentService, meetingService } from '../services/api'
+import { courseService, enrollmentService, lessonService, meetingService } from '../services/api'
 import { paymentService } from '../services/paymentAPI'
 import { getMeetingJoinTarget, pickJoinableMeeting } from '../lib/jitsi'
 import { isStudentUser } from '../lib/roles'
@@ -75,7 +74,7 @@ const CourseDetailsDB = () => {
           className={className}
         >
           <FiVideo className="w-5 h-5" />
-          {language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join Live Session'}
+          {t('courseDetailsDB.joinLiveSession_22')}
         </a>
       )
     }
@@ -87,7 +86,7 @@ const CourseDetailsDB = () => {
           className={className}
         >
           <FiVideo className="w-5 h-5" />
-          {language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join Live Session'}
+          {t('courseDetailsDB.joinLiveSession_21')}
         </Link>
       )
     }
@@ -98,7 +97,7 @@ const CourseDetailsDB = () => {
         className={className}
       >
         <FiVideo className="w-5 h-5" />
-        {language === 'ar' ? 'الانضمام للجلسة المباشرة' : 'Join Live Session'}
+        {t('courseDetailsDB.joinLiveSession_20')}
       </Link>
     )
   }
@@ -139,43 +138,17 @@ const CourseDetailsDB = () => {
       setLoading(true)
       setError(null)
 
-      // Fetch course with instructor details
-      const { data: courseData, error: courseError } = await supabase
-        .from('courses')
-        .select(`
-          *,
-          users:instructor_id (
-            full_name,
-            email,
-            avatar_url,
-            bio
-          )
-        `)
-        .eq('id', id)
-        .eq('is_published', true)
-        .single()
+      const courseData = await courseService.getPublishedCourseDetails(id)
 
-      if (courseError) {
-        console.error('Course fetch error:', courseError)
+      if (!courseData) {
         setError('Course not found')
         return
       }
 
       setCourse(courseData)
 
-      // Fetch course lessons
-      const { data: lessonsData, error: lessonsError } = await supabase
-        .from('lessons')
-        .select('*')
-        .eq('course_id', id)
-        .eq('is_published', true)
-        .order('order_index', { ascending: true })
-
-      if (lessonsError) {
-        console.error('Lessons fetch error:', lessonsError)
-      } else {
-        setLessons(lessonsData || [])
-      }
+      const lessonsData = await lessonService.getPublishedLessonsByCourse(id)
+      setLessons(lessonsData || [])
 
     } catch (err) {
       console.error('Fetch error:', err)
@@ -189,18 +162,7 @@ const CourseDetailsDB = () => {
     if (!user || !course) return
 
     try {
-      const { data, error } = await supabase
-        .from('enrollments')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('course_id', course.id)
-        .maybeSingle()
-
-      if (error && error.code !== 'PGRST116') {
-        throw error
-      }
-
-      const enrolled = !!data
+      const enrolled = await enrollmentService.isEnrolled(course.id)
       setIsEnrolled(enrolled)
 
       const paidCourse = Number(course.price || 0) > 0
@@ -229,7 +191,7 @@ const CourseDetailsDB = () => {
     if (!user || !course) return
 
     if (!isStudent && isPaidCourse) {
-      setError(language === 'ar' ? 'الدفع متاح للطلاب فقط' : 'Payment is allowed for students only')
+      setError(t('courseDetailsDB.paymentIsAllowedForStudentsOnl'))
       return
     }
 
@@ -243,7 +205,7 @@ const CourseDetailsDB = () => {
       } catch (err) {
         setError(
           err.message
-          || (language === 'ar' ? 'تعذر التسجيل في الدورة' : 'Failed to enroll in course')
+          || (t('courseDetailsDB.failedToEnrollInCourse'))
         )
       } finally {
         setEnrolling(false)
@@ -275,10 +237,10 @@ const CourseDetailsDB = () => {
       <div className="min-h-screen pt-24 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">
-            {language === 'ar' ? 'الدورة غير موجودة' : 'Course Not Found'}
+            {t('courseDetailsDB.courseNotFound')}
           </h2>
           <Button to="/courses" variant="primary">
-            {language === 'ar' ? 'تصفح الدورات' : 'Browse Courses'}
+            {t('dashboardExtra.browseCourses')}
           </Button>
         </div>
       </div>
@@ -287,14 +249,14 @@ const CourseDetailsDB = () => {
 
   const instructor = course.users || {}
   const courseFeatures = [
-    { icon: FiClock, label: language === 'ar' ? `محتوى شامل` : `Comprehensive content` },
-    { icon: FiBookOpen, label: language === 'ar' ? `${lessons.length} درس` : `${lessons.length} lessons` },
-    { icon: FiGlobe, label: language === 'ar' ? 'الوصول مدى الحياة' : 'Lifetime access' },
-    { icon: FiAward, label: language === 'ar' ? 'شهادة إتمام' : 'Certificate of completion' },
+    { icon: FiClock, label: t('courseDetailsDB.comprehensiveContent') },
+    { icon: FiBookOpen, label: t('courseDetailsDB.lessonslengthLessons') },
+    { icon: FiGlobe, label: t('courseDetailsDB.lifetimeAccess') },
+    { icon: FiAward, label: t('courseDetailsDB.certificateOfCompletion') },
   ]
 
   const tabs = [
-    { id: 'overview', label: language === 'ar' ? 'نظرة عامة' : 'Overview' },
+    { id: 'overview', label: t('courseDetailsDB.overview') },
     { id: 'curriculum', label: t('course.curriculum') },
     { id: 'instructor', label: t('course.instructor') },
   ]
@@ -308,12 +270,12 @@ const CourseDetailsDB = () => {
             {/* Course Info */}
             <div className="lg:col-span-2">
               {/* Breadcrumb */}
-              <div className="flex items-center gap-2 text-sm text-secondary-400 mb-4">
-                <Link to="/" className="hover:text-white">{t('nav.home')}</Link>
-                <span>/</span>
-                <Link to="/courses" className="hover:text-white">{t('nav.courses')}</Link>
-                <span>/</span>
-                <span className="text-white">{course.title}</span>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-secondary-400 mb-4">
+                <Link to="/" className="hover:text-white shrink-0">{t('nav.home')}</Link>
+                <span className="shrink-0">/</span>
+                <Link to="/courses" className="hover:text-white shrink-0">{t('nav.courses')}</Link>
+                <span className="shrink-0">/</span>
+                <span className="text-white break-words min-w-0">{course.title}</span>
               </div>
 
               {/* Tags */}
@@ -329,8 +291,8 @@ const CourseDetailsDB = () => {
                 </span>
               </div>
 
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">{course.title}</h1>
-              <p className="text-lg text-secondary-300 mb-6">{course.description}</p>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 break-words">{course.title}</h1>
+              <p className="text-base sm:text-lg text-secondary-300 mb-6 break-words">{course.description}</p>
 
               {/* Instructor */}
               <div className="flex items-center gap-3">
@@ -357,7 +319,7 @@ const CourseDetailsDB = () => {
 
             {/* Course Card (Desktop) */}
             <div className="hidden lg:block">
-              <div className="bg-white dark:bg-dark-card rounded-xl shadow-xl overflow-hidden sticky top-24">
+              <div className="bg-white dark:bg-dark-card rounded-xl shadow-xl overflow-hidden sticky top-24 lg:top-28">
                 {/* Thumbnail */}
                 <div className="relative aspect-video bg-gradient-to-br from-primary-500 to-secondary-500">
                   {course.thumbnail_url ? (
@@ -382,13 +344,13 @@ const CourseDetailsDB = () => {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="group flex flex-col items-center gap-2"
-                              title={language === 'ar' ? 'انضم للجلسة المباشرة' : 'Join live session'}
+                              title={t('courseDetailsDB.joinLiveSession_19')}
                             >
                               <span className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
                                 <FiVideo className="w-7 h-7" />
                               </span>
                               <span className="text-sm font-semibold text-white drop-shadow">
-                                {language === 'ar' ? 'انضم للجلسة' : 'Join Session'}
+                                {t('courseDetailsDB.joinSession_18')}
                               </span>
                             </a>
                           )
@@ -402,13 +364,13 @@ const CourseDetailsDB = () => {
                                 : `/courses/${course.id}/learn?session=live`
                             }
                             className="group flex flex-col items-center gap-2"
-                            title={language === 'ar' ? 'انضم للجلسة المباشرة' : 'Join live session'}
+                            title={t('courseDetailsDB.joinLiveSession')}
                           >
                             <span className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
                               <FiVideo className="w-7 h-7" />
                             </span>
                             <span className="text-sm font-semibold text-white drop-shadow">
-                              {language === 'ar' ? 'انضم للجلسة' : 'Join Session'}
+                              {t('courseDetailsDB.joinSession')}
                             </span>
                           </Link>
                         )
@@ -424,14 +386,14 @@ const CourseDetailsDB = () => {
                 {/* Price & CTA */}
                 <div className="p-6 text-secondary-900 dark:text-white">
                   <div className="text-3xl font-bold text-green-500 mb-4">
-                    {isPaidCourse ? coursePriceDisplay : (language === 'ar' ? 'مجاني' : 'Free')}
+                    {isPaidCourse ? coursePriceDisplay : (t('courseDetailsDB.free_17'))}
                   </div>
 
                   {hasCourseAccess ? (
                     <div className="space-y-3">
                       {renderJoinSessionLink()}
                       <Button to={`/courses/${course.id}/learn`} fullWidth icon={ArrowIcon} iconPosition="end" variant="outline">
-                        {language === 'ar' ? 'متابعة التعلم' : 'Continue Learning'}
+                        {t('courseDetailsDB.continueLearning')}
                       </Button>
                     </div>
                   ) : (
@@ -442,12 +404,12 @@ const CourseDetailsDB = () => {
                       disabled={enrolling || (isPaidCourse && !isStudent)}
                     >
                       {enrolling
-                        ? (language === 'ar' ? 'جاري التسجيل...' : 'Enrolling...')
+                        ? (t('courseDetailsDB.enrolling_16'))
                         : (isPaidCourse && !isStudent)
-                          ? (language === 'ar' ? 'الدفع للطلاب فقط' : 'Students Only')
+                          ? (t('courseDetailsDB.studentsOnly_15'))
                           : isPaidCourse
-                            ? (language === 'ar' ? 'ادفع للحصول على الدورة' : 'Pay to Get Course')
-                            : (language === 'ar' ? 'سجّل مجاناً' : 'Enroll for Free')
+                            ? (t('courseDetailsDB.payToGetCourse'))
+                            : (t('courseDetailsDB.enrollForFree'))
                       }
                     </Button>
                   )}
@@ -458,7 +420,7 @@ const CourseDetailsDB = () => {
                       className="btn btn-secondary w-full mt-3 inline-flex items-center justify-center gap-2"
                     >
                       <FiMessageCircle className="w-4 h-4" />
-                      {language === 'ar' ? 'الدردشة مع المدرس' : 'Chat with instructor'}
+                      {t('dashboardExtra.chatWithInstructor')}
                     </Link>
                   )}
 
@@ -483,14 +445,14 @@ const CourseDetailsDB = () => {
         <div className="flex items-center justify-between">
           <div>
             <span className="text-2xl font-bold text-green-500">
-              {isPaidCourse ? coursePriceDisplay : (language === 'ar' ? 'مجاني' : 'Free')}
+              {isPaidCourse ? coursePriceDisplay : (t('courseDetailsDB.free_14'))}
             </span>
           </div>
           {hasCourseAccess ? (
             <div className="flex items-center gap-2">
               {renderJoinSessionLink('btn btn-primary btn-sm inline-flex items-center gap-2')}
               <Button to={`/courses/${course.id}/learn`} icon={ArrowIcon} iconPosition="end" variant="outline" size="sm">
-                {language === 'ar' ? 'متابعة' : 'Continue'}
+                {t('courseDetailsDB.continue')}
               </Button>
             </div>
           ) : (
@@ -499,12 +461,12 @@ const CourseDetailsDB = () => {
               disabled={enrolling || (isPaidCourse && !isStudent)}
             >
               {enrolling
-                ? (language === 'ar' ? 'تسجيل...' : 'Enrolling...')
+                ? (t('courseDetailsDB.enrolling'))
                 : (isPaidCourse && !isStudent)
-                  ? (language === 'ar' ? 'للطلاب فقط' : 'Students Only')
+                  ? (t('courseDetailsDB.studentsOnly'))
                   : isPaidCourse
-                    ? (language === 'ar' ? 'ادفع' : 'Pay')
-                    : (language === 'ar' ? 'مجاني' : 'Free')
+                    ? (t('courseDetailsDB.pay'))
+                    : (t('courseDetailsDB.free'))
               }
             </Button>
           )}
@@ -537,7 +499,7 @@ const CourseDetailsDB = () => {
               <div className="space-y-8">
                 <div>
                   <h2 className="text-2xl font-bold mb-4">
-                    {language === 'ar' ? 'وصف الدورة' : 'Course Description'}
+                    {t('courseDetailsDB.courseDescription')}
                   </h2>
                   <p className="text-secondary-600 dark:text-secondary-400 leading-relaxed">
                     {course.description}
@@ -551,7 +513,7 @@ const CourseDetailsDB = () => {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-2xl font-bold">{t('course.curriculum')}</h2>
                   <span className="text-sm text-secondary-500">
-                    {lessons.length} {language === 'ar' ? 'درس' : 'lessons'}
+                    {lessons.length} {t('courseDetailsDB.lessons_13')}
                   </span>
                 </div>
 
@@ -569,11 +531,11 @@ const CourseDetailsDB = () => {
                           <FiChevronDown className="w-5 h-5" />
                         )}
                         <span className="font-medium">
-                          {language === 'ar' ? 'محتوى الدورة' : 'Course Content'}
+                          {t('courseDetailsDB.courseContent')}
                         </span>
                       </div>
                       <span className="text-sm text-secondary-500">
-                        {lessons.length} {language === 'ar' ? 'درس' : 'lessons'}
+                        {lessons.length} {t('courseDetailsDB.lessons')}
                       </span>
                     </button>
 
@@ -598,7 +560,7 @@ const CourseDetailsDB = () => {
                         ))}
                         {lessons.length === 0 && (
                           <div className="p-4 text-center text-secondary-500">
-                            {language === 'ar' ? 'لا توجد دروس حتى الآن' : 'No lessons yet'}
+                            {t('courseDetailsDB.noLessonsYet')}
                           </div>
                         )}
                       </div>

@@ -32,9 +32,10 @@ const CourseCard = ({ course, variant = 'default' }) => {
   const isEnrolled = isAuthenticated && user?.enrolledCourses?.includes(course.id)
   const progress = user?.progress?.[course.id] || 0
 
-  const title = language === 'ar' ? course.title : (course.titleEn || course.title)
-  const description = language === 'ar' ? course.description : (course.descriptionEn || course.description)
-  const instructorName = language === 'ar' ? instructor.name : (instructor.nameEn || instructor.name)
+  const isArabic = language === 'ar'
+  const title = isArabic ? course.title : (course.titleEn || course.title)
+  const description = isArabic ? course.description : (course.descriptionEn || course.description)
+  const instructorName = isArabic ? instructor.name : (instructor.nameEn || instructor.name)
 
   const getLevelBadge = (level) => {
     const levels = {
@@ -54,9 +55,9 @@ const CourseCard = ({ course, variant = 'default' }) => {
 
   if (variant === 'horizontal') {
     return (
-      <Link to={`/courses/${course.id}`} className="card flex flex-col md:flex-row group">
+      <Link to={`/courses/${course.id}`} className="card flex flex-col md:flex-row group min-w-0">
         {/* Thumbnail */}
-        <div className="relative w-full md:w-64 h-48 md:h-auto shrink-0 overflow-hidden">
+        <div className="relative w-full md:w-48 lg:w-64 h-48 md:h-auto md:min-h-[12rem] shrink-0 overflow-hidden">
           <img
             src={thumbnailSrc}
             alt={title}
@@ -72,13 +73,13 @@ const CourseCard = ({ course, variant = 'default' }) => {
           )}
           {course.isBestseller && (
             <span className="absolute top-3 end-3 badge bg-yellow-500 text-white">
-              Bestseller
+              {t('courseExtra.bestseller')}
             </span>
           )}
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6 flex flex-col">
+        <div className="flex-1 p-4 sm:p-6 flex flex-col min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <span className={`badge ${levelBadge.color}`}>{levelBadge.label}</span>
           </div>
@@ -91,7 +92,7 @@ const CourseCard = ({ course, variant = 'default' }) => {
             {description}
           </p>
 
-          <div className="flex items-center gap-4 text-sm text-secondary-500 mb-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-secondary-500 mb-4">
             <span className="flex items-center gap-1">
               <FiBookOpen className="w-4 h-4" />
               {course.lessons} {t('course.lessons')}
@@ -106,7 +107,7 @@ const CourseCard = ({ course, variant = 'default' }) => {
             </span>
           </div>
 
-          <div className="mt-auto flex items-center justify-between">
+          <div className="mt-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <img
@@ -184,7 +185,7 @@ const CourseCard = ({ course, variant = 'default' }) => {
           )}
           {course.isBestseller && (
             <span className="bg-amber-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
-              Bestseller
+              {t('courseExtra.bestseller')}
             </span>
           )}
         </div>
@@ -197,7 +198,7 @@ const CourseCard = ({ course, variant = 'default' }) => {
 
         {/* Progress bar for enrolled courses */}
         {isEnrolled && progress > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gray-700">
+          <div className="absolute inset-x-0 bottom-0 h-1.5 bg-gray-700">
             <div
               className="h-full bg-gradient-to-r from-[#009FFD] to-[#00D9FF] transition-all"
               style={{ width: `${progress}%` }}

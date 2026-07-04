@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { courseService, lessonService, meetingService, notificationService } from '../../services/api'
@@ -8,6 +9,7 @@ import { isValidGoogleMeetLink, normalizeGoogleMeetLink } from '../../lib/meetLi
 import './CreateCourse.css'
 
 const CreateCourse = () => {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
@@ -118,7 +120,7 @@ const CreateCourse = () => {
         setUploadProgress(prev => ({ ...prev, thumbnail: null }))
       }, 1000)
     } catch (err) {
-      setError('فشل رفع الصورة')
+      setError(t('teacherWizard.errThumbnailFailed'))
       setUploadProgress(prev => ({ ...prev, thumbnail: null }))
     }
   }
@@ -163,7 +165,7 @@ const CreateCourse = () => {
         setUploadProgress(prev => ({ ...prev, video: null }))
       }, 1000)
     } catch (err) {
-      setError('فشل رفع الفيديو')
+      setError(t('teacherWizard.errVideoFailed'))
       setUploadProgress(prev => ({ ...prev, video: null }))
     }
   }
@@ -236,7 +238,7 @@ const CreateCourse = () => {
   // Add lesson to list
   const addLesson = () => {
     if (!currentLesson.title) {
-      setError('يرجى إدخال عنوان الدرس')
+      setError(t('teacherWizard.errLessonTitle'))
       return
     }
 
@@ -250,7 +252,7 @@ const CreateCourse = () => {
       files: []
     })
     setUploadedFiles([])
-    setSuccess('تمت إضافة الدرس بنجاح!')
+    setSuccess(t('teacherWizard.successLessonAdded'))
     setTimeout(() => setSuccess(null), 3000)
   }
 
@@ -272,7 +274,7 @@ const CreateCourse = () => {
     const isManualGoogleMeet = meetingPlatform === 'google_meet' && googleMeetLinkMode === 'manual'
 
     if (!isManualGoogleMeet && (!meetingData.title || !meetingData.scheduled_at)) {
-      setError('يرجى إدخال عنوان الاجتماع والوقت')
+      setError(t('teacherWizard.errMeetingFields'))
       return
     }
 
@@ -356,25 +358,25 @@ const CreateCourse = () => {
   // Copy meet link
   const copyMeetLink = (link) => {
     navigator.clipboard.writeText(link)
-    setSuccess('تم نسخ الرابط!')
+    setSuccess(t('teacherWizard.successLinkCopied'))
     setTimeout(() => setSuccess(null), 2000)
   }
 
   // Submit course
   const handleSubmit = async () => {
     if (!courseData.title || !courseData.description) {
-      setError('يرجى إدخال جميع البيانات المطلوبة')
+      setError(t('teacherWizard.errRequiredFields'))
       return
     }
 
     if (lessons.length === 0) {
-      setError('يرجى إضافة درس واحد على الأقل')
+      setError(t('teacherWizard.errMinOneLesson'))
       return
     }
 
     const courseMeetLink = normalizeGoogleMeetLink(courseData.google_meet_link)
     if (courseData.google_meet_link?.trim() && !isValidGoogleMeetLink(courseMeetLink)) {
-      setError('رابط Google Meet غير صالح. استخدم رابطاً مثل https://meet.google.com/abc-defg-hij')
+      setError(t('teacherWizard.errInvalidMeetLink'))
       return
     }
 
@@ -431,7 +433,7 @@ const CreateCourse = () => {
         })
       }
 
-      setSuccess('تم إنشاء الكورس بنجاح!')
+      setSuccess(t('teacherWizard.successCourseCreated'))
       setTimeout(() => {
         navigate('/dashboard')
       }, 2000)
@@ -503,7 +505,7 @@ const CreateCourse = () => {
         <div className="progress-steps">
           <div className={`step ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
             <div className="step-number">{step > 1 ? '✓' : '1'}</div>
-            <span>معلومات الكورس</span>
+            <span>{t('teacherWizard.stepCourseInfo')}</span>
           </div>
           <div className="step-line" />
           <div className={`step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
@@ -528,19 +530,19 @@ const CreateCourse = () => {
               <h2>📝 معلومات الكورس الأساسية</h2>
               
               <div className="form-group">
-                <label>عنوان الكورس *</label>
+                <label>{t('teacherWizard.courseTitle')}</label>
                 <input
                   type="text"
                   name="title"
                   value={courseData.title}
                   onChange={handleCourseChange}
-                  placeholder="مثال: تعلم البرمجة بلغة Python من الصفر"
+                  placeholder={t('teacherWizard.courseTitlePlaceholder')}
                   className="form-control"
                 />
               </div>
 
               <div className="form-group">
-                <label>وصف الكورس *</label>
+                <label>{t('teacherWizard.courseDescription')}</label>
                 <textarea
                   name="description"
                   value={courseData.description}
@@ -569,7 +571,7 @@ const CreateCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>المستوى</label>
+                  <label>{t('teacherWizard.level')}</label>
                   <select
                     name="level"
                     value={courseData.level}
@@ -585,7 +587,7 @@ const CreateCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>السعر (USD)</label>
+                  <label>{t('teacherWizard.price')}</label>
                   <input
                     type="number"
                     name="price"
@@ -613,7 +615,7 @@ const CreateCourse = () => {
               </div>
 
               <div className="form-group">
-                <label>صورة الكورس</label>
+                <label>{t('teacherWizard.thumbnail')}</label>
                 <div 
                   className="thumbnail-upload"
                   onClick={() => document.getElementById('thumbnail-input').click()}
@@ -624,7 +626,7 @@ const CreateCourse = () => {
                     <div className="upload-placeholder">
                       <span className="upload-icon">📷</span>
                       <p>انقر لرفع صورة الكورس</p>
-                      <small>PNG, JPG حتى 5MB</small>
+                      <small>{t('teacherWizard.thumbnailHint')}</small>
                     </div>
                   )}
                   {uploadProgress.thumbnail !== null && uploadProgress.thumbnail !== undefined && (
@@ -733,7 +735,7 @@ const CreateCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>وصف الدرس</label>
+                  <label>{t('teacherWizard.lessonDescription')}</label>
                   <textarea
                     name="description"
                     value={currentLesson.description}
@@ -745,7 +747,7 @@ const CreateCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>نوع المحتوى</label>
+                  <label>{t('teacherWizard.contentType')}</label>
                   <div className="content-type-selector">
                     {contentTypes.map(type => (
                       <button
@@ -1113,7 +1115,7 @@ const CreateCourse = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>المدة (دقيقة)</label>
+                  <label>{t('teacherWizard.duration')}</label>
                   <input
                     type="number"
                     value={meetingData.duration_minutes}
@@ -1158,7 +1160,7 @@ const CreateCourse = () => {
                     : (!meetingData.title || !meetingData.scheduled_at))
                 }
               >
-                {isLoading ? 'جاري الإنشاء...' : (meetingPlatform === 'jitsi' ? '🎥 إنشاء جلسة Jitsi' : '📅 إنشاء الرابط')}
+                {isLoading ? t('teacherWizard.creating') : (meetingPlatform === 'jitsi' ? '🎥 إنشاء جلسة Jitsi' : '📅 إنشاء الرابط')}
               </button>
             </div>
           </div>
@@ -1167,5 +1169,4 @@ const CreateCourse = () => {
     </div>
   )
 }
-
 export default CreateCourse

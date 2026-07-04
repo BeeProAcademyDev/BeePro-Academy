@@ -25,6 +25,7 @@ import {
 const Home = () => {
   const { t } = useTranslation()
   const { language, isRTL } = useLanguage()
+  const isArabic = language === 'ar'
   const [popularCourses, setPopularCourses] = useState([])
   
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight
@@ -106,8 +107,8 @@ const Home = () => {
         {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-transparent to-primary-700/10 dark:from-primary-900/20 dark:to-primary-700/10" />
         <div className="absolute inset-0">
-          <div className="absolute top-20 start-10 w-72 h-72 bg-primary-500/20 rounded-full blur-3xl animate-float" />
-          <div className="absolute bottom-20 end-10 w-96 h-96 bg-primary-700/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-20 start-10 w-48 h-48 sm:w-72 sm:h-72 bg-primary-500/20 rounded-full blur-3xl animate-float" />
+          <div className="absolute bottom-20 end-10 w-64 h-64 sm:w-96 sm:h-96 bg-primary-700/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
         </div>
 
         <div className="container-custom relative z-10">
@@ -240,7 +241,7 @@ const Home = () => {
                 >
                   <img
                     src={category.image}
-                    alt={language === 'ar' ? category.name : category.nameEn}
+                    alt={isArabic ? category.name : category.nameEn}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
@@ -249,7 +250,7 @@ const Home = () => {
                       {Icon && <Icon className="w-7 h-7" />}
                     </div>
                     <h3 className="text-xl font-bold mb-1">
-                      {language === 'ar' ? category.name : category.nameEn}
+                      {isArabic ? category.name : category.nameEn}
                     </h3>
                     <p className="text-sm text-white/80">
                       {category.coursesCount} {t('home.stats.courses')}
@@ -286,7 +287,7 @@ const Home = () => {
             ) : (
               <div className="col-span-full card card-body text-center py-10">
                 <p className="text-secondary-500">
-                  {language === 'ar' ? 'لا توجد دورات منشورة حالياً' : 'No published courses yet'}
+                  {t('home.noPublishedCoursesYet')}
                 </p>
               </div>
             )}
@@ -305,7 +306,7 @@ const Home = () => {
         <div className="container-custom">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {language === 'ar' ? 'آراء طلابنا' : 'What Our Students Say'}
+              {t('home.whatOurStudentsSay')}
             </h2>
           </div>
 
@@ -321,18 +322,18 @@ const Home = () => {
                   ))}
                 </div>
                 <p className="text-secondary-600 dark:text-secondary-400 mb-6 leading-relaxed">
-                  "{language === 'ar' ? testimonial.content : testimonial.contentEn}"
+                  "{isArabic ? testimonial.content : testimonial.contentEn}"
                 </p>
                 <div className="flex items-center gap-3 mt-auto pt-4 border-t border-secondary-100 dark:border-dark-border">
                   <img
                     src={testimonial.avatar}
-                    alt={language === 'ar' ? testimonial.name : testimonial.nameEn}
+                    alt={isArabic ? testimonial.name : testimonial.nameEn}
                     className="w-12 h-12 rounded-full object-cover"
                   />
                   <div>
-                    <div className="font-bold">{language === 'ar' ? testimonial.name : testimonial.nameEn}</div>
+                    <div className="font-bold">{isArabic ? testimonial.name : testimonial.nameEn}</div>
                     <div className="text-sm text-secondary-500">
-                      {language === 'ar' ? testimonial.role : testimonial.roleEn}
+                      {isArabic ? testimonial.role : testimonial.roleEn}
                     </div>
                   </div>
                 </div>
@@ -346,13 +347,10 @@ const Home = () => {
       <section className="section bg-gradient-to-br from-primary-500 to-primary-700 text-white">
         <div className="container-custom text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {language === 'ar' ? 'ابدأ رحلة التعلم الآن' : 'Start Your Learning Journey Today'}
+            {t('home.startYourLearningJourneyToday')}
           </h2>
           <p className="text-lg text-white/80 mb-8 max-w-2xl mx-auto">
-            {language === 'ar' 
-              ? 'انضم إلى آلاف الطلاب الذين طوروا مهاراتهم معنا وحققوا أحلامهم المهنية'
-              : 'Join thousands of students who have developed their skills with us and achieved their career dreams'
-            }
+            {t('home.joinThousandsOfStudentsWhoHave')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
