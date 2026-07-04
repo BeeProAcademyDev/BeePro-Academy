@@ -15,7 +15,7 @@ const { chromium } = require("playwright");
     messages.push({ type: "pageerror", text: String(err) }),
   );
 
-  await page.goto("http://localhost:3000/test.html");
+  await page.goto("http://localhost:57886/test.html");
 
   // wait for test completion or timeout
   const start = Date.now();

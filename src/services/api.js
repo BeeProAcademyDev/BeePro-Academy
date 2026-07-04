@@ -1,4 +1,4 @@
-﻿import supabase from "../lib/supabase";
+import supabase from "../lib/supabase";
 import axios from "axios";
 import { generateArticleDraft } from "../lib/articleAiGenerator";
 import {
@@ -46,7 +46,13 @@ import {
 import { resolveSignupRole, normalizeDbRole } from "../lib/roles";
 import { categories as mockCategories } from "../data/courses";
 
-const API_BASE_URL = "https://bee-pro-academy.vercel.app/api/v1";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+if (!API_BASE_URL) {
+  console.error(
+    "[api] VITE_API_BASE_URL is not set. All API requests will fail. " +
+    "Add VITE_API_BASE_URL=https://bee-pro-academy.vercel.app/api/v1 to your .env.local file."
+  );
+}
 const AUTH_STORAGE_KEY = "beepro_academy_auth_session";
 const AUTH_SESSION_EVENT = "beepro:auth-session-changed";
 
@@ -150,10 +156,45 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error?.response?.status === 401) {
+    const originalRequest = error?.config;
+    const status = error?.response?.status;
+
+    // If unauthorized, try to refresh once
+    if (status === 401 && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const session = getStoredSession();
+      const refreshToken =
+        session?.refresh_token || session?.refreshToken || null;
+
+      if (refreshToken) {
+        return apiClient
+          .post("/auth/refresh-token", { refreshToken })
+          .then((res) => {
+            const authData = normalizeAuthResponse(res.data);
+            persistSession(authData.session);
+            dispatchAuthSessionChange("SIGNED_IN", authData.session);
+            // Update Authorization header and retry original request
+            originalRequest.headers = originalRequest.headers || {};
+            if (authData.session?.access_token) {
+              originalRequest.headers.Authorization = `Bearer ${authData.session.access_token}`;
+            }
+            return apiClient(originalRequest);
+          })
+          .catch((refreshErr) => {
+            clearStoredSession();
+            dispatchAuthSessionChange("SIGNED_OUT", null);
+            return Promise.reject(buildApiError(refreshErr, "Session expired"));
+          });
+      }
       clearStoredSession();
       dispatchAuthSessionChange("SIGNED_OUT", null);
     }
+
+    if (status === 401) {
+      clearStoredSession();
+      dispatchAuthSessionChange("SIGNED_OUT", null);
+    }
+
     return Promise.reject(error);
   },
 );
@@ -590,6 +631,17 @@ export const authService = {
   },
 
   async logout() {
+    const session = getStoredSession();
+    const refreshToken =
+      session?.refresh_token || session?.refreshToken || null;
+    try {
+      if (refreshToken) {
+        await apiClient.post("/auth/logout", { refreshToken });
+      }
+    } catch (e) {
+      // ignore server logout errors but continue to clear client session
+    }
+
     clearStoredSession();
     dispatchAuthSessionChange("SIGNED_OUT", null);
     return { success: true };
@@ -630,89 +682,31 @@ export const authService = {
 export const courseService = {
   // Get all courses with optional filters
   async getCourses({ category, level, search, limit = 20, offset = 0 } = {}) {
-    if (!isSupabaseAvailable()) {
-      return { data: [], count: 0 };
+    try {
+      const res = await apiClient.get("/courses", {
+        params: { category, level, search, limit, offset },
+      });
+      const payload = res.data || {};
+      const data = payload.data?.data || payload.data || [];
+      const count =
+        payload.data?.count ??
+        payload.count ??
+        (Array.isArray(data) ? data.length : 0);
+      return { data, count };
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch courses");
     }
-
-    let query = supabase.from("courses").select(
-      `
-        *,
-        instructor:users!instructor_id(id, full_name, avatar_url, bio),
-        lessons(count),
-        reviews(rating)
-      `,
-      { count: "exact" },
-    );
-
-    if (category) {
-      query = query.eq("category", category);
-    }
-    if (level) {
-      query = query.eq("level", level);
-    }
-    if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
-    }
-
-    const { data, error, count } = await query
-      .range(offset, offset + limit - 1)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    // Calculate average rating and enrollment count
-    const coursesWithStats = data.map((course) => ({
-      ...course,
-      lessonsCount: course.lessons?.[0]?.count || 0,
-      rating:
-        course.reviews?.length > 0
-          ? course.reviews.reduce((sum, r) => sum + r.rating, 0) /
-            course.reviews.length
-          : 0,
-      reviewsCount: course.reviews?.length || 0,
-    }));
-
-    return { data: coursesWithStats, count };
   },
 
   // Get single course by ID
   async getCourseById(id) {
-    if (!isSupabaseAvailable()) {
-      return null;
+    try {
+      const res = await apiClient.get(`/courses/${id}`);
+      const payload = res.data || {};
+      return payload.data || payload;
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch course");
     }
-
-    const { data, error } = await supabase
-      .from("courses")
-      .select(
-        `
-        *,
-        instructor:users!instructor_id(id, full_name, avatar_url, bio, role),
-        lessons(id, title, duration, order_index),
-        reviews(
-          id, rating, comment, created_at,
-          user:users(id, full_name, avatar_url)
-        )
-      `,
-      )
-      .eq("id", id)
-      .single();
-
-    if (error) throw error;
-
-    // Sort lessons by order_index
-    if (data.lessons) {
-      data.lessons.sort((a, b) => a.order_index - b.order_index);
-    }
-
-    // Calculate average rating
-    data.rating =
-      data.reviews?.length > 0
-        ? data.reviews.reduce((sum, r) => sum + r.rating, 0) /
-          data.reviews.length
-        : 0;
-    data.reviewsCount = data.reviews?.length || 0;
-
-    return data;
   },
 
   async getPublishedCourseDetails(id) {
@@ -742,18 +736,12 @@ export const courseService = {
   },
 
   async getCourseCheckoutSummary(id) {
-    if (!isSupabaseAvailable()) {
-      return null;
+    try {
+      const res = await apiClient.get(`/courses/${id}/checkout-summary`);
+      return res.data.data || res.data;
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch course checkout summary");
     }
-
-    const { data, error } = await supabase
-      .from("courses")
-      .select("id, title, price, instructor_id")
-      .eq("id", id)
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
   // Create a new course (instructor/admin only)
@@ -803,25 +791,13 @@ export const courseService = {
 
   // Get featured/popular courses
   async getFeaturedCourses(limit = 6) {
-    if (!isSupabaseAvailable()) {
-      return [];
+    try {
+      const res = await apiClient.get("/courses", { params: { limit } });
+      const data = res.data?.data?.data || res.data?.data || res.data || [];
+      return data.slice(0, limit);
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch featured courses");
     }
-
-    const { data, error } = await supabase
-      .from("courses")
-      .select(
-        `
-        *,
-        instructor:users!instructor_id(id, full_name, avatar_url, bio),
-        enrollments(count),
-        reviews(rating)
-      `,
-      )
-      .order("created_at", { ascending: false })
-      .limit(limit);
-
-    if (error) throw error;
-    return data;
   },
 
   // Get courses by category
@@ -862,112 +838,48 @@ const mockBlogPosts = [];
 
 export const blogService = {
   async getPublishedPosts() {
-    if (!isSupabaseAvailable()) {
-      return mockBlogPosts;
+    try {
+      const res = await apiClient.get("/blog/published");
+      return res.data?.data || res.data || [];
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch published posts");
     }
-
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .select(
-        `
-        *,
-        author:users!author_id(id, full_name, avatar_url),
-        course:courses(id, title, thumbnail_url)
-      `,
-      )
-      .eq("status", "published")
-      .order("published_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    return data || [];
   },
 
   async getAdminPosts() {
-    if (!isSupabaseAvailable()) {
-      return mockBlogPosts;
+    try {
+      const res = await apiClient.get("/blog/admin");
+      return res.data?.data || res.data || [];
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch admin posts");
     }
-
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .select(
-        `
-        *,
-        author:users!author_id(id, full_name, avatar_url),
-        course:courses(id, title, thumbnail_url)
-      `,
-      )
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    return data || [];
   },
 
   async createPost(postData) {
-    if (!isSupabaseAvailable()) {
-      return {
-        ...postData,
-        id: `mock-blog-${Date.now()}`,
-        created_at: new Date().toISOString(),
-      };
+    try {
+      const res = await apiClient.post("/blog", postData);
+      return res.data?.data || res.data;
+    } catch (err) {
+      throw buildApiError(err, "Failed to create post");
     }
-
-    const { id, author, course, ...payload } = postData;
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .insert(payload)
-      .select(
-        `
-        *,
-        author:users!author_id(id, full_name, avatar_url),
-        course:courses(id, title, thumbnail_url)
-      `,
-      )
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
   async updatePost(id, postData) {
-    if (!isSupabaseAvailable()) {
-      return { ...postData, id, updated_at: new Date().toISOString() };
+    try {
+      const res = await apiClient.patch(`/blog/${id}`, postData);
+      return res.data?.data || res.data;
+    } catch (err) {
+      throw buildApiError(err, "Failed to update post");
     }
-
-    const {
-      id: postId,
-      author,
-      course,
-      created_at,
-      updated_at,
-      ...payload
-    } = postData;
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .update(payload)
-      .eq("id", id)
-      .select(
-        `
-        *,
-        author:users!author_id(id, full_name, avatar_url),
-        course:courses(id, title, thumbnail_url)
-      `,
-      )
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
   async deletePost(id) {
-    if (!isSupabaseAvailable()) {
-      return { success: true };
+    try {
+      const res = await apiClient.delete(`/blog/${id}`);
+      return res.data || { success: true };
+    } catch (err) {
+      throw buildApiError(err, "Failed to delete post");
     }
-
-    const { error } = await supabase.from("blog_posts").delete().eq("id", id);
-
-    if (error) throw error;
-    return { success: true };
   },
 };
 
@@ -1143,34 +1055,24 @@ export const articleScheduleService = {
 export const lessonService = {
   // Get lessons for a course
   async getLessonsByCourse(courseId) {
-    if (!isSupabaseAvailable()) {
-      return [];
+    try {
+      const res = await apiClient.get(`/lessons/course/${courseId}`);
+      return res.data?.data || res.data || [];
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch lessons");
     }
-
-    const { data, error } = await supabase
-      .from("lessons")
-      .select("*")
-      .eq("course_id", courseId)
-      .order("order_index", { ascending: true });
-
-    if (error) throw error;
-    return data;
   },
 
   async getPublishedLessonsByCourse(courseId) {
-    if (!isSupabaseAvailable()) {
-      return [];
+    try {
+      // server endpoint returns published lessons when available
+      const res = await apiClient.get(`/lessons/course/${courseId}`, {
+        params: { published: true },
+      });
+      return res.data?.data || res.data || [];
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch published lessons");
     }
-
-    const { data, error } = await supabase
-      .from("lessons")
-      .select("*")
-      .eq("course_id", courseId)
-      .eq("is_published", true)
-      .order("order_index", { ascending: true });
-
-    if (error) throw error;
-    return data || [];
   },
 
   // Get single lesson
@@ -1242,95 +1144,47 @@ export const lessonService = {
 export const enrollmentService = {
   // Enroll in a course (free courses or after payment approval - enforced server-side)
   async enrollInCourse(courseId) {
-    if (!isSupabaseAvailable()) {
-      return { id: "mock-enrollment-id", course_id: courseId, progress: 0 };
+    try {
+      const res = await apiClient.post("/enrollments/enroll", { courseId });
+      return res.data?.data || res.data;
+    } catch (err) {
+      throw buildApiError(err, "Enrollment failed");
     }
-
-    const user = await authService.getCurrentUser();
-    if (!user) throw new Error("User not authenticated");
-
-    const { data, error } = await supabase.rpc("enroll_student_if_eligible", {
-      p_course_id: courseId,
-    });
-
-    if (error) throw error;
-    if (data?.success === false) {
-      throw new Error(
-        data.error || "Enrollment is not allowed for this course",
-      );
-    }
-
-    return {
-      id: data.enrollment_id,
-      course_id: courseId,
-      user_id: user.id,
-      progress: 0,
-    };
   },
 
   // Get user enrollments
   async getUserEnrollments() {
-    if (!isSupabaseAvailable()) {
-      return [];
+    try {
+      const res = await apiClient.get("/enrollments/my-enrollments");
+      return res.data?.data || res.data || [];
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch enrollments");
     }
-
-    const user = await authService.getCurrentUser();
-    if (!user) return [];
-
-    const { data, error } = await supabase
-      .from("enrollments")
-      .select(
-        `
-        *,
-        course:courses(
-          id, title, thumbnail_url, category,
-          instructor:users!instructor_id(full_name),
-          lessons(count)
-        )
-      `,
-      )
-      .eq("user_id", user.id)
-      .order("enrolled_at", { ascending: false });
-
-    if (error) throw error;
-    return data;
   },
 
   // Check if user is enrolled in a course
   async isEnrolled(courseId) {
-    if (!isSupabaseAvailable()) {
-      return false;
+    try {
+      const res = await apiClient.get("/enrollments/is-enrolled", {
+        params: { courseId },
+      });
+      return Boolean(res.data?.data ?? res.data);
+    } catch (err) {
+      throw buildApiError(err, "Failed to check enrollment");
     }
-
-    const user = await authService.getCurrentUser();
-    if (!user) return false;
-
-    const { data, error } = await supabase
-      .from("enrollments")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("course_id", courseId)
-      .single();
-
-    if (error && error.code !== "PGRST116") throw error;
-    return !!data;
   },
 
   // Update progress
   async updateProgress(enrollmentId, progress) {
-    if (!isSupabaseAvailable()) {
-      return { id: enrollmentId, progress };
+    try {
+      const res = await apiClient.post("/enrollments/update-progress", {
+        enrollmentId,
+        progress,
+      });
+      return res.data?.data || res.data;
+    } catch (err) {
+      throw buildApiError(err, "Failed to update progress");
     }
-
-    const { data, error } = await supabase
-      .from("enrollments")
-      .update({ progress })
-      .eq("id", enrollmentId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 };
 
@@ -1415,19 +1269,17 @@ export const reviewService = {
 export const userService = {
   // Get user profile
   async getProfile(userId) {
-    if (!isSupabaseAvailable()) {
-      return null;
+    try {
+      // If asking for current user profile, hit server endpoint
+      if (!userId) {
+        const res = await apiClient.get("/auth/me");
+        return res.data?.data || res.data || null;
+      }
+      const res = await apiClient.get(`/users/${userId}`);
+      return res.data?.data || res.data || null;
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch profile");
     }
-
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
-
-    // If no profile found, return null instead of throwing
-    if (error && error.code !== "PGRST116") throw error;
-    return data;
   },
 
   // Get or create user profile
@@ -1497,21 +1349,17 @@ export const userService = {
 
   // Update user profile
   async updateProfile(userId, profileData) {
-    if (!isSupabaseAvailable()) {
-      return { id: userId, ...profileData };
+    try {
+      // PATCH current user profile
+      if (!userId) {
+        const res = await apiClient.patch("/auth/me", profileData);
+        return res.data?.data || res.data;
+      }
+      const res = await apiClient.patch(`/users/${userId}`, profileData);
+      return res.data?.data || res.data;
+    } catch (err) {
+      throw buildApiError(err, "Failed to update profile");
     }
-
-    const { role, is_suspended, ...safeProfileData } = profileData || {};
-
-    const { data, error } = await supabase
-      .from("users")
-      .update(safeProfileData)
-      .eq("id", userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
   // Return the database profile only. Role changes are never synchronized from
@@ -1537,28 +1385,18 @@ export const userService = {
 
   // Upload avatar
   async uploadAvatar(userId, file) {
-    if (!isSupabaseAvailable()) {
-      return { url: URL.createObjectURL(file) };
+    try {
+      // Upload via server endpoint (server will proxy to Supabase storage)
+      const form = new FormData();
+      form.append("file", file);
+      form.append("userId", userId);
+      const res = await apiClient.post("/users/upload-avatar", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data?.data || res.data;
+    } catch (err) {
+      throw buildApiError(err, "Failed to upload avatar");
     }
-
-    const fileExt = file.name.split(".").pop();
-    const fileName = `avatar.${fileExt}`;
-    const filePath = `${userId}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("user-avatars")
-      .upload(filePath, file, { upsert: true });
-
-    if (uploadError) throw uploadError;
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("user-avatars").getPublicUrl(filePath);
-
-    // Update user profile with avatar URL
-    await this.updateProfile(userId, { avatar_url: publicUrl });
-
-    return { url: publicUrl };
   },
 };
 

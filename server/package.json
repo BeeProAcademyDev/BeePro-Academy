@@ -1,0 +1,33 @@
+{
+  "name": "beepro-academy-server",
+  "version": "1.0.0",
+  "description": "BePro Academy - Authentication API with Clean Architecture",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "prisma:generate": "npx prisma generate --schema=src/infrastructure/database/prisma/schema.prisma",
+    "prisma:migrate": "npx prisma migrate dev --schema=src/infrastructure/database/prisma/schema.prisma",
+    "prisma:studio": "npx prisma studio --schema=src/infrastructure/database/prisma/schema.prisma",
+    "prisma:push": "npx prisma db push --schema=src/infrastructure/database/prisma/schema.prisma",
+    "postinstall": "npm run prisma:generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.9.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.6",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "google-auth-library": "^9.15.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "nodemailer": "^9.0.3",
+    "zod": "^3.25.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9",
+    "prisma": "^6.9.0"
+  }
+}

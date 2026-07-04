@@ -1,5 +1,6 @@
 const ALLOWED_ORIGINS = new Set([
   "http://localhost:3000",
+  "http://127.0.0.1:3000",
   "http://localhost:5173",
   "https://bee-pro-academy.vercel.app",
 ]);
@@ -23,6 +24,36 @@ export function handleOptions(req, res) {
   applyCors(req, res);
   res.statusCode = 204;
   res.end();
+}
+
+function sendJsonError(res, status, message) {
+  try {
+    res.setHeader("Content-Type", "application/json");
+    res.statusCode = status;
+    res.end(JSON.stringify({ success: false, error: message }));
+  } catch (e) {
+    try {
+      res.end('{"success":false,"error":"' + String(message) + "'}");
+    } catch {}
+  }
+}
+
+// Higher-order wrapper to centralize CORS + error handling for API handlers
+export function withCors(handler) {
+  return async function (req, res) {
+    try {
+      applyCors(req, res);
+      if (req.method === "OPTIONS") return handleOptions(req, res);
+      const result = await handler(req, res);
+      return result;
+    } catch (err) {
+      try {
+        applyCors(req, res);
+      } catch (e) {}
+      const msg = err && err.message ? err.message : String(err);
+      sendJsonError(res, 500, msg);
+    }
+  };
 }
 
 export default applyCors;
