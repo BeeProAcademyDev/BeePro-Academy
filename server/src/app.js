@@ -14,8 +14,12 @@ function createApp(container) {
 
   // Middlewares
   app.use(helmet())
+  const allowedOrigins = typeof config.clientUrl === 'string'
+    ? config.clientUrl.split(',').map(url => url.trim())
+    : config.clientUrl
+
   app.use(cors({
-    origin: config.clientUrl, // Fixes ZAP Cross-Domain Misconfiguration
+    origin: allowedOrigins, // Fixes ZAP Cross-Domain Misconfiguration
     credentials: true
   }))
   app.use(express.json())
