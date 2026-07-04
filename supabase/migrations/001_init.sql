@@ -7,8 +7,20 @@
 -- =====================================================
 
 -- Extensions required by later migrations (e.g. gen_random_uuid()).
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+--CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+--CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Source - https://stackoverflow.com/a/63285629
+-- Posted by epox, modified by community. See post 'Timeline' for change history
+-- Retrieved 2026-07-01, License - CC BY-SA 4.0
+
+SET search_path TO public;
+DROP EXTENSION IF EXISTS "uuid-ossp";
+
+CREATE EXTENSION "uuid-ossp" SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS "pgcrypto"   SCHEMA public;  
+CREATE EXTENSION IF NOT EXISTS "pg_graphql" SCHEMA public;  
+
 
 -- =====================================================
 -- CORE TABLES

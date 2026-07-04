@@ -1,0 +1,44 @@
+// This is your Prisma schema file for BePro Academy.
+// It maps to the existing Supabase PostgreSQL database.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  full_name       String
+  email           String    @unique
+  password_hash   String?
+  role            String    @default("student")
+  avatar_url      String?
+  phone           String?
+  is_suspended    Boolean   @default(false)
+  reset_token     String?
+  reset_token_exp DateTime? @db.Timestamptz(6)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  refresh_tokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  token      String   @unique
+  user_id    String   @db.Uuid
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  expires_at DateTime @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([user_id])
+  @@index([token])
+  @@index([expires_at])
+  @@map("refresh_tokens")
+}

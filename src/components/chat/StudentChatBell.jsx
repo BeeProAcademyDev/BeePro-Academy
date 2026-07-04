@@ -42,47 +42,47 @@ const StudentChatBell = () => {
 
       const courseMap = new Map()
 
-      ;(inbox || []).forEach((row) => {
-        if (row.course_id) {
-          courseMap.set(row.course_id, {
-            id: row.course_id,
-            title: row.title || (isAr ? 'كورس' : 'Course'),
-            thumbnail_url: row.thumbnail_url,
-            message_count: row.message_count || 0,
-            unread_count: row.unread_count || 0,
-            last_message_at: row.last_message_at
-          })
-        }
-      })
+        ; (inbox || []).forEach((row) => {
+          if (row.course_id) {
+            courseMap.set(row.course_id, {
+              id: row.course_id,
+              title: row.title || (isAr ? 'كورس' : 'Course'),
+              thumbnail_url: row.thumbnail_url,
+              message_count: row.message_count || 0,
+              unread_count: row.unread_count || 0,
+              last_message_at: row.last_message_at
+            })
+          }
+        })
 
-      ;(enrollments || []).forEach((row) => {
-        if (row.course?.id) {
-          const existing = courseMap.get(row.course.id)
-          courseMap.set(row.course.id, {
-            id: row.course.id,
-            title: row.course.title,
-            thumbnail_url: row.course.thumbnail_url,
-            message_count: existing?.message_count || 0,
-            unread_count: existing?.unread_count || 0,
-            last_message_at: existing?.last_message_at
-          })
-        }
-      })
+        ; (enrollments || []).forEach((row) => {
+          if (row.course?.id) {
+            const existing = courseMap.get(row.course.id)
+            courseMap.set(row.course.id, {
+              id: row.course.id,
+              title: row.course.title,
+              thumbnail_url: row.course.thumbnail_url,
+              message_count: existing?.message_count || 0,
+              unread_count: existing?.unread_count || 0,
+              last_message_at: existing?.last_message_at
+            })
+          }
+        })
 
-      ;(payments || []).forEach((row) => {
-        const courseId = row.course_id || row.courses?.id
-        if (courseId) {
-          const existing = courseMap.get(courseId)
-          courseMap.set(courseId, {
-            id: courseId,
-            title: row.courses?.title || existing?.title || (isAr ? 'كورس' : 'Course'),
-            thumbnail_url: row.courses?.thumbnail_url || existing?.thumbnail_url,
-            message_count: existing?.message_count || 0,
-            unread_count: existing?.unread_count || 0,
-            last_message_at: existing?.last_message_at
-          })
-        }
-      })
+        ; (payments || []).forEach((row) => {
+          const courseId = row.course_id || row.courses?.id
+          if (courseId) {
+            const existing = courseMap.get(courseId)
+            courseMap.set(courseId, {
+              id: courseId,
+              title: row.courses?.title || existing?.title || (isAr ? 'كورس' : 'Course'),
+              thumbnail_url: row.courses?.thumbnail_url || existing?.thumbnail_url,
+              message_count: existing?.message_count || 0,
+              unread_count: existing?.unread_count || 0,
+              last_message_at: existing?.last_message_at
+            })
+          }
+        })
 
       const sortedCourses = Array.from(courseMap.values()).sort((a, b) => {
         if ((b.message_count || 0) !== (a.message_count || 0)) {
@@ -119,7 +119,7 @@ const StudentChatBell = () => {
 
   const openChat = async (courseId, notification = null) => {
     if (notification?.id && !notification.is_read) {
-      await notificationService.markAsRead(notification.id).catch(() => {})
+      await notificationService.markAsRead(notification.id).catch(() => { })
     }
     setOpen(false)
     navigate(`/courses/${courseId}/learn?tab=chat`)
@@ -180,9 +180,8 @@ const StudentChatBell = () => {
                         <button
                           key={alert.id}
                           type="button"
-                          className={`w-full text-left px-3 py-2 rounded-lg mb-2 last:mb-0 ${
-                            alert.is_read ? 'bg-secondary-50 dark:bg-dark-border' : 'bg-primary-50 dark:bg-primary-900/20'
-                          }`}
+                          className={`w-full text-left px-3 py-2 rounded-lg mb-2 last:mb-0 ${alert.is_read ? 'bg-secondary-50 dark:bg-dark-border' : 'bg-primary-50 dark:bg-primary-900/20'
+                            }`}
                           onClick={() => courseId && openChat(courseId, alert)}
                         >
                           <p className="text-sm font-medium">{alert.title}</p>

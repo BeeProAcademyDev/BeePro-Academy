@@ -11,6 +11,7 @@ DROP POLICY IF EXISTS "Students cannot approve own payments" ON public.payment_s
 
 -- Students may edit their own submission only while it remains pending.
 -- They cannot change status to approved/rejected (no self-approval).
+DROP POLICY IF EXISTS "Students can update own pending submissions" ON public.payment_submissions;
 CREATE POLICY "Students can update own pending submissions"
     ON public.payment_submissions
     FOR UPDATE

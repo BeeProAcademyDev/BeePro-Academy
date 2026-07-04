@@ -335,9 +335,8 @@ const StudentNotificationsBell = () => {
                 return (
                   <div
                     key={notification.id}
-                    className={`px-4 py-3 border-b border-secondary-100 dark:border-dark-border last:border-b-0 ${
-                      notification.is_read ? '' : 'bg-primary-50/60 dark:bg-primary-900/10'
-                    }`}
+                    className={`px-4 py-3 border-b border-secondary-100 dark:border-dark-border last:border-b-0 ${notification.is_read ? '' : 'bg-primary-50/60 dark:bg-primary-900/10'
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       {isLiveNow && (

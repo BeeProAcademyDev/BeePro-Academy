@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS public.certificates (
     expires_at DATE,
     template_url TEXT,
     certificate_url TEXT,
-    verification_code VARCHAR(20) UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(10), 'hex'),
+    verification_code VARCHAR(20) UNIQUE NOT NULL DEFAULT substr(replace(gen_random_uuid()::text, '-', ''), 1, 20),
     is_revoked BOOLEAN DEFAULT FALSE,
     revoked_at TIMESTAMP WITH TIME ZONE,
     revoke_reason TEXT,
