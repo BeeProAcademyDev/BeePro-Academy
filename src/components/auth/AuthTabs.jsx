@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -39,7 +39,27 @@ const AuthTabs = ({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login, register } = useAuth();
+  const registerFormRef = useRef(null);
   const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    console.log('[AuthTabs] Component mounted');
+    console.log('[AuthTabs] Register form ref on mount:', registerFormRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'register') {
+      console.log('[AuthTabs] Switched to register tab');
+      setTimeout(() => {
+        console.log('[AuthTabs] Register form ref after tab switch:', registerFormRef.current);
+        if (registerFormRef.current) {
+          console.log('[AuthTabs] Form element:', registerFormRef.current);
+          console.log('[AuthTabs] Form action:', registerFormRef.current.action);
+          console.log('[AuthTabs] Form method:', registerFormRef.current.method);
+        }
+      }, 100);
+    }
+  }, [activeTab]);
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
@@ -96,7 +116,14 @@ const AuthTabs = ({
   };
 
   const handleRegister = async (event) => {
+    console.log('[handleRegister] ENTRY - Event:', event);
+    console.log('[handleRegister] Form ref:', registerFormRef.current);
+    console.log('[handleRegister] Event target:', event.target);
+    console.log('[handleRegister] Current target:', event.currentTarget);
+    console.log('[handleRegister] About to call preventDefault');
     event.preventDefault();
+    console.log('[handleRegister] After preventDefault - default prevented:', event.defaultPrevented);
+    console.log('[handleRegister] Setting error and loading state');
     setError("");
     setIsLoading(true);
 
@@ -127,6 +154,12 @@ const AuthTabs = ({
     }
 
     try {
+      console.log('[handleRegister] About to call authService.register with:', {
+        email: registerData.email,
+        fullName: registerData.name,
+        phone: registerData.phone,
+        role: accountType,
+      });
       const result = await register({
         email: registerData.email,
         password: registerData.password,
@@ -134,6 +167,7 @@ const AuthTabs = ({
         phone: registerData.phone,
         role: accountType,
       });
+      console.log('[handleRegister] authService.register result:', result);
       if (!result.success) {
         setError(
           formatErrorMessage(result.error) || t("register.registrationFailed"),
@@ -277,7 +311,7 @@ const AuthTabs = ({
           </Button>
         </form>
       ) : (
-        <form onSubmit={handleRegister} className="space-y-5">
+        <form ref={registerFormRef} onSubmit={handleRegister} className="space-y-5">
           <div>
             <label htmlFor="auth-register-name" className="label">
               {t("auth.register.name")}

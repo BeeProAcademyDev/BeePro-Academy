@@ -1,152 +1,223 @@
-import { supabase, uploadFile, deleteFile } from '../lib/supabase.js'
+// This file is deprecated. The frontend now uses only the REST API.
+// All database calls must go through src/services/api.js instead.
+// Payment API functions are no longer available via this file.
 
 /**
- * Payment Management API
- * Handles instructor payment methods, student submissions, and approval workflow
- */
-
-// =====================================================
-// INSTRUCTOR PAYMENT METHODS MANAGEMENT
-// =====================================================
-
-/**
- * Get all payment methods for an instructor
+ * @deprecated Use REST API instead
  */
 export const getInstructorPaymentMethods = async (instructorId) => {
-  const { data, error } = await supabase
-    .from('instructor_payment_methods')
-    .select('*')
-    .eq('instructor_id', instructorId)
-    .eq('is_active', true)
-    .order('is_primary', { ascending: false })
-    .order('created_at', { ascending: true })
-
-  if (error) throw error
-  return data
+  throw new Error('This function requires payment API endpoints on the backend');
 }
 
 /**
- * Create a new payment method for instructor
+ * @deprecated Use REST API instead
  */
 export const createPaymentMethod = async (paymentMethodData) => {
-  const { data, error } = await supabase
-    .from('instructor_payment_methods')
-    .insert([paymentMethodData])
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
+  throw new Error('This function requires payment API endpoints on the backend');
 }
 
 /**
- * Update an existing payment method
+ * @deprecated Use REST API instead
  */
 export const updatePaymentMethod = async (methodId, updates) => {
-  const { data, error } = await supabase
-    .from('instructor_payment_methods')
-    .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', methodId)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
+  throw new Error('This function requires payment API endpoints on the backend');
 }
 
 /**
- * Delete a payment method
+ * @deprecated Use REST API instead
  */
 export const deletePaymentMethod = async (methodId) => {
-  const { error } = await supabase
-    .from('instructor_payment_methods')
-    .delete()
-    .eq('id', methodId)
-
-  if (error) throw error
-  return true
+  throw new Error('This function requires payment API endpoints on the backend');
 }
 
 /**
- * Set a payment method as primary (and unset others)
+ * @deprecated Use REST API instead
  */
 export const setPrimaryPaymentMethod = async (methodId, instructorId) => {
-  // Start transaction-like operations
-  // First, unset all primary methods for this instructor
-  const { error: unsetError } = await supabase
-    .from('instructor_payment_methods')
-    .update({ is_primary: false })
-    .eq('instructor_id', instructorId)
-
-  if (unsetError) throw unsetError
-
-  // Then set the selected method as primary
-  const { data, error } = await supabase
-    .from('instructor_payment_methods')
-    .update({ is_primary: true, updated_at: new Date().toISOString() })
-    .eq('id', methodId)
-    .eq('instructor_id', instructorId)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
+  throw new Error('This function requires payment API endpoints on the backend');
 }
 
 /**
- * Get payment methods for a specific course (instructor's methods)
+ * @deprecated Use REST API instead
  */
 export const getCoursePaymentMethods = async (courseId) => {
-  const { data, error } = await supabase
-    .from('instructor_payment_methods')
-    .select(`
-      *,
-      courses!inner(id, instructor_id)
-    `)
-    .eq('courses.id', courseId)
-    .eq('is_active', true)
-    .order('is_primary', { ascending: false })
-
-  if (error) throw error
-  return data
+  throw new Error('This function requires payment API endpoints on the backend');
 }
 
-// =====================================================
-// STUDENT PAYMENT SUBMISSION API
-// =====================================================
-
 /**
- * Upload payment screenshot and get URL
+ * @deprecated Use REST API instead
  */
 export const uploadPaymentScreenshot = async (file, studentId, courseId) => {
-  const fileExt = file.name.split('.').pop()
-  const fileName = `${studentId}/course-${courseId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
-  
-  try {
-    const uploadResult = await uploadFile('payment-proofs', fileName, file)
-    const { data } = supabase.storage.from('payment-proofs').getPublicUrl(fileName)
-    return data.publicUrl
-  } catch (error) {
-    console.error('Error uploading payment screenshot:', error)
-    throw error
-  }
+  throw new Error('This function requires payment API endpoints on the backend');
 }
 
 /**
- * Submit payment proof
+ * @deprecated Use REST API instead
  */
 export const submitPaymentProof = async (submissionData) => {
-  const { data, error } = await supabase
-    .from('payment_submissions')
-    .insert([submissionData])
-    .select(`
-      *,
-      courses(id, title, instructor_id),
-      instructor_payment_methods(display_name, payment_type),
-      students:users!student_id(full_name, email),
-      instructors:users!instructor_id(full_name, email)
-    `)
-    .single()
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const getStudentPaymentSubmissions = async (studentId) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const getInstructorPaymentSubmissions = async (instructorId, filters = {}) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const getPaymentSubmissionDetails = async (submissionId) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const approvePaymentSubmission = async (submissionId, reviewerId, reviewNotes = null) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const rejectPaymentSubmission = async (submissionId, reviewerId, reviewNotes = null) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const requestPaymentInfo = async (submissionId, reviewerId, requestNotes) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const createPaymentNotification = async (userId, courseId, notificationType, title, message, actionUrl = null) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const getPaymentNotifications = async (userId, limit = 10) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const markNotificationAsRead = async (notificationId) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const getInstructorPaymentStats = async (instructorId) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const getPendingPaymentsCount = async (instructorId) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const getRecentPaymentActivity = async (instructorId, limit = 5) => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+/**
+ * Format payment method details for display
+ */
+export const formatPaymentDetails = (paymentType, details) => {
+  const formatters = {
+    vodafone_cash: (d) => `Vodafone Cash: ${d.phone_number}`,
+    orange_cash: (d) => `Orange Cash: ${d.phone_number}`,
+    etisalat_cash: (d) => `Etisalat Cash: ${d.phone_number}`,
+    we_pay: (d) => `WE Pay: ${d.phone_number}`,
+    bank_transfer: (d) => `Bank: ${d.bank_name} - Account: ${d.account_number}`,
+    iban: (d) => `IBAN: ${d.iban} (${d.bank_name})`,
+    paypal: (d) => `PayPal: ${d.email}`,
+    ksa_local: (d) => `${d.provider}: ${d.account_info}`,
+    uae_local: (d) => `${d.provider}: ${d.account_info}`,
+    international_wire: (d) => `Wire Transfer: ${d.swift_code}`,
+    crypto: (d) => `${d.currency}: ${d.wallet_address}`,
+    other: (d) => d.custom_info || 'Custom Payment Method'
+  }
+
+  return formatters[paymentType] ? formatters[paymentType](details) : 'Unknown Payment Method'
+}
+
+/**
+ * Validate payment method data
+ */
+export const validatePaymentMethodData = (paymentType, details) => {
+  const validators = {
+    vodafone_cash: (d) => d.phone_number && d.phone_number.length >= 10,
+    orange_cash: (d) => d.phone_number && d.phone_number.length >= 10,
+    etisalat_cash: (d) => d.phone_number && d.phone_number.length >= 10,
+    we_pay: (d) => d.phone_number && d.phone_number.length >= 10,
+    bank_transfer: (d) => d.bank_name && d.account_number,
+    iban: (d) => d.iban && d.bank_name,
+    paypal: (d) => d.email && d.email.includes('@'),
+    ksa_local: (d) => d.provider && d.account_info,
+    uae_local: (d) => d.provider && d.account_info,
+    international_wire: (d) => d.swift_code && d.account_number,
+    crypto: (d) => d.currency && d.wallet_address,
+    other: (d) => d.custom_info && d.custom_info.length > 0
+  }
+
+  return validators[paymentType] ? validators[paymentType](details) : false
+}
+
+/**
+ * @deprecated Use REST API instead
+ */
+export const cleanupExpiredPayments = async () => {
+  throw new Error('This function requires payment API endpoints on the backend');
+}
+
+export default {
+  getInstructorPaymentMethods,
+  createPaymentMethod,
+  updatePaymentMethod,
+  deletePaymentMethod,
+  setPrimaryPaymentMethod,
+  getCoursePaymentMethods,
+  uploadPaymentScreenshot,
+  submitPaymentProof,
+  getStudentPaymentSubmissions,
+  getInstructorPaymentSubmissions,
+  getPaymentSubmissionDetails,
+  approvePaymentSubmission,
+  rejectPaymentSubmission,
+  requestPaymentInfo,
+  createPaymentNotification,
+  getPaymentNotifications,
+  markNotificationAsRead,
+  getInstructorPaymentStats,
+  getPendingPaymentsCount,
+  getRecentPaymentActivity,
+  formatPaymentDetails,
+  validatePaymentMethodData,
+  cleanupExpiredPayments
+}
 
   if (error) throw error
 

@@ -1,72 +1,40 @@
-import { createClient } from "@supabase/supabase-js";
+// This file is deprecated. The frontend now uses only the REST API.
+// All database calls must go through src/services/api.js instead.
 
-const rawUrl = import.meta.env.VITE_SUPABASE_URL;
-const rawAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Stub Supabase object for backward compatibility
+// This prevents import errors but does not actually work.
+// All actual database operations should use the REST API.
 
-const supabaseUrl =
-  typeof rawUrl === "string" ? rawUrl.trim().replace(/\/+$/, "") : "";
-const supabaseAnonKey = typeof rawAnonKey === "string" ? rawAnonKey.trim() : "";
+export const supabase = {
+  from: (table) => ({
+    select: () => ({ eq: () => ({}) }),
+    insert: () => ({}),
+    update: () => ({}),
+    delete: () => ({}),
+  }),
+  rpc: () => ({}),
+  auth: {
+    getSession: () => Promise.resolve({}),
+    signUp: () => Promise.resolve({}),
+    signIn: () => Promise.resolve({}),
+    signOut: () => Promise.resolve({}),
+  },
+  storage: {
+    from: () => ({
+      getPublicUrl: () => ({ data: { publicUrl: "" } }),
+      upload: () => Promise.resolve({}),
+      remove: () => Promise.resolve({}),
+    }),
+  },
+};
 
-function decodeSupabaseJwtPayload(jwt) {
-  try {
-    const body = jwt.split(".")[1];
-    if (!body) return null;
-    const b64 = body.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = b64.padEnd(Math.ceil(b64.length / 4) * 4, "=");
-    return JSON.parse(atob(padded));
-  } catch {
-    return null;
-  }
-}
+// These are no longer used - use the REST API instead
+export const getPublicUrl = (bucket, path) => "";
 
-function warnIfUrlDoesNotMatchAnonHost() {
-  if (!supabaseUrl || !supabaseAnonKey) return;
+export const uploadFile = async (bucket, path, file, options = {}) => {
+  throw new Error("uploadFile is deprecated. Use the REST API instead.");
+};
 
-  const payload = decodeSupabaseJwtPayload(supabaseAnonKey);
-  const ref = typeof payload?.ref === "string" ? payload.ref : "";
-
-  try {
-    const host = new URL(supabaseUrl).hostname.toLowerCase();
-    if (ref && host.endsWith(".supabase.co") && host !== `${ref}.supabase.co`) {
-      console.warn(
-        `[Supabase] URL host "${host}" does not match anon key ref "${ref}". Use Project URL + anon key from the same Dashboard → Settings → API (expected "${ref}.supabase.co").`,
-      );
-    }
-
-    // Hosted keys include `ref`; local demo JWT omits it.
-    if (
-      ref &&
-      (host === "127.0.0.1" || host === "localhost" || host === "[::1]")
-    ) {
-      console.warn(
-        "[Supabase] This anon key is for cloud project `" +
-          ref +
-          "`, but VITE_SUPABASE_URL points at localhost. Use `npx supabase start`, then copy the local URL/key from CLI output—or use your Dashboard Project URL together with this key.",
-      );
-    }
-  } catch {
-    console.warn("⚠️ VITE_SUPABASE_URL is not a valid URL.");
-  }
-}
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("⚠️ Supabase environment variables not set. Using mock mode.");
-  console.warn(
-    "Add VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY to .env, or run local Supabase: npx supabase start (Docker) and paste the URLs from terminal output.",
-  );
-} else {
-  warnIfUrlDoesNotMatchAnonHost();
-}
-
-export const supabase =
-  supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {},
-      })
-    : null;
-
-if (!supabase) {
-  console.log("❌ Supabase client not initialized - running in mock mode");
-}
-
-export default supabase;
+export const deleteFile = async (bucket, path) => {
+  throw new Error("deleteFile is deprecated. Use the REST API instead.");
+};

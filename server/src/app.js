@@ -12,19 +12,28 @@ const createAuthRoutes = require("./interfaces/http/routes/authRoutes");
 function createApp(container) {
   const app = express();
 
-  // Middlewares
-  app.use(helmet());
+  // Parse CLIENT_URL and log for debugging
   const allowedOrigins =
     typeof config.clientUrl === "string"
       ? config.clientUrl.split(",").map((url) => url.trim())
       : config.clientUrl;
 
+  console.log("[CORS] Allowed Origins:", JSON.stringify(allowedOrigins));
+  console.log("[CORS] Environment:", config.env);
+
+  // Middlewares - CORS MUST be before helmet to ensure headers are set
   app.use(
     cors({
-      origin: allowedOrigins, // Fixes ZAP Cross-Domain Misconfiguration
+      origin: allowedOrigins,
       credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      exposedHeaders: ["Content-Length", "Authorization"],
+      preflightContinue: false,
+      optionsSuccessStatus: 204,
     }),
   );
+  app.use(helmet());
   app.use(express.json());
   app.use(morgan("dev"));
 
@@ -81,7 +90,5 @@ function createApp(container) {
   // Global Error Handler (must be last)
   app.use(errorHandler);
 
-  return app;
-}
 
 module.exports = createApp;

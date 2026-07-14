@@ -88,6 +88,7 @@ const Button = forwardRef(({
   }
 
   // Default button
+  console.log('[Button] Rendering button with props:', { type: props.type, disabled, loading, className });
   return (
     <button ref={ref} className={classes} disabled={disabled || loading} {...props}>
       {content}

@@ -1,4 +1,3 @@
-import supabase from "../lib/supabase";
 import axios from "axios";
 import { generateArticleDraft } from "../lib/articleAiGenerator";
 import {
@@ -38,19 +37,15 @@ function mergeMeetingRows(primary = [], secondary = []) {
 
   return Array.from(byId.values());
 }
-import {
-  clarifySupabaseConnectionError,
-  formatErrorMessage,
-  mapSignupProfileError,
-} from "../lib/supabaseErrors";
-import { resolveSignupRole, normalizeDbRole } from "../lib/roles";
+import { formatErrorMessage } from "../lib/supabaseErrors";
+import { resolveSignupRole } from "../lib/roles";
 import { categories as mockCategories } from "../data/courses";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 if (!API_BASE_URL) {
   console.error(
     "[api] VITE_API_BASE_URL is not set. All API requests will fail. " +
-    "Add VITE_API_BASE_URL=https://bee-pro-academy.vercel.app/api/v1 to your .env.local file."
+      "Add VITE_API_BASE_URL=https://bee-pro-academy.vercel.app/api/v1 to your .env.local file.",
   );
 }
 const AUTH_STORAGE_KEY = "beepro_academy_auth_session";
@@ -420,160 +415,24 @@ function buildApiError(error, fallbackMessage = "Request failed") {
   return normalized;
 }
 
-// Check if Supabase is available
-const isSupabaseAvailable = () => !!supabase;
-
-const SUPABASE_CONFIG_ERROR =
-  "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel (Production + Preview), then redeploy.";
-
-function assertSupabaseAvailable() {
-  if (!isSupabaseAvailable()) {
-    throw new Error(SUPABASE_CONFIG_ERROR);
-  }
-}
-
-function parseRpcJsonResult(data) {
-  if (data == null) {
-    return { success: false, error: "Empty RPC response" };
-  }
-
-  if (typeof data === "string") {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return { success: false, error: data };
-    }
-  }
-
-  return data;
-}
-
-function assertRoleUpdateResult(profile, expectedRole) {
-  const expected = normalizeDbRole(expectedRole);
-  const actual = normalizeDbRole(profile?.role);
-
-  if (!profile?.id || actual !== expected) {
-    throw new Error(
-      "Role was not updated in the database. Run supabase/fix-admin-access.sql and ensure migration 017 is applied.",
-    );
-  }
-
-  return profile;
-}
-
-const isMissingTableError = (error) => {
-  const text =
-    `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`.toLowerCase();
-  return (
-    error?.code === "PGRST205" ||
-    text.includes("could not find the table") ||
-    text.includes("schema cache")
+function unsupportedFeature(featureName) {
+  throw new Error(
+    `${featureName} is not supported by the current backend REST API.`,
   );
-};
-
-const warnMissingMeetingsTable = () => {
-  console.warn(
-    "meetings table is missing in Supabase. Run supabase/migrations/022_ensure_meetings_table.sql in the SQL Editor.",
-  );
-};
-
-async function syncSignupUserProfile({
-  userId,
-  email,
-  fullName,
-  phone = "",
-  resolvedRole,
-}) {
-  const safeRole = resolvedRole === "admin" ? "student" : resolvedRole;
-  const normalizedPhone = (phone || "").toString().trim();
-
-  const { data: profileById, error: fetchByIdError } = await supabase
-    .from("users")
-    .select("id, role, email")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (fetchByIdError) {
-    throw mapSignupProfileError(
-      clarifySupabaseConnectionError(fetchByIdError),
-      resolvedRole,
-    );
-  }
-
-  if (profileById) {
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({ full_name: fullName, phone: normalizedPhone || null })
-      .eq("id", userId);
-
-    if (updateError) {
-      console.warn(
-        "[signup] Could not update profile name:",
-        updateError.message,
-      );
-    }
-
-    return profileById;
-  }
-
-  const normalizedEmail = (email || "").trim().toLowerCase();
-  let emailToUse = email;
-
-  if (normalizedEmail) {
-    const { data: profileByEmail, error: fetchByEmailError } = await supabase
-      .from("users")
-      .select("id")
-      .ilike("email", normalizedEmail)
-      .maybeSingle();
-
-    if (fetchByEmailError) {
-      throw mapSignupProfileError(
-        clarifySupabaseConnectionError(fetchByEmailError),
-        resolvedRole,
-      );
-    }
-
-    if (profileByEmail && profileByEmail.id !== userId) {
-      emailToUse = `user-${userId}@profile.local`;
-    }
-  }
-
-  const { error: insertError } = await supabase.from("users").insert({
-    id: userId,
-    email: emailToUse,
-    full_name: fullName,
-    phone: normalizedPhone || null,
-    role: safeRole,
-  });
-
-  if (insertError) {
-    const { data: retryProfile, error: retryError } = await supabase
-      .from("users")
-      .select("id, role, email")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (!retryError && retryProfile) {
-      return retryProfile;
-    }
-
-    throw mapSignupProfileError(
-      clarifySupabaseConnectionError(insertError),
-      resolvedRole,
-    );
-  }
-
-  return {
-    id: userId,
-    email: emailToUse,
-    phone: normalizedPhone || null,
-    role: safeRole,
-  };
 }
+
+const mockArticleSchedules = [];
+const mockReviews = [];
 
 // ============ AUTH SERVICES ============
 export const authService = {
   async register({ email, password, fullName, phone = "", role = "student" }) {
+    console.log("[authService.register] Called with:", {
+      email,
+      fullName,
+      phone,
+      role,
+    });
     let resolvedRole;
     try {
       resolvedRole = resolveSignupRole(role);
@@ -582,6 +441,9 @@ export const authService = {
     }
 
     try {
+      console.log(
+        '[authService.register] Calling apiClient.post("/auth/register")',
+      );
       const response = await apiClient.post("/auth/register", {
         fullName,
         email: (email || "").toString().trim().toLowerCase(),
@@ -648,7 +510,16 @@ export const authService = {
   },
 
   async getCurrentUser() {
-    return getStoredSession()?.user || null;
+    const session = getStoredSession();
+    if (!session?.access_token) return null;
+
+    try {
+      const res = await apiClient.get("/auth/me");
+      const payload = res.data || {};
+      return payload.data || payload || null;
+    } catch (error) {
+      return null;
+    }
   },
 
   getAuthState() {
@@ -710,35 +581,18 @@ export const courseService = {
   },
 
   async getPublishedCourseDetails(id) {
-    if (!isSupabaseAvailable()) {
-      return null;
+    try {
+      const res = await apiClient.get(`/courses/${id}`);
+      return res.data?.data || res.data || null;
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch published course details");
     }
-
-    const { data, error } = await supabase
-      .from("courses")
-      .select(
-        `
-        *,
-        users:instructor_id (
-          full_name,
-          email,
-          avatar_url,
-          bio
-        )
-      `,
-      )
-      .eq("id", id)
-      .eq("is_published", true)
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
   async getCourseCheckoutSummary(id) {
     try {
-      const res = await apiClient.get(`/courses/${id}/checkout-summary`);
-      return res.data.data || res.data;
+      const course = await this.getCourseById(id);
+      return course;
     } catch (err) {
       throw buildApiError(err, "Failed to fetch course checkout summary");
     }
@@ -746,47 +600,32 @@ export const courseService = {
 
   // Create a new course (instructor/admin only)
   async createCourse(courseData) {
-    if (!isSupabaseAvailable()) {
-      return { id: "mock-course-id", ...courseData };
+    try {
+      const res = await apiClient.post("/courses", courseData);
+      return res.data?.data || res.data;
+    } catch (err) {
+      throw buildApiError(err, "Failed to create course");
     }
-
-    const { data, error } = await supabase
-      .from("courses")
-      .insert(courseData)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
   // Update a course
   async updateCourse(id, courseData) {
-    if (!isSupabaseAvailable()) {
-      return { id, ...courseData };
+    try {
+      const res = await apiClient.patch(`/courses/${id}`, courseData);
+      return res.data?.data || res.data;
+    } catch (err) {
+      throw buildApiError(err, "Failed to update course");
     }
-
-    const { data, error } = await supabase
-      .from("courses")
-      .update(courseData)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
   // Delete a course
   async deleteCourse(id) {
-    if (!isSupabaseAvailable()) {
-      return { success: true };
+    try {
+      const res = await apiClient.delete(`/courses/${id}`);
+      return res.data || { success: true };
+    } catch (err) {
+      throw buildApiError(err, "Failed to delete course");
     }
-
-    const { error } = await supabase.from("courses").delete().eq("id", id);
-
-    if (error) throw error;
-    return { success: true };
   },
 
   // Get featured/popular courses
@@ -807,29 +646,21 @@ export const courseService = {
 
   // Get courses by instructor (for teacher dashboard)
   async getInstructorCourses(instructorId) {
-    if (!isSupabaseAvailable()) {
-      return [];
+    if (!instructorId) return [];
+
+    try {
+      const { data } = await this.getCourses({ limit: 1000 });
+      return (data || [])
+        .filter((course) => `${course.instructor_id}` === `${instructorId}`)
+        .map((course) => ({
+          ...course,
+          lessonsCount: Array.isArray(course.lessons)
+            ? course.lessons.length
+            : course.lessons?.[0]?.count || 0,
+        }));
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch instructor courses");
     }
-
-    const { data, error } = await supabase
-      .from("courses")
-      .select(
-        `
-        *,
-        lessons(count)
-      `,
-      )
-      .eq("instructor_id", instructorId)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    return (
-      data?.map((course) => ({
-        ...course,
-        lessonsCount: course.lessons?.[0]?.count || 0,
-      })) || []
-    );
   },
 };
 
@@ -883,100 +714,37 @@ export const blogService = {
   },
 };
 
-const mockArticleSchedules = [];
-
 export const articleScheduleService = {
   async getSchedules() {
-    if (!isSupabaseAvailable()) {
-      return mockArticleSchedules;
-    }
-
-    const { data, error } = await supabase
-      .from("article_schedules")
-      .select(
-        `
-        *,
-        course:courses(id, title, category, level, thumbnail_url),
-        blog_post:blog_posts(id, title, slug, status)
-      `,
-      )
-      .order("scheduled_at", { ascending: true });
-
-    if (error) throw error;
-    return data || [];
+    return mockArticleSchedules;
   },
 
   async createSchedule(payload) {
-    if (!isSupabaseAvailable()) {
-      const row = {
-        ...payload,
-        id: `mock-schedule-${Date.now()}`,
-        status: "pending",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      mockArticleSchedules.unshift(row);
-      return row;
-    }
-
-    const { data, error } = await supabase
-      .from("article_schedules")
-      .insert(payload)
-      .select(
-        `
-        *,
-        course:courses(id, title, category, level, thumbnail_url),
-        blog_post:blog_posts(id, title, slug, status)
-      `,
-      )
-      .single();
-
-    if (error) throw error;
-    return data;
+    const row = {
+      ...payload,
+      id: `mock-schedule-${Date.now()}`,
+      status: "pending",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    mockArticleSchedules.unshift(row);
+    return row;
   },
 
   async updateSchedule(id, payload) {
-    if (!isSupabaseAvailable()) {
-      const index = mockArticleSchedules.findIndex((row) => row.id === id);
-      if (index === -1) throw new Error("Schedule not found");
-      mockArticleSchedules[index] = {
-        ...mockArticleSchedules[index],
-        ...payload,
-        updated_at: new Date().toISOString(),
-      };
-      return mockArticleSchedules[index];
-    }
-
-    const { data, error } = await supabase
-      .from("article_schedules")
-      .update(payload)
-      .eq("id", id)
-      .select(
-        `
-        *,
-        course:courses(id, title, category, level, thumbnail_url),
-        blog_post:blog_posts(id, title, slug, status)
-      `,
-      )
-      .single();
-
-    if (error) throw error;
-    return data;
+    const index = mockArticleSchedules.findIndex((row) => row.id === id);
+    if (index === -1) throw new Error("Schedule not found");
+    mockArticleSchedules[index] = {
+      ...mockArticleSchedules[index],
+      ...payload,
+      updated_at: new Date().toISOString(),
+    };
+    return mockArticleSchedules[index];
   },
 
   async deleteSchedule(id) {
-    if (!isSupabaseAvailable()) {
-      const index = mockArticleSchedules.findIndex((row) => row.id === id);
-      if (index >= 0) mockArticleSchedules.splice(index, 1);
-      return { success: true };
-    }
-
-    const { error } = await supabase
-      .from("article_schedules")
-      .delete()
-      .eq("id", id);
-
-    if (error) throw error;
+    const index = mockArticleSchedules.findIndex((row) => row.id === id);
+    if (index >= 0) mockArticleSchedules.splice(index, 1);
     return { success: true };
   },
 
@@ -1077,66 +845,43 @@ export const lessonService = {
 
   // Get single lesson
   async getLessonById(id) {
-    if (!isSupabaseAvailable()) {
-      return null;
+    try {
+      const res = await apiClient.get(`/lessons/${id}`);
+      return res.data?.data || res.data || null;
+    } catch (err) {
+      throw buildApiError(err, "Failed to fetch lesson");
     }
-
-    const { data, error } = await supabase
-      .from("lessons")
-      .select("*, course:courses(id, title, instructor_id)")
-      .eq("id", id)
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
   // Create a lesson
   async createLesson(lessonData) {
-    if (!isSupabaseAvailable()) {
-      return { id: "mock-lesson-id", ...lessonData };
+    try {
+      const { files, ...dbLessonData } = lessonData;
+      const res = await apiClient.post("/lessons", dbLessonData);
+      return res.data?.data || res.data;
+    } catch (err) {
+      throw buildApiError(err, "Failed to create lesson");
     }
-
-    // Remove fields that don't exist in the database
-    const { files, ...dbLessonData } = lessonData;
-
-    const { data, error } = await supabase
-      .from("lessons")
-      .insert(dbLessonData)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
   // Update a lesson
   async updateLesson(id, lessonData) {
-    if (!isSupabaseAvailable()) {
-      return { id, ...lessonData };
+    try {
+      const res = await apiClient.patch(`/lessons/${id}`, lessonData);
+      return res.data?.data || res.data;
+    } catch (err) {
+      throw buildApiError(err, "Failed to update lesson");
     }
-
-    const { data, error } = await supabase
-      .from("lessons")
-      .update(lessonData)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
   // Delete a lesson
   async deleteLesson(id) {
-    if (!isSupabaseAvailable()) {
-      return { success: true };
+    try {
+      const res = await apiClient.delete(`/lessons/${id}`);
+      return res.data || { success: true };
+    } catch (err) {
+      throw buildApiError(err, "Failed to delete lesson");
     }
-
-    const { error } = await supabase.from("lessons").delete().eq("id", id);
-
-    if (error) throw error;
-    return { success: true };
   },
 };
 
@@ -1190,77 +935,24 @@ export const enrollmentService = {
 
 // ============ REVIEW SERVICES ============
 export const reviewService = {
-  // Get reviews for a course
   async getReviewsByCourse(courseId) {
-    if (!isSupabaseAvailable()) {
-      return [];
-    }
-
-    const { data, error } = await supabase
-      .from("reviews")
-      .select(
-        `
-        *,
-        user:users(id, full_name, avatar_url)
-      `,
-      )
-      .eq("course_id", courseId)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    return data;
+    return [];
   },
 
-  // Create a review
   async createReview({ courseId, rating, comment }) {
-    if (!isSupabaseAvailable()) {
-      return { id: "mock-review-id", course_id: courseId, rating, comment };
-    }
-
-    const user = await authService.getCurrentUser();
-    if (!user) throw new Error("User not authenticated");
-
-    const { data, error } = await supabase
-      .from("reviews")
-      .insert({
-        course_id: courseId,
-        user_id: user.id,
-        rating,
-        comment,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return {
+      id: `mock-review-${Date.now()}`,
+      course_id: courseId,
+      rating,
+      comment,
+    };
   },
 
-  // Update a review
   async updateReview(id, { rating, comment }) {
-    if (!isSupabaseAvailable()) {
-      return { id, rating, comment };
-    }
-
-    const { data, error } = await supabase
-      .from("reviews")
-      .update({ rating, comment })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return { id, rating, comment };
   },
 
-  // Delete a review
   async deleteReview(id) {
-    if (!isSupabaseAvailable()) {
-      return { success: true };
-    }
-
-    const { error } = await supabase.from("reviews").delete().eq("id", id);
-
-    if (error) throw error;
     return { success: true };
   },
 };
@@ -1270,13 +962,14 @@ export const userService = {
   // Get user profile
   async getProfile(userId) {
     try {
-      // If asking for current user profile, hit server endpoint
-      if (!userId) {
-        const res = await apiClient.get("/auth/me");
-        return res.data?.data || res.data || null;
+      const res = await apiClient.get("/auth/me");
+      const profile = res.data?.data || res.data || null;
+      if (!userId || `${profile?.id}` === `${userId}`) {
+        return profile;
       }
-      const res = await apiClient.get(`/users/${userId}`);
-      return res.data?.data || res.data || null;
+      throw new Error(
+        "Fetching arbitrary user profiles is not supported by the current backend API.",
+      );
     } catch (err) {
       throw buildApiError(err, "Failed to fetch profile");
     }
@@ -1284,79 +977,34 @@ export const userService = {
 
   // Get or create user profile
   async getOrCreateProfile(userId, userData = {}) {
-    if (!isSupabaseAvailable()) {
-      return null;
+    if (!userId) {
+      throw new Error(
+        "getOrCreateProfile requires a userId, and this backend API does not support arbitrary user profile creation.",
+      );
     }
 
-    // First try to get existing profile
-    let { data: profile, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
-
-    // If profile doesn't exist, create it
-    if (!profile) {
-      try {
-        profile = await syncSignupUserProfile({
-          userId,
-          email: userData.email || "",
-          fullName:
-            userData.full_name || userData.email?.split("@")[0] || "User",
-          phone: userData.phone || userData.phone_number || "",
-          resolvedRole: "student",
-        });
-        if (userData.avatar_url) {
-          await supabase
-            .from("users")
-            .update({ avatar_url: userData.avatar_url })
-            .eq("id", userId);
-        }
-      } catch (createError) {
-        console.error("Error creating profile:", createError);
-        return {
-          id: userId,
-          email: userData.email || "",
-          full_name:
-            userData.full_name || userData.email?.split("@")[0] || "User",
-          role: "student",
-          avatar_url: userData.avatar_url || null,
-        };
-      }
+    const session = getStoredSession();
+    const currentUserId = session?.user?.id || null;
+    if (`${currentUserId}` !== `${userId}`) {
+      throw new Error(
+        "Creating or fetching arbitrary user profiles is not supported by the current backend REST API.",
+      );
     }
 
-    // Ensure missing role is stored as student in the database
-    if (profile) {
-      const role = (profile.role || "").toString().trim();
-      if (!role) {
-        const { data: updated, error: updateError } = await supabase
-          .from("users")
-          .update({ role: "student" })
-          .eq("id", userId)
-          .select("*")
-          .maybeSingle();
-
-        if (!updateError && updated) {
-          profile = updated;
-        } else {
-          profile = { ...profile, role: "student" };
-        }
-      }
-    }
-
-    return profile;
+    return this.getProfile(userId);
   },
 
   // Update user profile
   async updateProfile(userId, profileData) {
     try {
-      // PATCH current user profile
-      if (!userId) {
-        const res = await apiClient.patch("/auth/me", profileData);
-        return res.data?.data || res.data;
+      const res = await apiClient.patch("/auth/me", profileData);
+      const profile = res.data?.data || res.data;
+      if (!userId || `${profile?.id}` === `${userId}`) {
+        return profile;
       }
-      const res = await apiClient.patch(`/users/${userId}`, profileData);
-      return res.data?.data || res.data;
+      throw new Error(
+        "Updating another user's profile is not supported by the current backend API.",
+      );
     } catch (err) {
       throw buildApiError(err, "Failed to update profile");
     }
@@ -1365,38 +1013,25 @@ export const userService = {
   // Return the database profile only. Role changes are never synchronized from
   // client input; admins must be assigned by database-authorized RPCs.
   async ensureUserRole(userId, email, role) {
-    if (!isSupabaseAvailable()) {
-      return { id: userId, email, role: role === "admin" ? "student" : role };
-    }
-
     if (!userId) {
       throw new Error("Missing required user role synchronization data");
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
+    const session = getStoredSession();
+    if (`${session?.user?.id}` !== `${userId}`) {
+      throw new Error(
+        "Ensuring another user's role is not supported by the current backend REST API.",
+      );
+    }
 
-    if (profileError) throw profileError;
-    return profile || { id: userId, email, role: "student" };
+    return this.getProfile(userId);
   },
 
   // Upload avatar
   async uploadAvatar(userId, file) {
-    try {
-      // Upload via server endpoint (server will proxy to Supabase storage)
-      const form = new FormData();
-      form.append("file", file);
-      form.append("userId", userId);
-      const res = await apiClient.post("/users/upload-avatar", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      return res.data?.data || res.data;
-    } catch (err) {
-      throw buildApiError(err, "Failed to upload avatar");
-    }
+    throw new Error(
+      "Avatar uploads are not supported by the current backend REST API. Use a direct profile URL or update the backend to support file uploads.",
+    );
   },
 };
 
@@ -1716,92 +1351,24 @@ export const chatService = {
   getCourseChatChannelName,
 
   subscribeToCourseChat(courseId, handlers = {}) {
-    if (!isSupabaseAvailable() || !courseId) {
-      return null;
-    }
-
-    const { onMessage, onConversationUpdate, onStatus } = handlers;
-    const channel = supabase.channel(getCourseChatChannelName(courseId), {
-      config: { broadcast: { self: true } },
-    });
-
-    if (onMessage) {
-      channel.on("broadcast", { event: "message" }, ({ payload }) => {
-        onMessage(payload);
-      });
-    }
-
-    if (onConversationUpdate) {
-      channel.on("broadcast", { event: "conversation" }, ({ payload }) => {
-        onConversationUpdate(payload);
-      });
-    }
-
-    channel.subscribe((status) => {
-      onStatus?.(status);
-    });
-
-    return channel;
+    // Realtime subscription is disabled on the frontend. Use polling instead.
+    handlers.onStatus?.("SUBSCRIBED");
+    return null;
   },
 
   removeChannel(channel) {
-    if (isSupabaseAvailable() && channel) {
-      supabase.removeChannel(channel);
-    }
+    // No realtime channel to remove when using polling.
+    return;
   },
 
   subscribeToConversationMessages(conversationId, onInsert) {
-    if (!isSupabaseAvailable() || !conversationId || !onInsert) {
-      return null;
-    }
-
-    const channel = supabase
-      .channel(`course-chat-db-${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "course_messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          onInsert(payload.new);
-        },
-      )
-      .subscribe();
-
-    return channel;
+    // Realtime subscription is disabled on the frontend. Use polling instead.
+    return null;
   },
 
   async broadcastChatMessage(courseId, message) {
-    if (!isSupabaseAvailable() || !courseId || !message) {
-      return;
-    }
-
-    const channel = supabase.channel(getCourseChatChannelName(courseId), {
-      config: { broadcast: { self: true } },
-    });
-
-    await new Promise((resolve) => {
-      const timeoutId = window.setTimeout(() => {
-        supabase.removeChannel(channel);
-        resolve();
-      }, 3000);
-
-      channel.subscribe(async (status) => {
-        if (status !== "SUBSCRIBED") return;
-
-        window.clearTimeout(timeoutId);
-        await channel.send({
-          type: "broadcast",
-          event: "message",
-          payload: message,
-        });
-        supabase.removeChannel(channel);
-        resolve();
-      });
-    });
+    // Realtime broadcast is disabled on the frontend.
+    return;
   },
 
   async getOrCreateConversation({ courseId, studentId, instructorId }) {
@@ -2271,584 +1838,78 @@ async function ensureMeetingJoinFields(meeting, preferredRoomName = null) {
 }
 
 export const meetingService = {
-  // Create a meeting
-  async createMeeting(meetingData) {
-    if (!isSupabaseAvailable()) {
-      return { id: "mock-meeting-id", ...meetingData };
-    }
-
-    const { data, error } = await supabase
-      .from("meetings")
-      .insert(meetingData)
-      .select()
-      .single();
-
-    if (error) {
-      if (isMissingTableError(error)) {
-        warnMissingMeetingsTable();
-        throw new Error(
-          "Live sessions table is not set up yet. Ask the admin to run migration 022 in Supabase.",
-        );
-      }
-      throw error;
-    }
-
-    if (
-      meetingData.platform === "jitsi" &&
-      meetingData.jitsi_room_name &&
-      (!data.jitsi_room_name || data.platform !== "jitsi")
-    ) {
-      const { data: patched, error: patchError } = await supabase
-        .from("meetings")
-        .update({
-          platform: "jitsi",
-          jitsi_room_name: meetingData.jitsi_room_name,
-        })
-        .eq("id", data.id)
-        .select()
-        .single();
-
-      if (!patchError && patched) {
-        return ensureMeetingJoinFields(patched, meetingData.jitsi_room_name);
-      }
-    }
-
-    if (meetingData.platform === "google_meet" || isExternalGoogleMeet(data)) {
-      return normalizeMeetingRecord(data);
-    }
-
-    return ensureMeetingJoinFields(data, meetingData.jitsi_room_name);
-  },
-
   ensureMeetingJoinFields,
 
-  // Get meetings for a course
-  async getMeetingsByCourse(courseId, { instructorView = false } = {}) {
-    if (!isSupabaseAvailable()) {
-      return [];
-    }
-
-    const normalizeAll = (rows) => (rows || []).map(normalizeMeetingRecord);
-
-    if (instructorView) {
-      const { data, error } = await supabase
-        .from("meetings")
-        .select("*")
-        .eq("course_id", courseId)
-        .order("scheduled_at", { ascending: true });
-
-      if (error) {
-        if (isMissingTableError(error)) {
-          warnMissingMeetingsTable();
-          return [];
-        }
-        throw error;
-      }
-
-      return normalizeAll(data);
-    }
-
-    const { data: rpcData, error: rpcError } = await supabase.rpc(
-      "get_course_meetings_for_student",
-      { p_course_id: courseId },
+  async createMeeting(meetingData) {
+    throw new Error(
+      "Backend REST API does not support meeting creation at this time.",
     );
+  },
 
-    if (!rpcError && Array.isArray(rpcData)) {
-      return normalizeAll(rpcData);
-    }
-
-    if (rpcError?.message?.includes("Access denied")) {
-      return [];
-    }
-
-    if (
-      rpcError &&
-      !rpcError.message?.includes("Could not find the function")
-    ) {
-      console.warn(
-        "get_course_meetings_for_student RPC failed:",
-        rpcError.message,
-      );
-    }
-
+  async getMeetingsByCourse(courseId, { instructorView = false } = {}) {
     return [];
   },
 
-  // Get upcoming meetings for a user
   async getUpcomingMeetings(userId) {
-    if (!isSupabaseAvailable()) {
-      return [];
-    }
-
-    const { data, error } = await supabase
-      .from("meetings")
-      .select(
-        `
-        *,
-        course:courses(id, title, thumbnail_url)
-      `,
-      )
-      .gte("scheduled_at", new Date().toISOString())
-      .order("scheduled_at", { ascending: true })
-      .limit(10);
-
-    if (error) {
-      if (isMissingTableError(error)) {
-        warnMissingMeetingsTable();
-        return [];
-      }
-      throw error;
-    }
-    return data;
+    return [];
   },
 
-  // Update a meeting
   async updateMeeting(id, meetingData) {
-    if (!isSupabaseAvailable()) {
-      return { id, ...meetingData };
-    }
-
-    const { data, error } = await supabase
-      .from("meetings")
-      .update(meetingData)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      if (isMissingTableError(error)) {
-        warnMissingMeetingsTable();
-        throw new Error(
-          "Live sessions table is not set up yet. Ask the admin to run migration 022 in Supabase.",
-        );
-      }
-      throw error;
-    }
-    return data;
+    throw new Error(
+      "Backend REST API does not support meeting updates at this time.",
+    );
   },
 
-  // Delete a meeting
   async deleteMeeting(id) {
-    if (!isSupabaseAvailable()) {
-      return { success: true };
-    }
-
-    const { error } = await supabase.from("meetings").delete().eq("id", id);
-
-    if (error) {
-      if (isMissingTableError(error)) {
-        warnMissingMeetingsTable();
-        throw new Error(
-          "Live sessions table is not set up yet. Ask the admin to run migration 022 in Supabase.",
-        );
-      }
-      throw error;
-    }
-    return { success: true };
+    throw new Error(
+      "Backend REST API does not support meeting deletion at this time.",
+    );
   },
 };
 
-// ============ NOTIFICATION SERVICES ============
 export const notificationService = {
-  // Send notification to enrolled students
-  async notifyStudents({ course_id, title, message, type = "general" }) {
-    if (!isSupabaseAvailable()) {
-      console.log("Mock notification:", { course_id, title, message, type });
-      return { success: true };
-    }
-
-    // Get enrolled students
-    const { data: enrollments, error: enrollError } = await supabase
-      .from("enrollments")
-      .select("user_id")
-      .eq("course_id", course_id);
-
-    if (enrollError) throw enrollError;
-
-    // Create notifications for each student
-    const notifications = enrollments.map((e) => ({
-      user_id: e.user_id,
-      course_id,
-      title,
-      message,
-      type,
-      is_read: false,
-    }));
-
-    if (notifications.length > 0) {
-      const { error } = await supabase
-        .from("notifications")
-        .insert(notifications);
-
-      if (error) throw error;
-    }
-
-    return { success: true, count: notifications.length };
-  },
-
-  // Notify students who can access the course (paid = approved payment, free = enrolled)
-  async notifyEligibleStudents({
-    course_id,
-    title,
-    message,
-    type = "meeting",
-    action_url = null,
-  }) {
-    if (!isSupabaseAvailable()) {
-      console.log("Mock eligible notification:", {
-        course_id,
-        title,
-        message,
-        type,
-      });
-      return { success: true, count: 0 };
-    }
-
-    const { data: rpcData, error: rpcError } = await supabase.rpc(
-      "notify_course_students",
-      {
-        p_course_id: course_id,
-        p_title: title,
-        p_message: message,
-        p_type: type,
-        p_action_url: action_url,
-      },
-    );
-
-    const rpcMissing =
-      rpcError?.code === "PGRST202" ||
-      `${rpcError?.message || ""}`
-        .toLowerCase()
-        .includes("could not find the function");
-
-    if (!rpcMissing && rpcData?.success === false) {
-      throw new Error(rpcData.error || "Failed to notify students");
-    }
-
-    if (!rpcMissing && rpcError) {
-      throw rpcError;
-    }
-
-    const rpcCount = Number(rpcData?.count ?? 0);
-    if (!rpcMissing && rpcData?.success !== false && rpcCount > 0) {
-      return { success: true, count: rpcCount };
-    }
-
-    const { data: approvedPayments, error: paymentError } = await supabase
-      .from("payment_submissions")
-      .select("student_id")
-      .eq("course_id", course_id)
-      .in("status", ["approved", "Approved", "APPROVED"]);
-
-    const { data: enrollments, error: enrollError } = await supabase
-      .from("enrollments")
-      .select("user_id")
-      .eq("course_id", course_id);
-
-    if (paymentError) throw paymentError;
-    if (enrollError) throw enrollError;
-
-    const studentIds = [
-      ...new Set(
-        [
-          ...(approvedPayments || []).map((row) => row.student_id),
-          ...(enrollments || []).map((row) => row.user_id),
-        ].filter(Boolean),
-      ),
-    ];
-
-    if (studentIds.length === 0) {
-      return { success: true, count: 0 };
-    }
-
-    const notifications = studentIds.map((user_id) => ({
-      user_id,
-      course_id,
-      title,
-      message,
-      type,
-      action_url,
-      is_read: false,
-    }));
-
-    const { error } = await supabase
-      .from("notifications")
-      .insert(notifications);
-
-    if (error) {
-      const text = `${error.message || ""}`.toLowerCase();
-      if (text.includes("row-level security") || text.includes("policy")) {
-        throw new Error(
-          "Notification blocked by database policy. Run supabase/migrations/023_fix_notifications_insert_rls.sql in Supabase SQL Editor, then retry.",
-        );
-      }
-
-      if (text.includes("course_id")) {
-        const fallbackRows = studentIds.map((user_id) => ({
-          user_id,
-          title,
-          message,
-          type,
-          is_read: false,
-        }));
-        const { error: fallbackError } = await supabase
-          .from("notifications")
-          .insert(fallbackRows);
-        if (fallbackError) throw fallbackError;
-        return { success: true, count: fallbackRows.length };
-      }
-      throw error;
-    }
-
-    return { success: true, count: notifications.length };
-  },
-
-  // Get notifications for a user
-  async getUserNotifications(userId, { limit = 20, unreadOnly = false } = {}) {
-    if (!isSupabaseAvailable()) {
-      return [];
-    }
-
-    const authUser = await authService.getCurrentUser();
-    const queryUserId = authUser?.id || userId;
-
-    const { data: rpcData, error: rpcError } = await supabase.rpc(
-      "get_my_notifications",
-      {
-        p_limit: limit,
-        p_unread_only: unreadOnly,
-      },
-    );
-
-    if (!rpcError && Array.isArray(rpcData)) {
-      return rpcData;
-    }
-
-    let query = supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", queryUserId)
-      .order("created_at", { ascending: false })
-      .limit(limit);
-
-    if (unreadOnly) {
-      query = query.eq("is_read", false);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data || [];
-  },
-
-  // Mark notification as read
-  async markAsRead(notificationId) {
-    if (!isSupabaseAvailable()) {
-      return { success: true };
-    }
-
-    const { error } = await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("id", notificationId);
-
-    if (error) throw error;
-    return { success: true };
-  },
-
-  // Mark all notifications as read
-  async markAllAsRead(userId) {
-    if (!isSupabaseAvailable()) {
-      return { success: true };
-    }
-
-    const { error } = await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", userId)
-      .eq("is_read", false);
-
-    if (error) throw error;
-    return { success: true };
-  },
-
-  // Get unread count
-  async getUnreadCount(userId) {
-    if (!isSupabaseAvailable()) {
-      return 0;
-    }
-
-    const { data: rpcCount, error: rpcError } = await supabase.rpc(
-      "get_my_unread_notification_count",
-    );
-    if (!rpcError && typeof rpcCount === "number") {
-      return rpcCount;
-    }
-
-    const authUser = await authService.getCurrentUser();
-    const queryUserId = authUser?.id || userId;
-
-    const { count, error } = await supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", queryUserId)
-      .eq("is_read", false);
-
-    if (error) throw error;
-    return count || 0;
-  },
-
-  // Live sessions the student can join right now (fallback when notifications table fails)
-  async getLiveSessionInvitesForStudent(userId) {
-    if (!isSupabaseAvailable() || !userId) {
-      return [];
-    }
-
-    const authUser = await authService.getCurrentUser();
-    const queryUserId = authUser?.id || userId;
-
-    const courseMeta = new Map();
-
-    const [{ data: enrollments }, { data: approvedPayments }] =
-      await Promise.all([
-        supabase
-          .from("enrollments")
-          .select("course_id, course:courses(id, title)")
-          .eq("user_id", queryUserId),
-        supabase
-          .from("payment_submissions")
-          .select("course_id, course:courses(id, title)")
-          .eq("student_id", queryUserId)
-          .in("status", ["approved", "Approved", "APPROVED"]),
-      ]);
-
-    (enrollments || []).forEach((row) => {
-      if (row.course_id) {
-        courseMeta.set(
-          row.course_id,
-          row.course?.title || courseMeta.get(row.course_id) || "Course",
-        );
-      }
-    });
-    (approvedPayments || []).forEach((row) => {
-      if (row.course_id) {
-        courseMeta.set(
-          row.course_id,
-          row.course?.title || courseMeta.get(row.course_id) || "Course",
-        );
-      }
-    });
-
-    if (courseMeta.size === 0) {
-      return [];
-    }
-
-    const invites = [];
-
-    for (const [courseId, courseTitle] of courseMeta.entries()) {
-      const meetings = await meetingService.getMeetingsByCourse(courseId);
-      const liveMeetings = (meetings || []).filter(
-        (meeting) => meeting.status === "live",
-      );
-
-      for (const meeting of liveMeetings) {
-        const joinTarget = getMeetingJoinTarget(meeting, courseId);
-        const sessionLabel = meeting.title || "Live session";
-        const learnUrl = meeting.id
-          ? `/courses/${courseId}/learn?session=${meeting.id}`
-          : `/courses/${courseId}/learn?session=live`;
-
-        const platformLabel =
-          joinTarget?.type === "external" ? "Google Meet" : "Jitsi";
-        const shareUrl =
-          joinTarget?.type === "external"
-            ? joinTarget.url
-            : joinTarget?.type === "jitsi"
-              ? getJitsiExternalUrl(joinTarget.roomName)
-              : "";
-
-        invites.push({
-          id: `live-meeting-${meeting.id}`,
-          user_id: queryUserId,
-          course_id: courseId,
-          title: `Live session invitation: ${sessionLabel}`,
-          message: shareUrl
-            ? `You are invited to a live session in "${courseTitle}".\n\nTap "Join session" to enter.\n\n${platformLabel} link:\n${shareUrl}`
-            : `You are invited to a live session in "${courseTitle}". Tap "Join session" to enter.`,
-          type: "meeting",
-          action_url: learnUrl,
-          is_read: false,
-          created_at:
-            meeting.updated_at ||
-            meeting.scheduled_at ||
-            new Date().toISOString(),
-          _source: "live_meeting",
-        });
-      }
-    }
-
-    return invites.sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    );
-  },
-
   async getSessionInvites(userId, { limit = 15 } = {}) {
-    const [stored, live] = await Promise.all([
-      this.getUserNotifications(userId, { limit }).catch(() => []),
-      this.getLiveSessionInvitesForStudent(userId).catch(() => []),
-    ]);
-
-    const merged = [];
-    const seen = new Set();
-
-    for (const item of [...live, ...stored]) {
-      const key = item.id || `${item.course_id}-${item.title}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      merged.push(item);
-    }
-
-    return merged.slice(0, limit);
+    return [];
   },
 
-  subscribeToUserNotifications(userId, onInsert) {
-    if (!isSupabaseAvailable() || !userId || !onInsert) {
-      return null;
-    }
+  async getUnreadCount(userId) {
+    return 0;
+  },
 
-    const channel = supabase
-      .channel(`student-notifications-${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          onInsert(payload.new);
-        },
-      )
-      .subscribe();
-
-    return channel;
+  subscribeToUserNotifications(userId, onNotification) {
+    return null;
   },
 
   removeChannel(channel) {
-    if (isSupabaseAvailable() && channel) {
-      supabase.removeChannel(channel);
-    }
+    return;
+  },
+
+  async markAsRead(notificationId) {
+    return { success: true };
+  },
+
+  async markAllAsRead(userId) {
+    return { success: true };
+  },
+
+  async deleteNotification(notificationId, userId) {
+    return { success: true };
+  },
+
+  async notifyStudents(notificationData) {
+    throw new Error(
+      "Backend REST API does not support notifications at this time.",
+    );
+  },
+
+  async notifyEligibleStudents(notificationData) {
+    throw new Error(
+      "Backend REST API does not support notifications at this time.",
+    );
   },
 };
 
-export default {
-  auth: authService,
-  courses: courseService,
-  lessons: lessonService,
-  enrollments: enrollmentService,
-  reviews: reviewService,
-  users: userService,
+export const services = {
   categories: categoryService,
   blogs: blogService,
   articleSchedules: articleScheduleService,

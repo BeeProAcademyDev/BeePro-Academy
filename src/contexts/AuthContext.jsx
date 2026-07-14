@@ -1,11 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import i18n from "../i18n/i18n";
-import { authService, userService } from "../services/api";
-import {
-  resolveUserRole,
-  isPendingInstructor,
-  resolveAppRole,
-} from "../lib/roles";
+import { authService } from "../services/api";
+import { resolveUserRole, isPendingInstructor } from "../lib/roles";
 import { formatErrorMessage } from "../lib/supabaseErrors";
 
 const AuthContext = createContext(null);
@@ -30,24 +26,6 @@ export const AuthProvider = ({ children }) => {
     return {
       ...userData,
       role: resolveUserRole(userData),
-    };
-  };
-
-  const mergeAuthProfile = (authUser, profile) => {
-    const authEmail = (authUser?.email || "").toString().trim();
-    return {
-      ...authUser,
-      ...profile,
-      email: authEmail || profile?.email || "",
-      full_name:
-        profile?.full_name ||
-        authUser?.full_name ||
-        authUser?.user_metadata?.full_name,
-      avatar_url:
-        profile?.avatar_url ||
-        authUser?.avatar_url ||
-        authUser?.user_metadata?.avatar_url,
-      role: resolveAppRole(profile),
     };
   };
 
@@ -94,10 +72,9 @@ export const AuthProvider = ({ children }) => {
       if (showLoading) setIsLoading(true);
 
       const authState = authService.getAuthState();
-      const currentUser = authState?.user || null;
       const activeSession = authState?.session || null;
 
-      if (!currentUser?.id || !activeSession) {
+      if (!activeSession?.access_token) {
         setUser(null);
         setSession(null);
         return;
@@ -110,17 +87,16 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      const profile = await userService.getOrCreateProfile(currentUser.id, {
-        email: currentUser.email,
-        full_name:
-          currentUser.full_name || currentUser.user_metadata?.full_name,
-        avatar_url:
-          currentUser.avatar_url || currentUser.user_metadata?.avatar_url,
-      });
-      await assertProfileIsActive(profile);
+      const profile = await authService.getCurrentUser();
+      if (!profile) {
+        setUser(null);
+        setSession(null);
+        return;
+      }
 
-      const mergedUser = mergeAuthProfile(currentUser, profile);
-      setUser(applyRoleFallback(mergedUser));
+      await assertProfileIsActive(profile);
+      setUser(applyRoleFallback(profile));
+      setSession(activeSession);
     } catch (err) {
       console.error("Error checking user:", err);
       if (isBlockedAccountError(err)) {
@@ -225,15 +201,8 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (authUser) {
-        // Use getOrCreateProfile to handle users without a profile
-        const profile = await userService.getOrCreateProfile(authUser.id, {
-          email: authUser.email,
-          full_name: authUser.user_metadata?.full_name,
-          avatar_url: authUser.user_metadata?.avatar_url,
-        });
-        await assertProfileIsActive(profile);
-        const mergedUser = mergeAuthProfile(authUser, profile);
-        setUser(applyRoleFallback(mergedUser));
+        await assertProfileIsActive(authUser);
+        setUser(applyRoleFallback(authUser));
       }
 
       return { success: true, user: authUser };
@@ -264,16 +233,16 @@ export const AuthProvider = ({ children }) => {
         role,
       });
       const authUser = signupResult?.user;
+      const session = signupResult?.session || null;
       const resolvedRole = signupResult?.resolvedRole || role;
 
+      if (session) {
+        setSession(session);
+      }
+
       if (authUser) {
-        const withRoleFallback = applyRoleFallback({
-          ...authUser,
-          full_name: fullName,
-          phone,
-          role: resolvedRole,
-        });
-        setUser(withRoleFallback);
+        await assertProfileIsActive(authUser);
+        setUser(applyRoleFallback(authUser));
       }
 
       return {

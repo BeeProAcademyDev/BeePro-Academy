@@ -11,6 +11,16 @@ import './index.css'
 import './styles/theme.css'
 import './i18n/i18n'
 
+// Global submit event listener to catch all form submissions
+document.addEventListener('submit', (event) => {
+  console.log('[GLOBAL SUBMIT] Form submission detected:', event);
+  console.log('[GLOBAL SUBMIT] Form element:', event.target);
+  console.log('[GLOBAL SUBMIT] Form action:', event.target.action);
+  console.log('[GLOBAL SUBMIT] Form method:', event.target.method);
+  console.log('[GLOBAL SUBMIT] Submitter:', event.submitter);
+  console.log('[GLOBAL SUBMIT] Event default prevented:', event.defaultPrevented);
+}, true) // Capture phase to catch before React
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>

@@ -29,7 +29,6 @@ class SupabaseCourseRepository {
     if (error) throw error;
     return data;
   }
-
   async create(payload) {
     if (!this.supabase) return { id: `mock-${Date.now()}`, ...payload };
     const { data, error } = await this.supabase

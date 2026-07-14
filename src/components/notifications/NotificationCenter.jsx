@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { useAuthState } from '../../hooks/useAuth';
-import { paymentNotificationService } from '../../services/paymentAPI';
-import { Card } from '../ui/Card';
-import toast from 'react-hot-toast';
-import { 
-  Bell, 
-  Check, 
-  X, 
-  DollarSign, 
-  AlertTriangle, 
-  CheckCircle, 
+import React, { useState, useEffect } from "react";
+import { useAuthState } from "../../hooks/useAuth";
+import { paymentNotificationService } from "../../services/paymentAPI";
+import { Card } from "../ui/Card";
+import toast from "react-hot-toast";
+import {
+  Bell,
+  Check,
+  X,
+  DollarSign,
+  AlertTriangle,
+  CheckCircle,
   XCircle,
   Clock,
   Trash2,
-  MarkAsRead
-} from 'lucide-react';
+  MarkAsRead,
+} from "lucide-react";
 
 const NotificationCenter = ({ isOpen, onClose }) => {
   const { user } = useAuthState();
@@ -23,50 +23,44 @@ const NotificationCenter = ({ isOpen, onClose }) => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (user && isOpen) {
-      loadNotifications();
-      // Set up real-time subscription
-      const subscription = setupRealtimeSubscription();
-      return () => {
-        if (subscription) paymentNotificationService.removeChannel(subscription);
-      };
-    }
+    if (!user || !isOpen) return undefined;
+
+    loadNotifications();
+    const pollId = window.setInterval(loadNotifications, 8000);
+
+    return () => {
+      window.clearInterval(pollId);
+    };
   }, [user, isOpen]);
 
   const loadNotifications = async () => {
     try {
       setLoading(true);
-      const data = await paymentNotificationService.getUserNotifications(user.id);
-      
+      const data = await paymentNotificationService.getUserNotifications(
+        user.id,
+      );
+
       setNotifications(data || []);
-      setUnreadCount(data?.filter(n => !n.is_read).length || 0);
+      setUnreadCount(data?.filter((n) => !n.is_read).length || 0);
     } catch (error) {
-      console.error('Error loading notifications:', error);
-      toast.error('Failed to load notifications');
+      console.error("Error loading notifications:", error);
+      toast.error("Failed to load notifications");
     } finally {
       setLoading(false);
     }
   };
 
-  const setupRealtimeSubscription = () => {
-    return paymentNotificationService.subscribeToUserNotifications(user.id, (notification) => {
-      setNotifications(prev => [notification, ...prev]);
-      setUnreadCount(prev => prev + 1);
-      showToastNotification(notification);
-    });
-  };
-
   const showToastNotification = (notification) => {
     const message = notification.message;
-    
+
     switch (notification.notification_type) {
-      case 'payment_submitted':
-        toast(message, { icon: '💳' });
+      case "payment_submitted":
+        toast(message, { icon: "💳" });
         break;
-      case 'payment_approved':
+      case "payment_approved":
         toast.success(message);
         break;
-      case 'payment_rejected':
+      case "payment_rejected":
         toast.error(message);
         break;
       default:
@@ -79,14 +73,14 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       await paymentNotificationService.markAsRead(notificationId, user.id);
 
       // Update local state
-      setNotifications(prev => 
-        prev.map(n => 
-          n.id === notificationId ? { ...n, is_read: true } : n
-        )
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notificationId ? { ...n, is_read: true } : n,
+        ),
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error("Error marking notification as read:", error);
     }
   };
 
@@ -95,42 +89,46 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       await paymentNotificationService.markAllAsRead(user.id);
 
       // Update local state
-      setNotifications(prev => 
-        prev.map(n => ({ ...n, is_read: true }))
-      );
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       setUnreadCount(0);
-      toast.success('All notifications marked as read');
+      toast.success("All notifications marked as read");
     } catch (error) {
-      console.error('Error marking all as read:', error);
-      toast.error('Failed to mark all as read');
+      console.error("Error marking all as read:", error);
+      toast.error("Failed to mark all as read");
     }
   };
 
   const deleteNotification = async (notificationId) => {
     try {
-      await paymentNotificationService.deleteNotification(notificationId, user.id);
+      await paymentNotificationService.deleteNotification(
+        notificationId,
+        user.id,
+      );
 
       // Update local state
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      setUnreadCount(prev => {
-        const notification = notifications.find(n => n.id === notificationId);
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+      setUnreadCount((prev) => {
+        const notification = notifications.find((n) => n.id === notificationId);
         return notification && !notification.is_read ? prev - 1 : prev;
       });
     } catch (error) {
-      console.error('Error deleting notification:', error);
-      toast.error('Failed to delete notification');
+      console.error("Error deleting notification:", error);
+      toast.error("Failed to delete notification");
     }
   };
 
   const getNotificationIcon = (type) => {
     const iconMap = {
-      payment_submitted: { icon: DollarSign, color: 'text-blue-400' },
-      payment_approved: { icon: CheckCircle, color: 'text-green-400' },
-      payment_rejected: { icon: XCircle, color: 'text-red-400' },
-      payment_pending: { icon: Clock, color: 'text-yellow-400' }
+      payment_submitted: { icon: DollarSign, color: "text-blue-400" },
+      payment_approved: { icon: CheckCircle, color: "text-green-400" },
+      payment_rejected: { icon: XCircle, color: "text-red-400" },
+      payment_pending: { icon: Clock, color: "text-yellow-400" },
     };
 
-    const { icon: Icon, color } = iconMap[type] || { icon: Bell, color: 'text-gray-400' };
+    const { icon: Icon, color } = iconMap[type] || {
+      icon: Bell,
+      color: "text-gray-400",
+    };
     return <Icon className={`w-5 h-5 ${color}`} />;
   };
 
@@ -139,9 +137,10 @@ const NotificationCenter = ({ isOpen, onClose }) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
 
-    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 60) return "Just now";
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)}h ago`;
     return `${Math.floor(diffInSeconds / 86400)}d ago`;
   };
 
@@ -168,7 +167,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
               <X className="w-5 h-5" />
             </button>
           </div>
-          
+
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
@@ -198,9 +197,9 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                 <div
                   key={notification.id}
                   className={`p-4 rounded-lg border transition-all ${
-                    notification.is_read 
-                      ? 'bg-gray-800 border-gray-700' 
-                      : 'bg-gray-700 border-blue-600'
+                    notification.is_read
+                      ? "bg-gray-800 border-gray-700"
+                      : "bg-gray-700 border-blue-600"
                   }`}
                 >
                   <div className="flex items-start justify-between mb-2">
@@ -222,7 +221,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                       </button>
                     </div>
                   </div>
-                  
+
                   <p className="text-gray-300 text-sm mb-3">
                     {notification.message}
                   </p>
@@ -230,7 +229,13 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                   {notification.payment_submission && (
                     <div className="bg-gray-900 p-3 rounded text-xs text-gray-400">
                       <p>Amount: ${notification.payment_submission.amount}</p>
-                      <p>Method: {notification.payment_submission.payment_method?.method_name}</p>
+                      <p>
+                        Method:{" "}
+                        {
+                          notification.payment_submission.payment_method
+                            ?.method_name
+                        }
+                      </p>
                     </div>
                   )}
 

@@ -1,27 +1,44 @@
-const ALLOWED_ORIGINS = new Set([
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  "http://localhost:5173",
-  "https://bee-pro-academy.vercel.app",
-]);
+const ALLOWED_ORIGINS = new Set(
+  [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "https://bee-pro-academy.vercel.app",
+    process.env.CLIENT_URL,
+  ].filter(Boolean),
+);
 
 const ALLOWED_METHODS = "GET,POST,PUT,PATCH,DELETE,OPTIONS";
-const ALLOWED_HEADERS = "Authorization, Content-Type, Accept, X-Requested-With";
+const ALLOWED_HEADERS = "Authorization,Content-Type,Accept,X-Requested-With";
 const ALLOW_CREDENTIALS = "true";
+
+if (process.env.NODE_ENV !== "production") {
+  console.log("[CORS] Allowed origins:", Array.from(ALLOWED_ORIGINS));
+}
 
 export function applyCors(req, res) {
   const origin = req.headers?.origin;
+
+  // Always set CORS headers for OPTIONS requests
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", ALLOW_CREDENTIALS);
+  } else if (origin) {
+    // Log rejected origins in development
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[CORS] Rejected origin:", origin);
+    }
   }
+
   res.setHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
   res.setHeader("Access-Control-Allow-Headers", ALLOWED_HEADERS);
-  res.setHeader("Access-Control-Allow-Credentials", ALLOW_CREDENTIALS);
-  res.setHeader("Vary", "Origin, Access-Control-Request-Headers");
+  res.setHeader("Access-Control-Expose-Headers", "Content-Length");
+  res.setHeader("Vary", "Origin");
 }
 
 export function handleOptions(req, res) {
   applyCors(req, res);
+  res.setHeader("Content-Type", "text/plain");
   res.statusCode = 204;
   res.end();
 }
