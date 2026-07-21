@@ -15,9 +15,10 @@ function toUserDTO(user) {
     full_name: user.full_name ?? user.fullName,
     email: user.email,
     role: user.role,
+    status: user.status,
     avatar_url: user.avatar_url ?? user.avatarUrl ?? null,
     phone: user.phone ?? null,
-    is_suspended: user.is_suspended ?? user.isSuspended ?? false,
+    bio: user.bio ?? null,
     created_at: user.created_at ?? user.createdAt,
     updated_at: user.updated_at ?? user.updatedAt,
   }

@@ -13,7 +13,7 @@ async function startServer() {
     await container.prisma.$connect()
     console.log('✅ Connected to database')
 
-    const server = app.listen(config.port, () => {
+    const server = app.listen(config.port, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${config.port} in ${config.env} mode`)
     })
 
@@ -36,3 +36,6 @@ async function startServer() {
 }
 
 startServer()
+
+// Keep the event loop alive to prevent clean exit issues
+setInterval(() => {}, 1000 * 60 * 60)

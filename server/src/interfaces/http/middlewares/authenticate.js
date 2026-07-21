@@ -22,6 +22,7 @@ const authenticate = (tokenService) => (req, res, next) => {
     id: decoded.sub,
     email: decoded.email,
     role: decoded.role,
+    status: decoded.status,
   }
 
   next()

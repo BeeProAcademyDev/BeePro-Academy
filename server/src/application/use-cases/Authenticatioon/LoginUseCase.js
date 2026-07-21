@@ -20,7 +20,7 @@ class LoginUseCase {
     }
 
     // 2. Check if account is suspended
-    if (user.is_suspended) {
+    if (user.status === 'suspended') {
       throw new AuthorizationError('Your account has been suspended. Please contact support.')
     }
 
@@ -41,6 +41,7 @@ class LoginUseCase {
       sub: user.id,
       email: user.email,
       role: user.role,
+      status: user.status,
     })
 
     const refreshTokenValue = this.tokenService.generateRefreshToken()

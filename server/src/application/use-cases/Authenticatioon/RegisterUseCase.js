@@ -32,8 +32,8 @@ class RegisterUseCase {
       throw new ConflictError('An account with this email already exists')
     }
 
-    // 4. Resolve role (instructor → pending_instructor, admin never allowed)
-    const resolvedRole = User.resolveSignupRole(role)
+    // 4. Resolve role and status
+    const resolvedSignup = User.resolveSignup(role)
 
     // 5. Hash password
     const passwordHash = await this.hashService.hash(password)
@@ -43,7 +43,8 @@ class RegisterUseCase {
       full_name: fullName,
       email: normalizedEmail,
       password_hash: passwordHash,
-      role: resolvedRole,
+      role: resolvedSignup.role,
+      status: resolvedSignup.status,
       phone: phone || null,
     })
 
@@ -52,6 +53,7 @@ class RegisterUseCase {
       sub: newUser.id,
       email: newUser.email,
       role: newUser.role,
+      status: newUser.status,
     })
 
     const refreshTokenValue = this.tokenService.generateRefreshToken()
@@ -68,7 +70,7 @@ class RegisterUseCase {
 
     return {
       ...toAuthResponseDTO(newUser, accessToken, refreshTokenValue),
-      pending_approval: resolvedRole === 'pending_instructor',
+      pending_approval: resolvedSignup.status === 'pending',
     }
   }
 }

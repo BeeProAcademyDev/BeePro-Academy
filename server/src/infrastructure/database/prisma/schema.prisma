@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -16,15 +17,17 @@ model User {
   email           String    @unique
   password_hash   String?
   role            String    @default("student")
+  status          String    @default("active")
   avatar_url      String?
   phone           String?
-  is_suspended    Boolean   @default(false)
+  bio             String?
   reset_token     String?
   reset_token_exp DateTime? @db.Timestamptz(6)
   created_at      DateTime  @default(now()) @db.Timestamptz(6)
   updated_at      DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
 
   refresh_tokens RefreshToken[]
+  Courses Course[]
 
   @@map("users")
 }
@@ -41,4 +44,80 @@ model RefreshToken {
   @@index([token])
   @@index([expires_at])
   @@map("refresh_tokens")
+}
+
+model Course {
+  id            String   @id @default(uuid()) @db.Uuid
+  title         String
+  description   String?
+  price         Decimal  @default(0) @db.Decimal(10, 2)
+  status        String   @default("draft")
+  instructor_id String   @db.Uuid
+  category_id   String?  @db.Uuid
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  instructor User     @relation(fields: [instructor_id], references: [id])
+  category   Category? @relation(fields: [category_id], references: [id])
+  sections   CourseSection[]
+
+  @@map("courses")
+}
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  courses Course[]
+
+  @@map("categories")
+}
+
+model CourseSection {
+  id         String   @id @default(uuid()) @db.Uuid
+  course_id  String   @db.Uuid
+  title      String
+  order      Int      @default(0)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  course  Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@map("course_sections")
+}
+
+model Lesson {
+  id           String   @id @default(uuid()) @db.Uuid
+  section_id   String   @db.Uuid
+  title        String
+  content_type String   @default("video")
+  content_url  String?  
+  text_content String?  @db.Text
+  duration     Int      @default(0)
+  is_free      Boolean  @default(false)
+  order        Int      @default(0)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  section CourseSection @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  files   LessonFile[]
+
+  @@map("lessons")
+}
+
+model LessonFile {
+  id         String   @id @default(uuid()) @db.Uuid
+  lesson_id  String   @db.Uuid
+  file_name  String
+  file_url   String
+  file_type  String   
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  lesson Lesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+
+  @@map("lesson_files")
 }

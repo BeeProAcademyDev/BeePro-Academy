@@ -14,6 +14,10 @@ const authorize = (...allowedRoles) => {
       return next(new AuthorizationError('You do not have permission to perform this action'))
     }
 
+    if (req.user.status !== 'active') {
+      return next(new AuthorizationError('Your account must be active to perform this action. If you are pending, please wait for admin approval.'))
+    }
+
     next()
   }
 }

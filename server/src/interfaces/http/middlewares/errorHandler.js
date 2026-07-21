@@ -26,14 +26,20 @@ const errorHandler = (err, req, res, next) => {
     })
   }
 
-  // Unhandled server errors
-  console.error('Unhandled Error:', err)
+  // Unhandled server errors — log full details
+  console.error('======= UNHANDLED ERROR =======')
+  console.error('Message:', err.message)
+  console.error('Stack:', err.stack)
+  console.error('Name:', err.name)
+  if (err.code) console.error('Code:', err.code)
+  if (err.meta) console.error('Meta:', JSON.stringify(err.meta, null, 2))
+  console.error('================================')
 
   res.status(500).json({
     success: false,
     error: {
       code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred',
+      message: err.message || 'An unexpected error occurred',
     },
   })
 }

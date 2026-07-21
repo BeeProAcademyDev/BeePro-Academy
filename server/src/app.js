@@ -8,6 +8,10 @@ const errorHandler = require('./interfaces/http/middlewares/errorHandler')
 const authenticateMiddleware = require('./interfaces/http/middlewares/authenticate')
 const authorizeMiddleware = require('./interfaces/http/middlewares/authorize')
 const createAuthRoutes = require('./interfaces/http/routes/authRoutes')
+const createAdminRoutes = require('./interfaces/http/routes/adminRoutes')
+const createCourseRoutes = require('./interfaces/http/routes/courseRoutes')
+const optionalAuthenticateMiddleware = require('./interfaces/http/middlewares/optionalAuthenticate')
+const createSectionRoutes =require('./interfaces/http/routes/sectionRoutes')
 
 function createApp(container) {
   const app = express()
@@ -28,10 +32,25 @@ function createApp(container) {
   // Inject dependencies into auth middleware
   const authenticate = authenticateMiddleware(container.tokenService)
   const authorize = authorizeMiddleware
+  const optionalAuthenticate = optionalAuthenticateMiddleware(container.tokenService)
 
   // Routes
   const authRoutes = createAuthRoutes(container.authController, authenticate, authorize)
   app.use('/api/v1/auth', authRoutes)
+
+  const adminRoutes = createAdminRoutes(container.adminController, authenticate, authorize)
+  app.use('/api/v1/admin', adminRoutes)
+
+  const courseRoutes = createCourseRoutes(container.courseController, authenticate, authorize, optionalAuthenticate)
+  app.use('/api/v1/courses', courseRoutes)
+
+  const createCategoryRoutes = require('./interfaces/http/routes/categoryRoutes')
+
+  const categoryRoutes = createCategoryRoutes(container.categoryController, authenticate, authorize)
+  app.use('/api/v1/categories', categoryRoutes)
+
+  const sectionRoutes = createSectionRoutes(container.sectionController, authenticate, authorize)
+  app.use('/api/v1/courses/:courseId/sections', sectionRoutes)
 
   // Health check
   app.get('/health', (req, res) => {

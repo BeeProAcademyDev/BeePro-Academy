@@ -28,7 +28,7 @@ class RefreshTokenUseCase {
       throw new AuthenticationError('User not found')
     }
 
-    if (user.is_suspended) {
+    if (user.status === 'suspended') {
       await this.tokenRepository.deleteAllForUser(user.id)
       throw new AuthenticationError('Your account has been suspended.')
     }
@@ -40,6 +40,7 @@ class RefreshTokenUseCase {
       sub: user.id,
       email: user.email,
       role: user.role,
+      status: user.status,
     })
 
     const newRefreshTokenValue = this.tokenService.generateRefreshToken()

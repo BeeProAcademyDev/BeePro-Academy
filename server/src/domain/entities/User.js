@@ -11,7 +11,8 @@ class User {
     role = 'student',
     avatarUrl = null,
     phone = null,
-    isSuspended = false,
+    status = 'active',
+    bio = null,
     resetToken = null,
     resetTokenExp = null,
     createdAt = new Date(),
@@ -24,7 +25,8 @@ class User {
     this.role = role
     this.avatarUrl = avatarUrl
     this.phone = phone
-    this.isSuspended = isSuspended
+    this.status = status
+    this.bio = bio
     this.resetToken = resetToken
     this.resetTokenExp = resetTokenExp
     this.createdAt = createdAt
@@ -33,9 +35,9 @@ class User {
 
   // ── Business Rules ──
 
-  static VALID_ROLES = ['student', 'pending_instructor', 'instructor', 'teacher', 'admin']
+  static VALID_ROLES = ['student','instructor', 'admin']
 
-  static SIGNUP_ALLOWED_ROLES = ['student', 'instructor', 'teacher']
+  static SIGNUP_ALLOWED_ROLES = ['student','instructor', 'admin']
 
   static normalizeEmail(email) {
     return (email || '').toString().trim().toLowerCase()
@@ -46,17 +48,17 @@ class User {
   }
 
   /**
-   * Resolves the role a user should get at signup.
-   * Admin is never allowed from client-side. Instructor becomes pending_instructor.
+   * Resolves the role and status a user should get at signup.
+   * Instructor becomes pending status.
    */
-  static resolveSignupRole(requestedRole) {
+  static resolveSignup(requestedRole) {
     const normalized = (requestedRole || 'student').toString().trim().toLowerCase()
 
     if (['instructor', 'teacher', 'academic'].includes(normalized)) {
-      return 'pending_instructor'
+      return { role: 'instructor', status: 'pending' }
     }
 
-    return 'student'
+    return { role: 'student', status: 'active' }
   }
 
   static validatePassword(password) {
@@ -76,11 +78,11 @@ class User {
   }
 
   isActive() {
-    return !this.isSuspended
+    return this.status === 'active'
   }
 
-  isPendingInstructor() {
-    return this.role === 'pending_instructor'
+  isPending() {
+    return this.status === 'pending'
   }
 
   isAdmin() {
@@ -88,7 +90,7 @@ class User {
   }
 
   canAccessTeacherFeatures() {
-    return ['instructor', 'teacher', 'admin'].includes(this.role)
+    return ['instructor', 'admin'].includes(this.role)
   }
 
   /**
@@ -100,9 +102,10 @@ class User {
       full_name: this.fullName,
       email: this.email,
       role: this.role,
+      status: this.status,
       avatar_url: this.avatarUrl,
       phone: this.phone,
-      is_suspended: this.isSuspended,
+      bio: this.bio,
       created_at: this.createdAt,
       updated_at: this.updatedAt,
     }

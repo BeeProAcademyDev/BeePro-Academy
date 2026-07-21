@@ -30,6 +30,20 @@ class IUserRepository {
   async clearResetToken(id) {
     throw new Error('IUserRepository.clearResetToken() not implemented')
   }
+
+  async findAll(filters){
+    throw new Error('IUserRepository.findAll() not implemented')
+  }
+  async findByStatus(status){
+    throw new Error('IUserRepository.findByStatus() not implemented')
+  }
+  async findByRoleAndStatus(role, status){
+    throw new Error('IUserRepository.findByRoleAndStatus() not implemented')
+  }
+  async delete(id){
+    throw new Error('IUserRepository.delete() not implemented')
+  }
+
 }
 
 module.exports = IUserRepository

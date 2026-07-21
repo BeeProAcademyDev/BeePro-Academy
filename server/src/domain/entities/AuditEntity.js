@@ -1,0 +1,7 @@
+class AuditEntity{
+    constructor(
+        id
+    ){
+
+    }
+}
