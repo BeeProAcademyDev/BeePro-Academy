@@ -22,8 +22,10 @@ function createApp(container) {
     ? config.clientUrl.split(',').map(url => url.trim())
     : config.clientUrl
 
+  // Allow CORS from any origin. `origin: true` reflects request origin —
+  // keeps `credentials: true` usable (unlike `origin: '*'`).
   app.use(cors({
-    origin: allowedOrigins, // Fixes ZAP Cross-Domain Misconfiguration
+    origin: true,
     credentials: true
   }))
   app.use(express.json())
