@@ -51,6 +51,12 @@ class RateLimitError extends AppError {
   }
 }
 
+class BadRequestError extends AppError {
+  constructor(resource = 'Resource') {
+    super(`${resource} Bad request`, 400, 'Bad Request')
+  }
+}
+
 module.exports = {
   AppError,
   AuthenticationError,
@@ -59,4 +65,5 @@ module.exports = {
   NotFoundError,
   ConflictError,
   RateLimitError,
+  BadRequestError
 }

@@ -19,12 +19,12 @@ class CourseController {
 
   createCourse = async (req, res, next) => {
     try {
-      const { title, description, price, categoryId } = req.body
+      const { title, description, thumbnailUrl, price, categoryId } = req.body
       const instructorId = req.user.id
       const userRole = req.user.role
 
       const course = await this.createCourseUseCase.execute({
-        title, description, price, categoryId, instructorId, userRole
+        title, description, thumbnailUrl, price, categoryId, instructorId, userRole
       })
 
       res.status(201).json({ success: true, data: toCourseDTO(course) })

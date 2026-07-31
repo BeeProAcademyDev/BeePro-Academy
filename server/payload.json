@@ -1,0 +1,43 @@
+{
+  "lessonId": "f1d17afe-3c77-46ca-970b-16d6eb474e49",
+  "title": "JavaScript Fundamentals Quiz",
+  "description": "A short quiz covering closures, promises, and event loop basics",
+  "type": "quiz",
+  "status": "draft",
+  "durationMinutes": 30,
+  "dueDate": "2026-08-10T23:59:59.000Z",
+  "allowLateSubmissions": false,
+  "showGrades": true,
+  "showAnswers": false,
+  "questions": [
+    {
+      "type": "mcq",
+      "text": "What does the 'this' keyword refer to inside an arrow function?",
+      "grade": 2,
+      "order": 0,
+      "options": [
+        { "text": "The global object", "isCorrect": false },
+        { "text": "The enclosing lexical scope's this", "isCorrect": true },
+        { "text": "undefined always", "isCorrect": false },
+        { "text": "The function itself", "is   Correct": false }
+      ]
+    },
+    {
+      "type": "mcq",
+      "text": "Which method schedules a callback after the current call stack clears?",
+      "grade": 2,
+      "order": 1,
+      "options": [
+        { "text": "setTimeout(fn, 0)", "isCorrect": true },
+        { "text": "fn()", "isCorrect": false },
+        { "text": "await fn()", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "text",
+      "text": "Explain the difference between var, let, and const.",
+      "grade": 5,
+      "order": 2
+    }
+  ]
+}

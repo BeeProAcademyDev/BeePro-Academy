@@ -42,6 +42,18 @@ class UpdateCourseUseCase {
       updateData.category_id = updateData.categoryId
       delete updateData.categoryId
     }
+    
+    if (updateData.thumbnailUrl !== undefined) {
+      updateData.thumbnail_url = updateData.thumbnailUrl
+      delete updateData.thumbnailUrl
+    }
+    
+    if (updateData.adminApprovalStatus !== undefined) {
+      // Only admins should be able to update adminApprovalStatus ideally,
+      // but assuming authorization is handled at controller/middleware level.
+      updateData.admin_approval_status = updateData.adminApprovalStatus
+      delete updateData.adminApprovalStatus
+    }
 
     return this.courseRepository.update(courseId, updateData)
   }

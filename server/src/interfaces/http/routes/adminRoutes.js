@@ -23,6 +23,9 @@ function createAdminRoutes(adminController, authenticate, authorize) {
   // Delete user
   router.delete('/users/:id', adminController.deleteUser)
 
+  // course approval
+  router.patch('/courses/:id/update-status',adminController.updateCourseStatus)
+
   return router
 }
 

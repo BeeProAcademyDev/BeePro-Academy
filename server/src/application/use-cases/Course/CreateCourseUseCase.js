@@ -7,7 +7,7 @@ class CreateCourseUseCase {
     this.userRepository = userRepository
   }
 
-  async execute({ title, description, price, categoryId, instructorId, userRole }) {
+  async execute({ title, description, thumbnailUrl, price, categoryId, instructorId, userRole }) {
     const titleCheck = Course.validateTitle(title)
     if (!titleCheck.valid) throw new ValidationError(titleCheck.message)
     
@@ -21,10 +21,12 @@ class CreateCourseUseCase {
         throw new ForbiddenError('Only instructors can create courses')
       }
     }
+    
 
     const courseData = {
       title: title.trim(),
       description,
+      thumbnail_url: thumbnailUrl || null,
       price: price ? Number(price) : 0,
       category_id: categoryId || null,
       instructor_id: instructorId,

@@ -1,5 +1,9 @@
 class Lesson {
-  constructor({ id, section_id, title, content_type, content_url, text_content, duration, is_free, order, created_at, updated_at }) {
+  constructor({ 
+    id, section_id, title, content_type, content_url, text_content, duration, 
+    is_free, requires_passing_quiz, requires_passing_assignment, order, 
+    created_at, updated_at 
+  }) {
     this.id = id
     this.section_id = section_id
     this.title = title
@@ -8,6 +12,8 @@ class Lesson {
     this.text_content = text_content
     this.duration = duration || 0
     this.is_free = !!is_free
+    this.requires_passing_quiz = !!requires_passing_quiz
+    this.requires_passing_assignment = !!requires_passing_assignment
     this.order = order || 0
     this.created_at = created_at
     this.updated_at = updated_at

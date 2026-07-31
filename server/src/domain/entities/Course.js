@@ -1,11 +1,22 @@
 // domain/entities/Course.js
 class Course {
-  constructor({ id, title, description, price, status, instructorId, categoryId, createdAt, updatedAt }) {
+  constructor({ 
+    id, title, description, thumbnailUrl, price, status, adminApprovalStatus, 
+    rank, averageRating, totalReviews, views, totalDuration, 
+    instructorId, categoryId, createdAt, updatedAt 
+  }) {
     this.id = id
     this.title = title
     this.description = description
+    this.thumbnailUrl = thumbnailUrl
     this.price = typeof price === 'string' || typeof price === 'number' ? Number(price) : 0
     this.status = status              // 'draft' | 'published' | 'archived'
+    this.adminApprovalStatus = adminApprovalStatus || 'pending' // 'pending' | 'approved' | 'rejected'
+    this.rank = rank
+    this.averageRating = typeof averageRating !== 'undefined' ? Number(averageRating) : 0
+    this.totalReviews = typeof totalReviews !== 'undefined' ? Number(totalReviews) : 0
+    this.views = typeof views !== 'undefined' ? Number(views) : 0
+    this.totalDuration = typeof totalDuration !== 'undefined' ? Number(totalDuration) : 0
     this.instructorId = instructorId
     this.categoryId = categoryId
     this.createdAt = createdAt

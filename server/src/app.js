@@ -12,6 +12,8 @@ const createAdminRoutes = require('./interfaces/http/routes/adminRoutes')
 const createCourseRoutes = require('./interfaces/http/routes/courseRoutes')
 const optionalAuthenticateMiddleware = require('./interfaces/http/middlewares/optionalAuthenticate')
 const createSectionRoutes =require('./interfaces/http/routes/sectionRoutes')
+const createLessonRoutes = require('./interfaces/http/routes/lessonRoutes')
+const createProgressRoutes = require('./interfaces/http/routes/progressRoutes')
 
 function createApp(container) {
   const app = express()
@@ -53,6 +55,29 @@ function createApp(container) {
 
   const sectionRoutes = createSectionRoutes(container.sectionController, authenticate, authorize)
   app.use('/api/v1/courses/:courseId/sections', sectionRoutes)
+
+  const lessonRoutes = createLessonRoutes(container.lessonController, authenticate, authorize, optionalAuthenticate)
+  app.use('/api/v1/sections/:sectionId/lessons', lessonRoutes)
+
+  const progressRoutes = createProgressRoutes(container.progressController, authenticate)
+  app.use('/api/v1/progress', progressRoutes)
+
+  const createReviewRoutes = require('./interfaces/http/routes/reviewRoutes')
+  const reviewRoutes = createReviewRoutes(container.reviewController, authenticate)
+  app.use('/api/v1/reviews', reviewRoutes)
+  app.use('/api/v1/courses/:courseId/reviews', reviewRoutes)
+
+  const createUploadRoutes = require('./interfaces/http/routes/uploadRoutes')
+  app.use('/api/v1/upload', createUploadRoutes(container.uploadController, authenticate))
+
+  const createAssessmentRoutes = require('./interfaces/http/routes/assessmentRoutes')
+  const assessmentRoutes = createAssessmentRoutes(container.assessmentController, authenticate, authorize)
+  app.use('/api/v1/courses/:courseId/assessments', assessmentRoutes)
+  app.use('/api/v1/lessons/:lessonId/assessments', assessmentRoutes)
+
+  const createSubmissionRoutes = require('./interfaces/http/routes/submissionRoutes')
+  const submissionRoutes = createSubmissionRoutes(container.assessmentController, authenticate, authorize)
+  app.use('/api/v1/submissions', submissionRoutes)
 
   // Health check
   app.get('/health', (req, res) => {

@@ -10,6 +10,7 @@ class AdminController {
     suspendUserUseCase,
     activateUserUseCase,
     deleteUserUseCase,
+    updateCourseStatusApprovalUseCase
   }) {
     this.getAllUsersUseCase = getAllUsersUseCase
     this.getPendingInstructorsUseCase = getPendingInstructorsUseCase
@@ -18,6 +19,7 @@ class AdminController {
     this.suspendUserUseCase = suspendUserUseCase
     this.activateUserUseCase = activateUserUseCase
     this.deleteUserUseCase = deleteUserUseCase
+    this.updateCourseStatusApprovalUseCase=updateCourseStatusApprovalUseCase
   }
 
   getAllUsers = async (req, res, next) => {
@@ -59,6 +61,20 @@ class AdminController {
       const result = await this.rejectInstructorUseCase.execute({ userId: req.params.id })
       res.status(200).json({ success: true, data: result, message: 'Instructor rejected' })
     } catch (err) {
+      next(err)
+    }
+  }
+
+  updateCourseStatus= async (req, res, next)=>{
+    try{
+      const result = await this.updateCourseStatusApprovalUseCase.execute({
+        courseId: req.params.id,
+        userId: req.user.id,
+        userRole: req.user.role,
+        adminApprovalStatus: req.body.adminApprovalStatus || req.body.status
+      })
+      res.status(200).json({success:true,data :result, message:"Course Updated Status"})
+    }catch(err){
       next(err)
     }
   }
