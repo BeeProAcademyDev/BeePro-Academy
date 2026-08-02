@@ -36,32 +36,32 @@ const createAssessmentSchema = z.object({
 
 const updateAssessmentSchema = z.object({
   body: z.object({
-    //title: z.string().min(3).optional(),
-    //description: z.string().optional(),
+    title: z.string().min(3).optional(),
+    description: z.string().optional(),
     status: z.enum(['draft', 'published']).optional(),
-    //durationMinutes: z.number().int().min(0).optional(),
-    //dueDate: z.string().datetime().nullable().optional(),
-    //allowLateSubmissions: z.boolean().optional(),
-    //showGrades: z.boolean().optional(),
-    //showAnswers: z.boolean().optional(),
-//     questions: z.array(
-//   z.object({
-//     type: z.enum(['mcq', 'text']),
-//     text: z.string().min(3),
-//     grade: z.number().int().min(0).optional(), // min(0) now, since 0 = valid ungraded
-//     order: z.number().int().min(0).optional(),
-//     options: z.array(z.object({
-//       text: z.string(),
-//       isCorrect: z.boolean().default(false)
-//     })).max(10).optional()
-//   }).refine(
-//     (q) => q.type !== 'mcq' || (q.options && q.options.length >= 2),
-//     { message: 'MCQ questions require at least 2 options', path: ['options'] }
-//   ).refine(
-//     (q) => q.type !== 'mcq' || q.options.some(o => o.isCorrect === true),
-//     { message: 'MCQ questions require at least one correct option', path: ['options'] }
-//   )
-// ).min(1)
+    durationMinutes: z.number().int().min(0).optional(),
+    dueDate: z.string().datetime().nullable().optional(),
+    allowLateSubmissions: z.boolean().optional(),
+    showGrades: z.boolean().optional(),
+    showAnswers: z.boolean().optional(),
+     questions: z.array(
+   z.object({
+     type: z.enum(['mcq', 'text']),
+    text: z.string().min(3),
+    grade: z.number().int().min(0).optional(), // min(0) now, since 0 = valid ungraded
+    order: z.number().int().min(0).optional(),
+    options: z.array(z.object({
+      text: z.string(),
+      isCorrect: z.boolean().default(false)
+    })).max(10).optional()
+  }).refine(
+    (q) => q.type !== 'mcq' || (q.options && q.options.length >= 2),
+    { message: 'MCQ questions require at least 2 options', path: ['options'] }
+  ).refine(
+    (q) => q.type !== 'mcq' || q.options.some(o => o.isCorrect === true),
+    { message: 'MCQ questions require at least one correct option', path: ['options'] }
+  )
+).min(1)
   })
 })
 

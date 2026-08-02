@@ -47,6 +47,9 @@ class CloudinaryMediaService {
    */
   generateUploadSignature(folder) {
     const timestamp = Math.round(new Date().getTime() / 1000)
+
+    // Cloudinary automatically enforces a 1-hour expiration based on the timestamp.
+    // Custom `expire_at` parameters are not supported by the `/upload` API and cause signature mismatches.
     const signature = cloudinary.utils.api_sign_request(
       { timestamp, folder },
       cloudinary.config().api_secret
@@ -77,6 +80,36 @@ class CloudinaryMediaService {
       }
     } catch (error) {
       throw new Error('Failed to fetch video details from Cloudinary')
+    }
+  }
+
+  /**
+   * Verifies the Cloudinary Webhook Signature
+   * @param {string} body - The raw request body string
+   * @param {string} signature - The X-Cld-Signature header
+   * @param {string} timestamp - The X-Cld-Timestamp header
+   * @returns {boolean} True if signature is valid
+   */
+  verifyWebhookSignature(body, signature, timestamp) {
+    if (!signature || !timestamp) return false;
+    return cloudinary.utils.verify_notification_signature(
+      body, 
+      timestamp, 
+      signature, 
+      cloudinary.config().api_secret
+    );
+  }
+
+  /**
+   * Deletes a file directly from Cloudinary
+   * @param {string} publicId - The public ID of the resource
+   * @param {string} resourceType - 'image' or 'video' or 'raw'
+   */
+  async deleteFile(publicId, resourceType = 'image') {
+    try {
+      await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+    } catch (error) {
+      console.error(`Failed to delete Cloudinary file ${publicId}:`, error);
     }
   }
 }

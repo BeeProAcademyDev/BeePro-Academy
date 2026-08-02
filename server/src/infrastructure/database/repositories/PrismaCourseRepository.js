@@ -64,6 +64,87 @@ class PrismaCourseRepository extends ICourseRepository {
   async delete(id) {
     return this.prisma.course.delete({ where: { id } })
   }
+
+  async recalculateTotalDuration(courseId) {
+    const result = await this.prisma.lesson.aggregate({
+      where: {
+        section: {
+          course_id: courseId
+        }
+      },
+      _sum: {
+        duration: true
+      }
+    })
+    const totalDuration = result._sum.duration || 0
+    await this.prisma.course.update({
+      where: { id: courseId },
+      data: { total_duration: totalDuration }
+    })
+    return totalDuration
+  }
+
+  async countAll() {
+    return this.prisma.course.count()
+  }
+
+  async countPendingApproval() {
+    return this.prisma.course.count({
+      where: {
+        admin_approval_status: 'pending'
+      }
+    })
+  }
+
+  async countByInstructor(instructorId) {
+    return this.prisma.course.count({
+      where: { instructor_id: instructorId }
+    })
+  }
+
+  async countPublishedByInstructor(instructorId) {
+    return this.prisma.course.count({
+      where: {
+        instructor_id: instructorId,
+        status: 'published',
+        admin_approval_status: 'approved'
+      }
+    })
+  }
+
+  async countDraftsByInstructor(instructorId) {
+    return this.prisma.course.count({
+      where: {
+        instructor_id: instructorId,
+        status: 'draft'
+      }
+    })
+  }
+
+  async countPendingApprovalByInstructor(instructorId) {
+    return this.prisma.course.count({
+      where: {
+        instructor_id: instructorId,
+        admin_approval_status: 'pending'
+      }
+    })
+  }
+
+  async GetMyTotalCourses(instructor_id) {
+    return this.countByInstructor(instructor_id)
+  }
+
+  async GetMyPublishedCourses(instructorId) {
+    return this.countPublishedByInstructor(instructorId)
+  }
+
+  async GetMyTotalDraftCourses(instructorId) {
+    return this.countDraftsByInstructor(instructorId)
+  }
+
+  async GetMyTotalAdminPendingCourses(instructorId) {
+    return this.countPendingApprovalByInstructor(instructorId)
+  }
 }
 
 module.exports = PrismaCourseRepository

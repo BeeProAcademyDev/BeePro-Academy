@@ -2,9 +2,12 @@ const { AppError } = require('../../../../domain/errors/AppError')
 const AssessmentQuestion = require('../../../../domain/entities/AssessmentQuestion')
 
 class UpdateAssessmentUseCase {
-  constructor({ assessmentRepository, courseRepository }) {
+  constructor({ assessmentRepository, courseRepository, assessmentSubmissionRepository, lessonRepository, notificationService }) {
     this.assessmentRepository = assessmentRepository
     this.courseRepository = courseRepository
+    this.assessmentSubmissionRepository = assessmentSubmissionRepository
+    this.lessonRepository = lessonRepository
+    this.notificationService = notificationService
   }
 
   async execute(instructorId, assessmentId, data) {
@@ -44,7 +47,59 @@ class UpdateAssessmentUseCase {
           return this.assessmentRepository.addQuestion(question)
         })
       )
-      return { ...updatedAssessment, questions: createdQuestions }
+      updatedAssessment.questions = createdQuestions
+    }
+
+    // Trigger Notifications
+    if (this.notificationService) {
+      let lessonTitle = null
+      const lessonId = assessment.lessonId || assessment.lesson_id
+      if (lessonId && this.lessonRepository) {
+        const lesson = await this.lessonRepository.findById(lessonId)
+        if (lesson) lessonTitle = lesson.title
+      }
+
+      // 1. If newly published
+      if (data.status === 'published' && assessment.status !== 'published') {
+        await this.notificationService.notifyNewAssessment(
+          course.id,
+          lessonId,
+          updatedAssessment.title,
+          updatedAssessment.type,
+          course.title,
+          lessonTitle
+        )
+      }
+
+      // 2. If showGrades flipped to true
+      if (data.showGrades === true && assessment.showGrades !== true && this.assessmentSubmissionRepository) {
+        const submissions = await this.assessmentSubmissionRepository.findByAssessmentId(assessmentId)
+        const submitterUserIds = [...new Set(submissions.map(s => s.userId || s.user_id).filter(Boolean))]
+        if (submitterUserIds.length > 0) {
+          await this.notificationService.notifyGradesPublished(
+            assessmentId,
+            updatedAssessment.title,
+            course.title,
+            submitterUserIds,
+            lessonTitle
+          )
+        }
+      }
+
+      // 3. If showAnswers flipped to true
+      if (data.showAnswers === true && assessment.showAnswers !== true && this.assessmentSubmissionRepository) {
+        const submissions = await this.assessmentSubmissionRepository.findByAssessmentId(assessmentId)
+        const submitterUserIds = [...new Set(submissions.map(s => s.userId || s.user_id).filter(Boolean))]
+        if (submitterUserIds.length > 0) {
+          await this.notificationService.notifyReviewAllowed(
+            assessmentId,
+            updatedAssessment.title,
+            course.title,
+            submitterUserIds,
+            lessonTitle
+          )
+        }
+      }
     }
 
     return updatedAssessment

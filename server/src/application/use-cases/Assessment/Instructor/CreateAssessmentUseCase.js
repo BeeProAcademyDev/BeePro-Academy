@@ -3,11 +3,12 @@ const AssessmentQuestion = require('../../../../domain/entities/AssessmentQuesti
 const { AppError, NotFoundError, ValidationError ,BadRequestError,AuthorizationError} = require('../../../../domain/errors/AppError')
 
 class CreateAssessmentUseCase {
-  constructor({ assessmentRepository, courseRepository, lessonRepository, sectionRepository }) {
+  constructor({ assessmentRepository, courseRepository, lessonRepository, sectionRepository, notificationService }) {
     this.assessmentRepository = assessmentRepository
     this.courseRepository = courseRepository
     this.lessonRepository = lessonRepository
     this.sectionRepository = sectionRepository
+    this.notificationService = notificationService
   }
 
   async execute(instructorId, data) {
@@ -74,6 +75,17 @@ class CreateAssessmentUseCase {
         return this.assessmentRepository.addQuestion(question)
       })
     )  
+
+    if (this.notificationService && (createdAssessment.status === 'published' || data.status === 'published')) {
+      await this.notificationService.notifyNewAssessment(
+        course.id,
+        createdAssessment.lessonId || createdAssessment.lesson_id,
+        createdAssessment.title,
+        createdAssessment.type,
+        course.title,
+        lesson?.title
+      )
+    }
 
     return { ...createdAssessment, questions: createdQuestions }
   }

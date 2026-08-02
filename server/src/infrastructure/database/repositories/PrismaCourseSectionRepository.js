@@ -50,6 +50,16 @@ class PrismaCourseSectionRepository extends ICourseSectionRepository {
   async delete(id) {
     return this.prisma.courseSection.delete({ where: { id } })
   }
+
+  async countSectionsByInstructor(instructorId) {
+    return this.prisma.courseSection.count({
+      where: {
+        course: {
+          instructor_id: instructorId
+        }
+      }
+    })
+  }
 }
 
 module.exports = PrismaCourseSectionRepository

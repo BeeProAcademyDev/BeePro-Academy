@@ -37,6 +37,15 @@ class PrismaLessonProgressRepository extends ILessonProgressRepository {
   async update(id, data) {
     return this.prisma.lessonProgress.update({ where: { id }, data });
   }
+
+  async CompletedLessonsCount(Id) {
+    return this.prisma.lessonProgress.count({
+      where: {
+        user_id: Id,
+        is_completed: true
+      },
+    })
+  }
 }
 
 module.exports = PrismaLessonProgressRepository;

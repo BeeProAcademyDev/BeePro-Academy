@@ -8,7 +8,7 @@ const createLessonSchema = z.object({
     contentType: z.enum(Lesson.VALID_TYPES).optional(),
     contentUrl: z.string().url().optional().nullable(),
     textContent: z.string().optional().nullable(),
-    duration: z.number().int().min(0).optional(),
+    duration: z.number().min(0).optional(),
     isFree: z.boolean().optional(),
     requiresPassingQuiz: z.boolean().optional(),
     requiresPassingAssignment: z.boolean().optional()
@@ -21,7 +21,7 @@ const updateLessonSchema = z.object({
     contentType: z.enum(Lesson.VALID_TYPES).optional(),
     contentUrl: z.string().url().optional().nullable(),
     textContent: z.string().optional().nullable(),
-    duration: z.number().int().min(0).optional(),
+    duration: z.number().min(0).optional(),
     isFree: z.boolean().optional(),
     requiresPassingQuiz: z.boolean().optional(),
     requiresPassingAssignment: z.boolean().optional(),

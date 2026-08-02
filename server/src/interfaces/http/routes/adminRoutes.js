@@ -13,6 +13,7 @@ function createAdminRoutes(adminController, authenticate, authorize) {
   // User management
   router.get('/users', adminController.getAllUsers)
   router.get('/users/pending', adminController.getPendingInstructors)
+  router.get('/instructors/pending', adminController.getPendingInstructors)
 
   // User status management
   router.patch('/users/:id/approve', adminController.approveInstructor)

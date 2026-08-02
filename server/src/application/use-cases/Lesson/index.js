@@ -4,13 +4,28 @@ const Course = require('../../../domain/entities/Course')
 const LessonFile = require('../../../domain/entities/LessonFile')
 
 class CreateLessonUseCase {
-  constructor({ lessonRepository, sectionRepository, courseRepository }) {
+  constructor({ lessonRepository, sectionRepository, courseRepository, notificationService }) {
     this.lessonRepository = lessonRepository
     this.sectionRepository = sectionRepository
     this.courseRepository = courseRepository
+    this.notificationService = notificationService
   }
 
-  async execute({ sectionId, title, contentType, contentUrl, textContent, duration,isFree, userId, userRole }) {
+  async execute({
+    sectionId,
+    title,
+    contentType,
+    contentUrl,
+    textContent,
+    duration,
+    isFree,
+    requiresPassingQuiz,
+    requires_passing_quiz,
+    requiresPassingAssignment,
+    requires_passing_assignment,
+    userId,
+    userRole
+  }) {
     const section = await this.sectionRepository.findById(sectionId)
     if (!section) throw new NotFoundError('Section')
 
@@ -30,16 +45,36 @@ class CreateLessonUseCase {
 
     const maxOrder = await this.lessonRepository.getMaxOrder(sectionId)
 
-    return this.lessonRepository.create({
+    const roundedDuration = (duration !== undefined && duration !== null)
+      ? Math.round(Number(duration))
+      : 0
+
+    const passQuiz = requiresPassingQuiz !== undefined ? !!requiresPassingQuiz : (requires_passing_quiz !== undefined ? !!requires_passing_quiz : false)
+    const passAssign = requiresPassingAssignment !== undefined ? !!requiresPassingAssignment : (requires_passing_assignment !== undefined ? !!requires_passing_assignment : false)
+
+    const createdLesson = await this.lessonRepository.create({
       section_id: sectionId,
       title: title.trim(),
       content_type: contentType || 'video',
       content_url: contentUrl,
       text_content: textContent,
-      duration: duration || 0,
+      duration: roundedDuration,
       is_free: !!isFree,
+      requires_passing_quiz: passQuiz,
+      requires_passing_assignment: passAssign,
       order: maxOrder + 1
     })
+
+    // Automatically recalculate and update the course total duration
+    if (this.courseRepository && typeof this.courseRepository.recalculateTotalDuration === 'function') {
+      await this.courseRepository.recalculateTotalDuration(course.id)
+    }
+
+    if (this.notificationService) {
+      await this.notificationService.notifyNewLesson(course.id, createdLesson.title, course.title)
+    }
+
+    return createdLesson
   }
 }
 
@@ -50,7 +85,22 @@ class UpdateLessonUseCase {
     this.courseRepository = courseRepository
   }
 
-  async execute({ lessonId, title, contentType, contentUrl, textContent, duration, isFree, order, userId, userRole }) {
+  async execute({
+    lessonId,
+    title,
+    contentType,
+    contentUrl,
+    textContent,
+    duration,
+    isFree,
+    requiresPassingQuiz,
+    requires_passing_quiz,
+    requiresPassingAssignment,
+    requires_passing_assignment,
+    order,
+    userId,
+    userRole
+  }) {
     const lesson = await this.lessonRepository.findById(lessonId)
     if (!lesson) throw new NotFoundError('Lesson')
 
@@ -77,13 +127,29 @@ class UpdateLessonUseCase {
 
     if (contentUrl !== undefined) updateData.content_url = contentUrl
     if (textContent !== undefined) updateData.text_content = textContent
-    if (duration !== undefined) updateData.duration = duration
+    if (duration !== undefined && duration !== null) {
+      updateData.duration = Math.round(Number(duration))
+    }
     if (isFree !== undefined) updateData.is_free = !!isFree
+
+    const passQuiz = requiresPassingQuiz !== undefined ? requiresPassingQuiz : requires_passing_quiz
+    if (passQuiz !== undefined) updateData.requires_passing_quiz = !!passQuiz
+
+    const passAssign = requiresPassingAssignment !== undefined ? requiresPassingAssignment : requires_passing_assignment
+    if (passAssign !== undefined) updateData.requires_passing_assignment = !!passAssign
+
     if (order !== undefined) updateData.order = parseInt(order)
 
     if (Object.keys(updateData).length === 0) return lesson
 
-    return this.lessonRepository.update(lessonId, updateData)
+    const updatedLesson = await this.lessonRepository.update(lessonId, updateData)
+
+    // Recalculate course total duration if duration changed
+    if (duration !== undefined && this.courseRepository && typeof this.courseRepository.recalculateTotalDuration === 'function') {
+      await this.courseRepository.recalculateTotalDuration(course.id)
+    }
+
+    return updatedLesson
   }
 }
 
@@ -106,6 +172,12 @@ class DeleteLessonUseCase {
     }
 
     await this.lessonRepository.delete(lessonId)
+
+    // Recalculate course total duration after lesson deletion
+    if (this.courseRepository && typeof this.courseRepository.recalculateTotalDuration === 'function') {
+      await this.courseRepository.recalculateTotalDuration(course.id)
+    }
+
     return { success: true }
   }
 }

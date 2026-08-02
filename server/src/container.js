@@ -8,6 +8,8 @@ const PrismaCourseRepository = require('./infrastructure/database/repositories/P
 const PrismaReviewRepository = require('./infrastructure/database/repositories/PrismaReviewRepository')
 const PrismaAssessmentRepository = require('./infrastructure/database/repositories/PrismaAssessmentRepository')
 const PrismaAssessmentSubmissionRepository = require('./infrastructure/database/repositories/PrismaAssessmentSubmissionRepository')
+const PrismaMeetingRepository = require('./infrastructure/database/repositories/PrismaMeetingRepository')
+const PrismaNotificationRepository = require('./infrastructure/database/repositories/PrismaNotificationRepository')
 
 // Services
 const BcryptHashService = require('./infrastructure/security/BcryptHashService')
@@ -15,6 +17,7 @@ const JwtTokenService = require('./infrastructure/security/JwtTokenService')
 const EmailService = require('./infrastructure/services/EmailService')
 const GoogleOAuthService = require('./infrastructure/services/GoogleOAuthService')
 const CloudinaryMediaService = require('./infrastructure/services/CloudinaryMediaService')
+const NotificationService = require('./application/services/NotificationService')
 
 // Use Cases
 const RegisterUseCase = require('./application/use-cases/Authenticatioon/RegisterUseCase')
@@ -101,6 +104,38 @@ const SubmitAssessmentUseCase = require('./application/use-cases/Assessment/Stud
 const GetAssessmentDetailsUseCase = require('./application/use-cases/Assessment/Student/GetAssessmentDetailsUseCase')
 const GetSubmissionResultUseCase = require('./application/use-cases/Assessment/Student/GetSubmissionResultUseCase')
 const DeleteAssessmentUseCase  = require('./application/use-cases/Assessment/Instructor/DeleteAssessmentUseCase')
+
+// Meeting Use Cases
+const CreateMeetingUseCase = require('./application/use-cases/Meeting/CreateMeetingUseCase')
+const UpdateMeetingUseCase = require('./application/use-cases/Meeting/UpdateMeetingUseCase')
+const DeleteMeetingUseCase = require('./application/use-cases/Meeting/DeleteMeetingUseCase')
+const GetLessonMeetingUseCase = require('./application/use-cases/Meeting/GetLessonMeetingUseCase')
+const GetUpcomingSessionsUseCase = require('./application/use-cases/Meeting/GetUpcomingSessionsUseCase')
+const JoinMeetingUseCase = require('./application/use-cases/Meeting/JoinMeetingUseCase')
+
+// Notification Use Cases
+const GetMyNotificationsUseCase = require('./application/use-cases/Notification/GetMyNotificationsUseCase')
+const MarkNotificationReadUseCase = require('./application/use-cases/Notification/MarkNotificationReadUseCase')
+const MarkAllNotificationsReadUseCase = require('./application/use-cases/Notification/MarkAllNotificationsReadUseCase')
+const GetUnreadCountUseCase = require('./application/use-cases/Notification/GetUnreadCountUseCase')
+
+// Blog Use Cases
+const PrismaBlogPostRepository = require('./infrastructure/database/repositories/PrismaBlogPostRepository')
+const CreateBlogPostUseCase = require('./application/use-cases/Blog/CreateBlogPostUseCase')
+const UpdateBlogPostUseCase = require('./application/use-cases/Blog/UpdateBlogPostUseCase')
+const DeleteBlogPostUseCase = require('./application/use-cases/Blog/DeleteBlogPostUseCase')
+const GetAllBlogPostsUseCase = require('./application/use-cases/Blog/GetAllBlogPostsUseCase')
+const GetBlogPostByIdUseCase = require('./application/use-cases/Blog/GetBlogPostByIdUseCase')
+const GetMyBlogPostsUseCase = require('./application/use-cases/Blog/GetMyBlogPostsUseCase')
+const ApproveBlogPostUseCase = require('./application/use-cases/Blog/ApproveBlogPostUseCase')
+const RejectBlogPostUseCase = require('./application/use-cases/Blog/RejectBlogPostUseCase')
+const GetPendingBlogPostsUseCase = require('./application/use-cases/Blog/GetPendingBlogPostsUseCase')
+
+// Dashboard use cases
+const StudentDashboardStats = require('./application/use-cases/Dashboards/StudentDashboardStats')
+const AdminDashboardStats = require('./application/use-cases/Dashboards/AdminDashboardStats')
+const TeacherDashboardStats = require('./application/use-cases/Dashboards/TeacherDashboardStats')
+
 // Controllers
 const AuthController = require('./interfaces/http/controllers/AuthController')
 const AdminController = require('./interfaces/http/controllers/AdminController')
@@ -112,6 +147,11 @@ const ProgressController = require('./interfaces/http/controllers/ProgressContro
 const ReviewController = require('./interfaces/http/controllers/ReviewController')
 const UploadController = require('./interfaces/http/controllers/UploadController')
 const AssessmentController = require('./interfaces/http/controllers/AssessmentController')
+const BlogController = require('./interfaces/http/controllers/BlogController')
+const MeetingController = require('./interfaces/http/controllers/MeetingController')
+const NotificationController = require('./interfaces/http/controllers/NotificationController')
+const DashboardController = require('./interfaces/http/controllers/DashboardController')
+
 /**
  * Dependency Injection Container
  * Initializes and wires all application components together.
@@ -130,6 +170,9 @@ function createContainer() {
   const reviewRepository = new PrismaReviewRepository(prisma)
   const assessmentRepository = new PrismaAssessmentRepository({ prisma })
   const assessmentSubmissionRepository = new PrismaAssessmentSubmissionRepository({ prisma })
+  const blogPostRepository = new PrismaBlogPostRepository(prisma)
+  const meetingRepository = new PrismaMeetingRepository({ prisma })
+  const notificationRepository = new PrismaNotificationRepository({ prisma })
 
   // 2. Init Services
   const hashService = new BcryptHashService()
@@ -137,6 +180,7 @@ function createContainer() {
   const emailService = new EmailService({ config })
   const googleOAuthService = new GoogleOAuthService({ config })
   const cloudinaryMediaService = new CloudinaryMediaService()
+  const notificationService = new NotificationService({ notificationRepository, enrollmentRepository })
 
   // 3. Init Use Cases
   const registerUseCase = new RegisterUseCase({ userRepository, tokenRepository, hashService, tokenService })
@@ -183,7 +227,7 @@ function createContainer() {
   const getAllCourseSectionUseCase = new GetAllCourseSectionUseCase({sectionRepository,courseRepository})
 
   // Lesson Use Cases
-  const createLessonUseCase = new CreateLessonUseCase({ lessonRepository, sectionRepository, courseRepository })
+  const createLessonUseCase = new CreateLessonUseCase({ lessonRepository, sectionRepository, courseRepository, notificationService })
   const updateLessonUseCase = new UpdateLessonUseCase({ lessonRepository, sectionRepository, courseRepository })
   const deleteLessonUseCase = new DeleteLessonUseCase({ lessonRepository, sectionRepository, courseRepository })
   const getSectionLessonsUseCase = new GetSectionLessonsUseCase({ lessonRepository, sectionRepository, courseRepository })
@@ -192,7 +236,14 @@ function createContainer() {
   
   // Progress Use Cases
   const enrollInCourseUseCase = new EnrollInCourseUseCase({ enrollmentRepository, courseRepository, lessonRepository })
-  const updateLessonProgressUseCase = new UpdateLessonProgressUseCase({ lessonProgressRepository, enrollmentRepository, lessonRepository, sectionRepository })
+  const updateLessonProgressUseCase = new UpdateLessonProgressUseCase({
+    lessonProgressRepository,
+    enrollmentRepository,
+    lessonRepository,
+    sectionRepository,
+    assessmentRepository,
+    assessmentSubmissionRepository
+  })
   const getCourseProgressUseCase = new GetCourseProgressUseCase({ enrollmentRepository, lessonProgressRepository })
   const getEnrollmentsUseCase = new GetEnrollmentsUseCase({ enrollmentRepository })
 
@@ -203,8 +254,8 @@ function createContainer() {
   const deleteReviewUseCase = new DeleteReviewUseCase({ reviewRepository, courseRepository })
 
   // Assessment Use Cases
-  const createAssessmentUseCase = new CreateAssessmentUseCase({ assessmentRepository, courseRepository, lessonRepository, sectionRepository })
-  const updateAssessmentUseCase = new UpdateAssessmentUseCase({ assessmentRepository, courseRepository })
+  const createAssessmentUseCase = new CreateAssessmentUseCase({ assessmentRepository, courseRepository, lessonRepository, sectionRepository, notificationService })
+  const updateAssessmentUseCase = new UpdateAssessmentUseCase({ assessmentRepository, courseRepository, assessmentSubmissionRepository, lessonRepository, notificationService })
   const addQuestionUseCase = new AddQuestionUseCase({ assessmentRepository, courseRepository })
   const updateQuestionUseCase = new UpdateQuestionUseCase({ assessmentRepository, courseRepository })
   const deleteQuestionUseCase = new DeleteQuestionUseCase({ assessmentRepository, courseRepository })
@@ -216,6 +267,55 @@ function createContainer() {
   const submitAssessmentUseCase = new SubmitAssessmentUseCase({ assessmentRepository, assessmentSubmissionRepository })
   const getAssessmentDetailsUseCase = new GetAssessmentDetailsUseCase({ assessmentRepository, enrollmentRepository })
   const getSubmissionResultUseCase = new GetSubmissionResultUseCase({ assessmentRepository, assessmentSubmissionRepository })
+
+  // Meeting Use Cases
+  const createMeetingUseCase = new CreateMeetingUseCase({
+    meetingRepository,
+    lessonRepository,
+    sectionRepository,
+    courseRepository,
+    enrollmentRepository,
+    notificationService
+  })
+  const updateMeetingUseCase = new UpdateMeetingUseCase({
+    meetingRepository,
+    courseRepository,
+    sectionRepository,
+    lessonRepository
+  })
+  const deleteMeetingUseCase = new DeleteMeetingUseCase({ meetingRepository })
+  const getLessonMeetingUseCase = new GetLessonMeetingUseCase({ meetingRepository })
+  const getUpcomingSessionsUseCase = new GetUpcomingSessionsUseCase({ meetingRepository })
+  const joinMeetingUseCase = new JoinMeetingUseCase({ meetingRepository, enrollmentRepository })
+
+  // Notification Use Cases
+  const getMyNotificationsUseCase = new GetMyNotificationsUseCase({ notificationRepository })
+  const markNotificationReadUseCase = new MarkNotificationReadUseCase({ notificationRepository })
+  const markAllNotificationsReadUseCase = new MarkAllNotificationsReadUseCase({ notificationRepository })
+  const getUnreadCountUseCase = new GetUnreadCountUseCase({ notificationRepository })
+
+  // Blog Use Cases
+  const createBlogPostUseCase = new CreateBlogPostUseCase({ blogPostRepository })
+  const updateBlogPostUseCase = new UpdateBlogPostUseCase({ blogPostRepository })
+  const deleteBlogPostUseCase = new DeleteBlogPostUseCase({ blogPostRepository })
+  const getAllBlogPostsUseCase = new GetAllBlogPostsUseCase({ blogPostRepository })
+  const getBlogPostByIdUseCase = new GetBlogPostByIdUseCase({ blogPostRepository })
+  const getMyBlogPostsUseCase = new GetMyBlogPostsUseCase({ blogPostRepository })
+  const approveBlogPostUseCase = new ApproveBlogPostUseCase({ blogPostRepository })
+  const rejectBlogPostUseCase = new RejectBlogPostUseCase({ blogPostRepository })
+  const getPendingBlogPostsUseCase = new GetPendingBlogPostsUseCase({ blogPostRepository })
+
+  // Dashboard use cases
+  const adminDashboardStats = new AdminDashboardStats({ userRepository, courseRepository, blogPostRepository })
+  const studentDashboardStats = new StudentDashboardStats({ enrollmentRepository, lessonProgressRepository })
+  const teacherDashboardStats = new TeacherDashboardStats({
+    courseRepository,
+    enrollmentRepository,
+    lessonRepository,
+    sectionRepository,
+    reviewRepository
+  })
+
 
   // 4. Init Controllers
   const authController = new AuthController({
@@ -303,7 +403,50 @@ function createContainer() {
     getSubmissionForReviewUseCase
   })
 
-  const uploadController = new UploadController({ cloudinaryMediaService })
+  const uploadController = new UploadController({ 
+    cloudinaryMediaService, 
+    courseRepository,
+    lessonRepository,
+    blogPostRepository
+  })
+
+  const WebhookController = require('./interfaces/http/controllers/WebhookController')
+
+  const webhookController = new WebhookController({ cloudinaryMediaService })
+
+  const blogController = new BlogController({
+    createBlogPostUseCase,
+    updateBlogPostUseCase,
+    deleteBlogPostUseCase,
+    getAllBlogPostsUseCase,
+    getBlogPostByIdUseCase,
+    getMyBlogPostsUseCase,
+    approveBlogPostUseCase,
+    rejectBlogPostUseCase,
+    getPendingBlogPostsUseCase
+  })
+
+  const meetingController = new MeetingController({
+    createMeetingUseCase,
+    updateMeetingUseCase,
+    deleteMeetingUseCase,
+    getLessonMeetingUseCase,
+    getUpcomingSessionsUseCase,
+    joinMeetingUseCase
+  })
+
+  const notificationController = new NotificationController({
+    getMyNotificationsUseCase,
+    markNotificationReadUseCase,
+    markAllNotificationsReadUseCase,
+    getUnreadCountUseCase
+  })
+
+  const dashboardController = new DashboardController({
+    studentDashboardStats,
+    teacherDashboardStats,
+    adminDashboardStats
+  })
 
   return {
     prisma,
@@ -317,7 +460,12 @@ function createContainer() {
     progressController,
     reviewController,
     assessmentController,
-    uploadController
+    uploadController,
+    webhookController,
+    blogController,
+    meetingController,
+    notificationController,
+    dashboardController
   }
 }
 

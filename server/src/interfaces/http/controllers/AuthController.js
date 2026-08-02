@@ -44,8 +44,9 @@ class AuthController {
 
   logout = async (req, res, next) => {
     try {
-      const { refreshToken } = req.body
-      const result = await this.logoutUseCase.execute({ refreshToken })
+      const refreshToken = req.body?.refreshToken || req.body?.refresh_token || req.cookies?.refreshToken
+      const userId = req.user?.id
+      const result = await this.logoutUseCase.execute({ refreshToken, userId })
       res.status(200).json(result)
     } catch (err) {
       next(err)
@@ -54,7 +55,7 @@ class AuthController {
 
   refreshToken = async (req, res, next) => {
     try {
-      const { refreshToken } = req.body
+      const refreshToken = req.body?.refreshToken || req.body?.refresh_token || req.cookies?.refreshToken
       const result = await this.refreshTokenUseCase.execute({ refreshToken })
       res.status(200).json({ success: true, data: result })
     } catch (err) {

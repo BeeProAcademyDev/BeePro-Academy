@@ -129,6 +129,16 @@ class PrismaReviewRepository extends IReviewRepository {
       totalReviews: stats._count.rating
     }
   }
+
+  async getAverageRatingByInstructor(instructorId) {
+    const stats = await this.prisma.review.aggregate({
+      where: {
+        course: { instructor_id: instructorId }
+      },
+      _avg: { rating: true }
+    })
+    return stats._avg.rating ? Number(stats._avg.rating.toFixed(1)) : 0
+  }
 }
 
 module.exports = PrismaReviewRepository

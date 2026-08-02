@@ -1,11 +1,18 @@
-const { AppError, NotFoundError } = require('../../../domain/errors/AppError');
-
 class UpdateLessonProgressUseCase {
-  constructor({ lessonProgressRepository, enrollmentRepository, lessonRepository, sectionRepository }) {
+  constructor({
+    lessonProgressRepository,
+    enrollmentRepository,
+    lessonRepository,
+    sectionRepository,
+    assessmentRepository,
+    assessmentSubmissionRepository
+  }) {
     this.lessonProgressRepository = lessonProgressRepository;
     this.enrollmentRepository = enrollmentRepository;
     this.lessonRepository = lessonRepository;
     this.sectionRepository = sectionRepository;
+    this.assessmentRepository = assessmentRepository;
+    this.assessmentSubmissionRepository = assessmentSubmissionRepository;
   }
 
   async execute(userId, lessonId, data) {
@@ -28,10 +35,54 @@ class UpdateLessonProgressUseCase {
       throw new AppError('User is not enrolled in this course', 400, 'BAD_REQUEST');
     }
 
+    // Check prerequisites if the student is marking the lesson as completed
     if (is_completed) {
-      if (lesson.requires_passing_quiz || lesson.requires_passing_assignment) {
-        // TODO: Call Assessment Module to verify if user has passed the quiz/assignment
-        throw new AppError('This lesson requires passing a quiz/assignment. Automatic completion will be handled by the Assessment module.', 400, 'BAD_REQUEST');
+      const requiresQuiz = !!lesson.requires_passing_quiz;
+      const requiresAssignment = !!lesson.requires_passing_assignment;
+
+      if (requiresQuiz || requiresAssignment) {
+        let assessments = [];
+        if (this.assessmentRepository) {
+          assessments = await this.assessmentRepository.findByLessonId(lessonId);
+        }
+
+        // 1. Verify Quiz requirement
+        if (requiresQuiz) {
+          const publishedQuizzes = assessments.filter(a => a.type === 'quiz' && a.status === 'published');
+          for (const quiz of publishedQuizzes) {
+            let submission = null;
+            if (this.assessmentSubmissionRepository) {
+              submission = await this.assessmentSubmissionRepository.findByUserAndAssessment(userId, quiz.id);
+            }
+            const isPassed = submission && (submission.status === 'submitted' || submission.status === 'graded' || submission.status === 'pending_review');
+            if (!isPassed) {
+              throw new AppError(
+                `You must complete and submit the quiz "${quiz.title}" before finishing this lesson.`,
+                400,
+                'QUIZ_REQUIRED'
+              );
+            }
+          }
+        }
+
+        // 2. Verify Assignment requirement
+        if (requiresAssignment) {
+          const publishedAssignments = assessments.filter(a => a.type === 'assignment' && a.status === 'published');
+          for (const assignment of publishedAssignments) {
+            let submission = null;
+            if (this.assessmentSubmissionRepository) {
+              submission = await this.assessmentSubmissionRepository.findByUserAndAssessment(userId, assignment.id);
+            }
+            const isPassed = submission && (submission.status === 'submitted' || submission.status === 'graded' || submission.status === 'pending_review');
+            if (!isPassed) {
+              throw new AppError(
+                `You must submit the assignment "${assignment.title}" before finishing this lesson.`,
+                400,
+                'ASSIGNMENT_REQUIRED'
+              );
+            }
+          }
+        }
       }
     }
 

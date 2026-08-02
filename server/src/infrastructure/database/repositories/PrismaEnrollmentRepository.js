@@ -40,8 +40,53 @@ class PrismaEnrollmentRepository extends IEnrollmentRepository {
     });
   }
 
+  async getStudentEnrollmentCount(userId) {
+    return this.prisma.enrollment.count({
+      where: { user_id: userId }
+    });
+  }
+
+  async findByCourseId(courseId) {
+    return this.prisma.enrollment.findMany({
+      where: { course_id: courseId }
+    });
+  }
+
   async update(id, data) {
     return this.prisma.enrollment.update({ where: { id }, data });
+  }
+
+  async userCompletedCoursesCount(id) {
+    return this.prisma.enrollment.count({
+      where: {
+        user_id: id,
+        progress: 100,
+      },
+    });
+  }
+
+  async getStudentAverageProgress(userId) {
+    const result = await this.prisma.enrollment.aggregate({
+      where: {
+        user_id: userId,
+      },
+      _avg: {
+        progress: true,
+      },
+    });
+
+    return result._avg.progress ?? 0;
+  }
+
+  async countDistinctStudentsByInstructor(instructorId) {
+    const records = await this.prisma.enrollment.findMany({
+      where: {
+        course: { instructor_id: instructorId }
+      },
+      select: { user_id: true },
+      distinct: ['user_id']
+    });
+    return records.length;
   }
 }
 

@@ -65,9 +65,26 @@ class PrismaUserRepository extends IUserRepository {
     })
   }
 
+  async countAll() {
+    return this.prisma.user.count()
+  }
+
+  async countPendingInstructors() {
+    return this.prisma.user.count({
+      where: {
+        role: { in: ['instructor', 'teacher'] },
+        status: 'pending',
+      },
+    })
+  }
+
   async findByRoleAndStatus(role, status) {
+    const roles = Array.isArray(role) ? role : (role === 'instructor' ? ['instructor', 'teacher'] : [role])
     return this.prisma.user.findMany({
-      where: { role, status },
+      where: {
+        role: { in: roles },
+        status,
+      },
       orderBy: { created_at: 'desc' },
     })
   }

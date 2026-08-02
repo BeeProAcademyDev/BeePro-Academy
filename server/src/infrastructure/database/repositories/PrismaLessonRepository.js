@@ -43,6 +43,18 @@ class PrismaLessonRepository extends ILessonRepository {
     })
   }
 
+  async countLessonsByInstructor(instructorId) {
+    return this.prisma.lesson.count({
+      where: {
+        section: {
+          course: {
+            instructor_id: instructorId
+          }
+        }
+      }
+    })
+  }
+
   async create(data) {
     return this.prisma.lesson.create({ data })
   }

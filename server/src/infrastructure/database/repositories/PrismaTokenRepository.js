@@ -19,7 +19,7 @@ class PrismaTokenRepository extends ITokenRepository {
   }
 
   async deleteByToken(token) {
-    return this.prisma.refreshToken.delete({
+    return this.prisma.refreshToken.deleteMany({
       where: { token },
     })
   }
