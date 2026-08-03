@@ -1,0 +1,110 @@
+require('dotenv').config()
+const express = require('express')
+const cors = require('cors')
+const helmet = require('helmet')
+const morgan = require('morgan')
+const config = require('./config')
+const errorHandler = require('./interfaces/http/middlewares/errorHandler')
+const authenticateMiddleware = require('./interfaces/http/middlewares/authenticate')
+const authorizeMiddleware = require('./interfaces/http/middlewares/authorize')
+const createAuthRoutes = require('./interfaces/http/routes/authRoutes')
+const createAdminRoutes = require('./interfaces/http/routes/adminRoutes')
+const createCourseRoutes = require('./interfaces/http/routes/courseRoutes')
+const optionalAuthenticateMiddleware = require('./interfaces/http/middlewares/optionalAuthenticate')
+const createSectionRoutes =require('./interfaces/http/routes/sectionRoutes')
+const createLessonRoutes = require('./interfaces/http/routes/lessonRoutes')
+const createProgressRoutes = require('./interfaces/http/routes/progressRoutes')
+
+function createApp(container) {
+  const app = express()
+
+  // Middlewares
+  app.use(helmet())
+  const allowedOrigins = typeof config.clientUrl === 'string'
+    ? config.clientUrl.split(',').map(url => url.trim())
+    : config.clientUrl
+
+  // Allow CORS from any origin. `origin: true` reflects request origin —
+  // keeps `credentials: true` usable (unlike `origin: '*'`).
+  app.use(cors({
+    origin: true,
+    credentials: true
+  }))
+  app.use(express.json())
+  app.use(morgan('dev'))
+
+  // Inject dependencies into auth middleware
+  const authenticate = authenticateMiddleware(container.tokenService)
+  const authorize = authorizeMiddleware
+  const optionalAuthenticate = optionalAuthenticateMiddleware(container.tokenService)
+
+  // Routes
+  const authRoutes = createAuthRoutes(container.authController, authenticate, authorize)
+  app.use('/api/v1/auth', authRoutes)
+
+  const adminRoutes = createAdminRoutes(container.adminController, authenticate, authorize)
+  app.use('/api/v1/admin', adminRoutes)
+
+  const courseRoutes = createCourseRoutes(container.courseController, authenticate, authorize, optionalAuthenticate)
+  app.use('/api/v1/courses', courseRoutes)
+
+  const createCategoryRoutes = require('./interfaces/http/routes/categoryRoutes')
+
+  const categoryRoutes = createCategoryRoutes(container.categoryController, authenticate, authorize)
+  app.use('/api/v1/categories', categoryRoutes)
+
+  const sectionRoutes = createSectionRoutes(container.sectionController, authenticate, authorize)
+  app.use('/api/v1/courses/:courseId/sections', sectionRoutes)
+
+  const lessonRoutes = createLessonRoutes(container.lessonController, authenticate, authorize, optionalAuthenticate)
+  app.use('/api/v1/sections/:sectionId/lessons', lessonRoutes)
+
+  const progressRoutes = createProgressRoutes(container.progressController, authenticate)
+  app.use('/api/v1/progress', progressRoutes)
+
+  const createReviewRoutes = require('./interfaces/http/routes/reviewRoutes')
+  const reviewRoutes = createReviewRoutes(container.reviewController, authenticate)
+  app.use('/api/v1/reviews', reviewRoutes)
+  app.use('/api/v1/courses/:courseId/reviews', reviewRoutes)
+
+  const createUploadRoutes = require('./interfaces/http/routes/uploadRoutes')
+  app.use('/api/v1/upload', createUploadRoutes(container.uploadController, authenticate, authorize))
+
+  const createWebhookRoutes = require('./interfaces/http/routes/webhookRoutes')
+  app.use('/api/v1/webhooks', createWebhookRoutes(container.webhookController))
+
+  const createAssessmentRoutes = require('./interfaces/http/routes/assessmentRoutes')
+  const assessmentRoutes = createAssessmentRoutes(container.assessmentController, authenticate, authorize)
+  app.use('/api/v1/courses/:courseId/assessments', assessmentRoutes)
+  app.use('/api/v1/lessons/:lessonId/assessments', assessmentRoutes)
+
+  const createSubmissionRoutes = require('./interfaces/http/routes/submissionRoutes')
+  const submissionRoutes = createSubmissionRoutes(container.assessmentController, authenticate, authorize)
+  app.use('/api/v1/submissions', submissionRoutes)
+
+  const createBlogRoutes = require('./interfaces/http/routes/blogRoutes')
+  const blogRoutes = createBlogRoutes(container.blogController, authenticate, authorize)
+  app.use('/api/v1/blog', blogRoutes)
+
+  const { createMeetingRoutes, createMeetingManagementRoutes } = require('./interfaces/http/routes/meetingRoutes')
+  app.use('/api/v1/lessons/:lessonId/meetings', createMeetingRoutes(container.meetingController, authenticate, authorize, optionalAuthenticate))
+  app.use('/api/v1/meetings', createMeetingManagementRoutes(container.meetingController, authenticate, authorize))
+
+  const createNotificationRoutes = require('./interfaces/http/routes/notificationRoutes')
+  app.use('/api/v1/notifications', createNotificationRoutes(container.notificationController, authenticate))
+
+  const createDashboardRoutes = require('./interfaces/http/routes/dashboardRoutes')
+  app.use('/api/v1/dashboard', createDashboardRoutes(container.dashboardController, authenticate, authorize))
+
+  // Health check
+  app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK' })
+  })
+
+  // Global Error Handler (must be last)
+  app.use(errorHandler)
+
+  return app
+}
+
+module.exports = createApp
