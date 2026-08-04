@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import { blogService } from "../services/api";
 import {
@@ -11,6 +11,9 @@ import {
   FiUser,
 } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
+import SEO from "../components/seo/SEO";
+import StructuredData from "../components/seo/StructuredData";
+import { createBlogPostingSchema } from "../lib/seo";
 
 const formatDate = (value, language) => {
   if (!value) return "";
@@ -38,6 +41,7 @@ const getPostTitle = (post, language) => {
 const Blogs = () => {
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const location = useLocation();
   const isArabic = language === "ar";
   const [posts, setPosts] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
@@ -92,130 +96,170 @@ const Blogs = () => {
     : activePost?.content_en || activePost?.content;
 
   return (
-    <div className="bepro-page pt-20 pb-16">
-      <section className="py-14">
-        <div className="bepro-container">
-          <div className="bepro-page-header">
-            <h1>{t("nav.blogs")}</h1>
-            <p>{t("blogs.courseawareArticlesThatHelpLea")}</p>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <div className="bepro-container">
-          <div className="bepro-card p-5 mb-8">
-            <div className="relative">
-              <FiSearch className="absolute top-1/2 -translate-y-1/2 start-4 w-5 h-5 text-white/50" />
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t("blogs.searchArticles")}
-                className="form-input form-input-glass ps-12"
-              />
+    <>
+      <SEO
+        title={isArabic ? "BeePro Academy | المدونة" : "BeePro Academy | Blog"}
+        description={
+          isArabic
+            ? "تصفح أحدث المقالات والأخبار التعليمية من BeePro Academy في البرمجة، التصميم، وتحليل الأسواق المالية."
+            : "Read the latest educational articles from BeePro Academy on programming, design, and financial markets."
+        }
+        pathname={location.pathname}
+        lang={language}
+        article
+      />
+      <StructuredData
+        jsonLd={
+          activePost
+            ? [
+                createBlogPostingSchema({
+                  title: isArabic
+                    ? activePost.title || activePost.title_en
+                    : activePost.title_en || activePost.title,
+                  description: isArabic
+                    ? activePost.excerpt || activePost.content
+                    : activePost.excerpt_en ||
+                      activePost.excerpt ||
+                      activePost.content_en ||
+                      activePost.content,
+                  url: `https://bepro-academy.com${location.pathname}`,
+                  image: activePost.cover_image_url || undefined,
+                  datePublished:
+                    activePost.published_at || activePost.created_at,
+                  dateModified:
+                    activePost.updated_at ||
+                    activePost.published_at ||
+                    activePost.created_at,
+                }),
+              ]
+            : []
+        }
+      />
+      <div className="bepro-page pt-20 pb-16">
+        <section className="py-14">
+          <div className="bepro-container">
+            <div className="bepro-page-header">
+              <h1>{t("nav.blogs")}</h1>
+              <p>{t("blogs.courseawareArticlesThatHelpLea")}</p>
             </div>
           </div>
+        </section>
 
-          {isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <FiLoader className="w-12 h-12 text-[#00D9FF] animate-spin" />
+        <section>
+          <div className="bepro-container">
+            <div className="bepro-card p-5 mb-8">
+              <div className="relative">
+                <FiSearch className="absolute top-1/2 -translate-y-1/2 start-4 w-5 h-5 text-white/50" />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={t("blogs.searchArticles")}
+                  className="form-input form-input-glass ps-12"
+                />
+              </div>
             </div>
-          ) : error ? (
-            <div className="bepro-card text-center p-10">
-              <p className="text-white font-bold">{error}</p>
-            </div>
-          ) : filteredPosts.length === 0 ? (
-            <div className="bepro-card text-center p-10">
-              <FiBookOpen className="w-14 h-14 mx-auto text-[#00D9FF] mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">
-                {t("blogs.noPublishedPostsYet")}
-              </h2>
-              <p className="text-white/70">
-                {t("blogs.newAdminpublishedArticlesWillA")}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-6 xl:gap-8 items-start">
-              <article className="bepro-card p-4 sm:p-6 md:p-8 min-w-0">
-                {activePost?.cover_image_url && (
-                  <img
-                    src={activePost.cover_image_url}
-                    alt={getPostTitle(activePost, language)}
-                    className="w-full aspect-[16/7] object-cover rounded-lg mb-6"
-                  />
-                )}
-                <div className="flex flex-wrap items-center gap-3 text-sm text-white/70 mb-4">
-                  <span className="inline-flex items-center gap-2">
-                    <FiCalendar className="w-4 h-4" />
-                    {formatDate(
-                      activePost?.published_at || activePost?.created_at,
-                      language,
-                    )}
-                  </span>
-                  <span className="inline-flex items-center gap-2">
-                    <FiUser className="w-4 h-4" />
-                    {activePost?.author?.full_name ||
-                      t("blogs.platformAdmin_8")}
-                  </span>
-                </div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 break-words">
-                  {getPostTitle(activePost, language)}
+
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <FiLoader className="w-12 h-12 text-[#00D9FF] animate-spin" />
+              </div>
+            ) : error ? (
+              <div className="bepro-card text-center p-10">
+                <p className="text-white font-bold">{error}</p>
+              </div>
+            ) : filteredPosts.length === 0 ? (
+              <div className="bepro-card text-center p-10">
+                <FiBookOpen className="w-14 h-14 mx-auto text-[#00D9FF] mb-4" />
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  {t("blogs.noPublishedPostsYet")}
                 </h2>
-                <p className="text-[#00D9FF] font-bold mb-6">
-                  {isArabic
-                    ? activePost?.excerpt
-                    : activePost?.excerpt_en || activePost?.excerpt}
+                <p className="text-white/70">
+                  {t("blogs.newAdminpublishedArticlesWillA")}
                 </p>
-                <div className="prose prose-invert max-w-none">
-                  {(activeContent || "")
-                    .split("\n")
-                    .filter(Boolean)
-                    .map((paragraph, index) => (
-                      <p key={index} className="text-white/80 leading-8 mb-5">
-                        {paragraph}
-                      </p>
-                    ))}
-                </div>
-                {activePost?.course_id && (
-                  <Link
-                    to={`/courses/${activePost.course_id}`}
-                    className="bepro-btn-primary mt-8 inline-flex"
-                  >
-                    {t("blogs.openRelatedCourse")}
-                    <FiArrowRight className="w-5 h-5" />
-                  </Link>
-                )}
-              </article>
-
-              <aside className="space-y-4 min-w-0 xl:max-w-[360px]">
-                {filteredPosts.map((post) => {
-                  const isActive = post.id === activePost?.id;
-                  return (
-                    <button
-                      type="button"
-                      key={post.id}
-                      onClick={() => setSelectedPost(post)}
-                      className={`w-full text-start bepro-card p-4 transition-all ${isActive ? "ring-2 ring-[#00D9FF]" : "hover:translate-y-[-2px]"}`}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-6 xl:gap-8 items-start">
+                <article className="bepro-card p-4 sm:p-6 md:p-8 min-w-0">
+                  {activePost?.cover_image_url && (
+                    <img
+                      src={activePost.cover_image_url}
+                      alt={getPostTitle(activePost, language)}
+                      className="w-full aspect-[16/7] object-cover rounded-lg mb-6"
+                    />
+                  )}
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-white/70 mb-4">
+                    <span className="inline-flex items-center gap-2">
+                      <FiCalendar className="w-4 h-4" />
+                      {formatDate(
+                        activePost?.published_at || activePost?.created_at,
+                        language,
+                      )}
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                      <FiUser className="w-4 h-4" />
+                      {activePost?.author?.full_name ||
+                        t("blogs.platformAdmin_8")}
+                    </span>
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 break-words">
+                    {getPostTitle(activePost, language)}
+                  </h2>
+                  <p className="text-[#00D9FF] font-bold mb-6">
+                    {isArabic
+                      ? activePost?.excerpt
+                      : activePost?.excerpt_en || activePost?.excerpt}
+                  </p>
+                  <div className="prose prose-invert max-w-none">
+                    {(activeContent || "")
+                      .split("\n")
+                      .filter(Boolean)
+                      .map((paragraph, index) => (
+                        <p key={index} className="text-white/80 leading-8 mb-5">
+                          {paragraph}
+                        </p>
+                      ))}
+                  </div>
+                  {activePost?.course_id && (
+                    <Link
+                      to={`/courses/${activePost.course_id}`}
+                      className="bepro-btn-primary mt-8 inline-flex"
                     >
-                      <span className="text-xs font-bold uppercase tracking-wide text-[#00D9FF]">
-                        {post.category || t("blogs.education_7")}
-                      </span>
-                      <h3 className="text-white font-bold mt-2 mb-2">
-                        {getPostTitle(post, language)}
-                      </h3>
-                      <p className="text-white/65 text-sm leading-6">
-                        {getExcerpt(post, language)}...
-                      </p>
-                    </button>
-                  );
-                })}
-              </aside>
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
+                      {t("blogs.openRelatedCourse")}
+                      <FiArrowRight className="w-5 h-5" />
+                    </Link>
+                  )}
+                </article>
+
+                <aside className="space-y-4 min-w-0 xl:max-w-[360px]">
+                  {filteredPosts.map((post) => {
+                    const isActive = post.id === activePost?.id;
+                    return (
+                      <button
+                        type="button"
+                        key={post.id}
+                        onClick={() => setSelectedPost(post)}
+                        className={`w-full text-start bepro-card p-4 transition-all ${isActive ? "ring-2 ring-[#00D9FF]" : "hover:translate-y-[-2px]"}`}
+                      >
+                        <span className="text-xs font-bold uppercase tracking-wide text-[#00D9FF]">
+                          {post.category || t("blogs.education_7")}
+                        </span>
+                        <h3 className="text-white font-bold mt-2 mb-2">
+                          {getPostTitle(post, language)}
+                        </h3>
+                        <p className="text-white/65 text-sm leading-6">
+                          {getExcerpt(post, language)}...
+                        </p>
+                      </button>
+                    );
+                  })}
+                </aside>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    </>
   );
 };
 

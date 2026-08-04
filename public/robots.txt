@@ -1,4 +1,19 @@
 User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /student-dashboard
+Disallow: /teacher-dashboard
+Disallow: /admin-dashboard
+Disallow: /login
+Disallow: /register
+Disallow: /register/teacher
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /settings
+Disallow: /profile
+Disallow: /teacher
+Disallow: /admin
+Disallow: /courses/*/checkout
+Disallow: /courses/*/learn
 
 Sitemap: https://bepro-academy.com/sitemap.xml

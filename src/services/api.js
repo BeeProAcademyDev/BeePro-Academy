@@ -2,7 +2,8 @@ import axios from "axios";
 import { formatErrorMessage } from "../lib/supabaseErrors";
 
 const rawBaseUrl =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://bee-pro-academy.vercel.app/api/v1";
 const AUTH_STORAGE_KEY = "beepro_academy_auth_session";
 const AUTH_SESSION_EVENT = "beepro:auth-session-changed";
 const API_LOADING_EVENT = "beepro:api-loading-changed";
@@ -13,7 +14,7 @@ let refreshPromise = null;
 
 function normalizeBaseUrl(value) {
   const trimmed = String(value || "").replace(/\/+$/, "");
-  if (!trimmed) return "http://localhost:5000/api/v1";
+  if (!trimmed) return "https://bee-pro-academy.vercel.app/api/v1";
   return trimmed.endsWith("/api/v1") ? trimmed : `${trimmed}/api/v1`;
 }
 

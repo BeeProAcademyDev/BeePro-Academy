@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useCurrency } from "../contexts/CurrencyContext";
@@ -20,6 +20,9 @@ import { getLandingAuthUrl } from "../lib/authRoutes";
 import { toastSuccess, toastError } from "../lib/toast";
 import Button from "../components/ui/Button";
 import LessonForm from "../components/course/LessonForm";
+import SEO from "../components/seo/SEO";
+import StructuredData from "../components/seo/StructuredData";
+import { createCourseSchema, SITE_URL } from "../lib/seo";
 import {
   FiPlay,
   FiClock,
@@ -44,6 +47,7 @@ import {
 const CourseDetailsDB = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const { language, isRTL } = useLanguage();
   const { formatCoursePrice } = useCurrency();
@@ -52,6 +56,22 @@ const CourseDetailsDB = () => {
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [sections, setSections] = useState([]);
+  const courseTitle = course
+    ? language === "ar"
+      ? course.title || course.title_en
+      : course.title_en || course.title
+    : "";
+  const courseDescription = course
+    ? language === "ar"
+      ? course.description || course.excerpt || course.content || ""
+      : course.description_en ||
+        course.excerpt_en ||
+        course.excerpt ||
+        course.content_en ||
+        course.content ||
+        ""
+    : "";
+  const courseImage = course?.cover_image_url || course?.image_url || undefined;
   const [openLessonFormFor, setOpenLessonFormFor] = useState(null);
   const [lessonForm, setLessonForm] = useState({
     title: "",
@@ -476,493 +496,537 @@ const CourseDetailsDB = () => {
   ];
 
   return (
-    <div className="min-h-screen pt-20">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-secondary-900 to-secondary-800 text-white py-12 md:py-16">
-        <div className="container-custom">
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Course Info */}
-            <div className="lg:col-span-2">
-              {/* Breadcrumb */}
-              <div className="flex flex-wrap items-center gap-2 text-sm text-secondary-400 mb-4">
-                <Link to="/" className="hover:text-white shrink-0">
-                  {t("nav.home")}
-                </Link>
-                <span className="shrink-0">/</span>
-                <Link to="/courses" className="hover:text-white shrink-0">
-                  {t("nav.courses")}
-                </Link>
-                <span className="shrink-0">/</span>
-                <span className="text-white break-words min-w-0">
+    <>
+      <SEO
+        title={courseTitle || "BeePro Academy | Course details"}
+        description={
+          courseDescription ||
+          (language === "ar"
+            ? "اطّلع على تفاصيل هذا الكورس، المحتوى، المدة، والمدرب في BeePro Academy."
+            : "Explore course details, curriculum, duration, and instructor information at BeePro Academy.")
+        }
+        pathname={location.pathname}
+        lang={language}
+        article
+      />
+      <StructuredData
+        jsonLd={
+          course
+            ? [
+                createCourseSchema({
+                  name: courseTitle || course.title || course.title_en,
+                  description:
+                    courseDescription ||
+                    course.short_description ||
+                    course.excerpt ||
+                    "",
+                  url: `${SITE_URL}${location.pathname}`,
+                  image: courseImage,
+                  author: {
+                    "@type": "Organization",
+                    name: "BeePro Academy",
+                  },
+                }),
+              ]
+            : []
+        }
+      />
+      <div className="min-h-screen pt-20">
+        {/* Hero Section */}
+        <section className="bg-gradient-to-br from-secondary-900 to-secondary-800 text-white py-12 md:py-16">
+          <div className="container-custom">
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Course Info */}
+              <div className="lg:col-span-2">
+                {/* Breadcrumb */}
+                <div className="flex flex-wrap items-center gap-2 text-sm text-secondary-400 mb-4">
+                  <Link to="/" className="hover:text-white shrink-0">
+                    {t("nav.home")}
+                  </Link>
+                  <span className="shrink-0">/</span>
+                  <Link to="/courses" className="hover:text-white shrink-0">
+                    {t("nav.courses")}
+                  </Link>
+                  <span className="shrink-0">/</span>
+                  <span className="text-white break-words min-w-0">
+                    {course.title}
+                  </span>
+                </div>
+
+                {/* Tags */}
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <span
+                    className={`badge ${
+                      courseLevel === "beginner"
+                        ? "bg-green-500"
+                        : courseLevel === "intermediate"
+                          ? "bg-yellow-500"
+                          : "bg-red-500"
+                    } text-white px-3 py-1`}
+                  >
+                    {t(`course.level.${courseLevel}`)}
+                  </span>
+                  <span className="badge bg-primary-500 text-white px-3 py-1">
+                    {course.category}
+                  </span>
+                </div>
+
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 break-words">
                   {course.title}
-                </span>
-              </div>
+                </h1>
+                <p className="text-base sm:text-lg text-secondary-300 mb-6 break-words">
+                  {course.description}
+                </p>
 
-              {/* Tags */}
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                <span
-                  className={`badge ${
-                    courseLevel === "beginner"
-                      ? "bg-green-500"
-                      : courseLevel === "intermediate"
-                        ? "bg-yellow-500"
-                        : "bg-red-500"
-                  } text-white px-3 py-1`}
-                >
-                  {t(`course.level.${courseLevel}`)}
-                </span>
-                <span className="badge bg-primary-500 text-white px-3 py-1">
-                  {course.category}
-                </span>
-              </div>
-
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 break-words">
-                {course.title}
-              </h1>
-              <p className="text-base sm:text-lg text-secondary-300 mb-6 break-words">
-                {course.description}
-              </p>
-
-              {isCourseOwner && (
-                <div className="mb-6 rounded-2xl border border-secondary-200 dark:border-dark-border bg-white dark:bg-dark-card p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <h2 className="text-xl font-semibold">
-                        Course Management
-                      </h2>
-                      <p className="text-sm text-secondary-500">
-                        Manage sections and lessons for this course.
-                      </p>
-                    </div>
-                    <Button onClick={handleAddSection} variant="secondary">
-                      + Add Section
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Instructor */}
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center overflow-hidden">
-                  {instructor.avatar_url ? (
-                    <img
-                      src={instructor.avatar_url}
-                      alt={instructor.full_name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <FiUser className="w-6 h-6 text-white" />
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm text-secondary-400">
-                    {t("course.instructor")}
-                  </p>
-                  <p className="font-medium">
-                    {instructor.full_name ||
-                      instructor.name ||
-                      t("course.instructor")}
-                  </p>
-                  <p className="text-sm text-secondary-500">
-                    {t("courseDetailsDB.instructorRole")}
-                  </p>
-                  {instructor.bio && (
-                    <p className="text-sm text-secondary-300 mt-1 line-clamp-2">
-                      {instructor.bio}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Course Card (Desktop) */}
-            <div className="hidden lg:block">
-              <div className="bg-white dark:bg-dark-card rounded-xl shadow-xl overflow-hidden sticky top-24 lg:top-28">
-                {/* Thumbnail */}
-                <div className="relative aspect-video bg-gradient-to-br from-primary-500 to-secondary-500">
-                  {course.thumbnail_url ? (
-                    <img
-                      src={course.thumbnail_url}
-                      alt={course.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <FiBookOpen className="w-16 h-16 text-white opacity-50" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center">
-                    {hasCourseAccess ? (
-                      (() => {
-                        const joinTarget = joinableMeeting
-                          ? getMeetingJoinTarget(joinableMeeting)
-                          : null;
-                        if (joinTarget?.type === "external") {
-                          return (
-                            <a
-                              href={joinTarget.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="group flex flex-col items-center gap-2"
-                              title={t("courseDetailsDB.joinLiveSession_19")}
-                            >
-                              <span className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                                <FiVideo className="w-7 h-7" />
-                              </span>
-                              <span className="text-sm font-semibold text-white drop-shadow">
-                                {t("courseDetailsDB.joinSession_18")}
-                              </span>
-                            </a>
-                          );
-                        }
-
-                        return (
-                          <Link
-                            to={
-                              joinableMeeting
-                                ? `/courses/${course.id}/learn?session=${joinableMeeting.id}`
-                                : `/courses/${course.id}/learn?session=live`
-                            }
-                            className="group flex flex-col items-center gap-2"
-                            title={t("courseDetailsDB.joinLiveSession")}
-                          >
-                            <span className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                              <FiVideo className="w-7 h-7" />
-                            </span>
-                            <span className="text-sm font-semibold text-white drop-shadow">
-                              {t("courseDetailsDB.joinSession")}
-                            </span>
-                          </Link>
-                        );
-                      })()
-                    ) : (
-                      <span className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
-                        <FiPlay className="w-6 h-6 text-primary-500 ms-1" />
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Price & CTA */}
-                <div className="p-6 text-secondary-900 dark:text-white">
-                  <div className="text-3xl font-bold text-green-500 mb-4">
-                    {isPaidCourse
-                      ? coursePriceDisplay
-                      : t("courseDetailsDB.free_17")}
-                  </div>
-
-                  {hasCourseAccess ? (
-                    <div className="space-y-3">
-                      {renderJoinSessionLink()}
-                      <Button
-                        to={`/courses/${course.id}/learn`}
-                        fullWidth
-                        icon={ArrowIcon}
-                        iconPosition="end"
-                        variant="outline"
-                      >
-                        {t("courseDetailsDB.continueLearning")}
+                {isCourseOwner && (
+                  <div className="mb-6 rounded-2xl border border-secondary-200 dark:border-dark-border bg-white dark:bg-dark-card p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <h2 className="text-xl font-semibold">
+                          Course Management
+                        </h2>
+                        <p className="text-sm text-secondary-500">
+                          Manage sections and lessons for this course.
+                        </p>
+                      </div>
+                      <Button onClick={handleAddSection} variant="secondary">
+                        + Add Section
                       </Button>
                     </div>
-                  ) : (
-                    <Button
-                      onClick={handleEnroll}
-                      fullWidth
-                      size="lg"
-                      disabled={enrolling || (isPaidCourse && !isStudent)}
-                    >
-                      {enrolling
-                        ? t("courseDetailsDB.enrolling_16")
-                        : isPaidCourse && !isStudent
-                          ? t("courseDetailsDB.studentsOnly_15")
-                          : isPaidCourse
-                            ? paymentsEnabled
-                              ? t("courseDetailsDB.payToGetCourse")
-                              : t("courseDetailsDB.enrollForFree")
-                            : t("courseDetailsDB.enrollForFree")}
-                    </Button>
-                  )}
-
-                  {isAuthenticated && isStudent && (
-                    <Link
-                      to={`/courses/${course.id}/learn?tab=chat`}
-                      className="btn btn-secondary w-full mt-3 inline-flex items-center justify-center gap-2"
-                    >
-                      <FiMessageCircle className="w-4 h-4" />
-                      {t("dashboardExtra.chatWithInstructor")}
-                    </Link>
-                  )}
-
-                  {/* Features */}
-                  <div className="mt-6 pt-6 border-t border-secondary-200 dark:border-dark-border space-y-3">
-                    {courseFeatures.map((feature, index) => (
-                      <div key={index} className="flex items-center gap-3">
-                        <feature.icon className="w-5 h-5 text-primary-500" />
-                        <span className="text-sm">{feature.label}</span>
-                      </div>
-                    ))}
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+                )}
 
-      {/* Mobile Course Card */}
-      <div className="lg:hidden sticky top-16 z-40 bg-white dark:bg-dark-card shadow-md p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-2xl font-bold text-green-500">
-              {isPaidCourse ? coursePriceDisplay : t("courseDetailsDB.free_14")}
-            </span>
-          </div>
-          {hasCourseAccess ? (
-            <div className="flex items-center gap-2">
-              {renderJoinSessionLink(
-                "btn btn-primary btn-sm inline-flex items-center gap-2",
-              )}
-              <Button
-                to={`/courses/${course.id}/learn`}
-                icon={ArrowIcon}
-                iconPosition="end"
-                variant="outline"
-                size="sm"
-              >
-                {t("courseDetailsDB.continue")}
-              </Button>
-            </div>
-          ) : (
-            <Button
-              onClick={handleEnroll}
-              disabled={enrolling || (isPaidCourse && !isStudent)}
-            >
-              {enrolling
-                ? t("courseDetailsDB.enrolling")
-                : isPaidCourse && !isStudent
-                  ? t("courseDetailsDB.studentsOnly")
-                  : isPaidCourse
-                    ? paymentsEnabled
-                      ? t("courseDetailsDB.pay")
-                      : t("courseDetailsDB.enrollForFree")
-                    : t("courseDetailsDB.free")}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Content Section */}
-      <section className="py-8">
-        <div className="container-custom">
-          <div className="lg:w-2/3">
-            {/* Tabs */}
-            <div className="flex overflow-x-auto gap-2 mb-8 border-b border-secondary-200 dark:border-dark-border">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-3 font-medium whitespace-nowrap border-b-2 transition-colors ${
-                    activeTab === tab.id
-                      ? "border-primary-500 text-primary-500"
-                      : "border-transparent text-secondary-600 hover:text-secondary-900 dark:text-secondary-400 dark:hover:text-white"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab Content */}
-            {activeTab === "overview" && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold mb-4">
-                    {t("courseDetailsDB.courseDescription")}
-                  </h2>
-                  <p className="text-secondary-600 dark:text-secondary-400 leading-relaxed">
-                    {course.description}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "curriculum" && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-2xl font-bold">
-                      {t("course.curriculum")}
-                    </h2>
-                    <p className="text-sm text-secondary-500">
-                      {totalLessons} {t("courseDetailsDB.lessons_13")}
-                    </p>
-                  </div>
-                  {isCourseOwner && (
-                    <Button onClick={handleAddSection} variant="secondary">
-                      + {t("courseDetailsDB.addSection")}
-                    </Button>
-                  )}
-                </div>
-
-                {/* Curriculum Sections */}
-                <div className="space-y-4">
-                  {sectionsToRender.map((section) => (
-                    <div
-                      key={section.id}
-                      className="border border-secondary-200 dark:border-dark-border rounded-xl overflow-hidden"
-                    >
-                      <button
-                        onClick={() => toggleSection(section.id)}
-                        className="w-full flex items-center justify-between p-4 bg-secondary-50 dark:bg-dark-border hover:bg-secondary-100 dark:hover:bg-dark-card transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          {expandedSections.includes(section.id) ? (
-                            <FiChevronUp className="w-5 h-5" />
-                          ) : (
-                            <FiChevronDown className="w-5 h-5" />
-                          )}
-                          <span className="font-medium">
-                            {section.title || t("courseDetailsDB.section")}
-                          </span>
-                        </div>
-                        <span className="text-sm text-secondary-500">
-                          {(section.lessons || []).length}{" "}
-                          {t("courseDetailsDB.lessons")}
-                        </span>
-                      </button>
-
-                      {expandedSections.includes(section.id) && (
-                        <div className="divide-y divide-secondary-100 dark:divide-dark-border">
-                          {(section.lessons || []).map((lesson) => {
-                            const canOpenLesson = isEnrolled || hasCourseAccess;
-                            return (
-                              <div
-                                key={lesson.id}
-                                className="flex flex-col gap-3 p-4 hover:bg-secondary-50 dark:hover:bg-dark-border/50 transition-colors"
-                              >
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3">
-                                    {canOpenLesson ? (
-                                      <FiPlay className="w-5 h-5 text-primary-500" />
-                                    ) : (
-                                      <FiLock className="w-5 h-5 text-secondary-400" />
-                                    )}
-                                    {canOpenLesson ? (
-                                      <Link
-                                        to={`/courses/${course.id}/lessons/${lesson.id}`}
-                                        className="font-medium"
-                                      >
-                                        {lesson.title}
-                                      </Link>
-                                    ) : (
-                                      <span className="font-medium text-secondary-400">
-                                        {lesson.title}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {isCourseOwner && (
-                                    <div className="flex items-center gap-2">
-                                      <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={() =>
-                                          handleEditLesson(lesson, section.id)
-                                        }
-                                      >
-                                        {t("courseDetailsDB.editLesson")}
-                                      </Button>
-                                      <Button
-                                        variant="danger"
-                                        size="sm"
-                                        onClick={() =>
-                                          handleDeleteLesson(lesson, section.id)
-                                        }
-                                      >
-                                        {t("courseDetailsDB.deleteLesson")}
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-
-                          {section.lessons?.length === 0 && (
-                            <div className="p-4 text-center text-secondary-500">
-                              {t("courseDetailsDB.noLessonsYet")}
-                            </div>
-                          )}
-
-                          {isCourseOwner && section.id !== "default" && (
-                            <div className="p-4">
-                              <Button
-                                variant="secondary"
-                                onClick={() => openLessonForm(section.id)}
-                              >
-                                + {t("courseDetailsDB.addLesson")}
-                              </Button>
-                              {openLessonFormFor === section.id && (
-                                <LessonForm
-                                  form={lessonForm}
-                                  onChange={handleLessonFormChange}
-                                  onSubmit={() => handleSaveLesson(section.id)}
-                                  loading={savingLessonFor === section.id}
-                                  onCancel={() => setOpenLessonFormFor(null)}
-                                  mode={editingLessonId ? "edit" : "create"}
-                                />
-                              )}
-                              {lessonError && (
-                                <p className="text-sm text-red-500 mt-3">
-                                  {lessonError}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === "instructor" && (
-              <div>
-                <h2 className="text-2xl font-bold mb-6">
-                  {t("course.instructor")}
-                </h2>
-                <div className="flex items-start gap-6">
-                  <div className="w-24 h-24 rounded-full bg-primary-500 flex items-center justify-center">
+                {/* Instructor */}
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center overflow-hidden">
                     {instructor.avatar_url ? (
                       <img
                         src={instructor.avatar_url}
                         alt={instructor.full_name}
-                        className="w-24 h-24 rounded-full object-cover"
+                        className="w-12 h-12 rounded-full object-cover"
                       />
                     ) : (
-                      <FiUser className="w-12 h-12 text-white" />
+                      <FiUser className="w-6 h-6 text-white" />
                     )}
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold mb-1">
-                      {instructor.full_name || "Instructor"}
-                    </h3>
-                    <p className="text-secondary-500 mb-4">
-                      {instructor.email}
+                    <p className="text-sm text-secondary-400">
+                      {t("course.instructor")}
+                    </p>
+                    <p className="font-medium">
+                      {instructor.full_name ||
+                        instructor.name ||
+                        t("course.instructor")}
+                    </p>
+                    <p className="text-sm text-secondary-500">
+                      {t("courseDetailsDB.instructorRole")}
                     </p>
                     {instructor.bio && (
-                      <p className="text-secondary-600 dark:text-secondary-400 leading-relaxed">
+                      <p className="text-sm text-secondary-300 mt-1 line-clamp-2">
                         {instructor.bio}
                       </p>
                     )}
                   </div>
                 </div>
               </div>
+
+              {/* Course Card (Desktop) */}
+              <div className="hidden lg:block">
+                <div className="bg-white dark:bg-dark-card rounded-xl shadow-xl overflow-hidden sticky top-24 lg:top-28">
+                  {/* Thumbnail */}
+                  <div className="relative aspect-video bg-gradient-to-br from-primary-500 to-secondary-500">
+                    {course.thumbnail_url ? (
+                      <img
+                        src={course.thumbnail_url}
+                        alt={course.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <FiBookOpen className="w-16 h-16 text-white opacity-50" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center">
+                      {hasCourseAccess ? (
+                        (() => {
+                          const joinTarget = joinableMeeting
+                            ? getMeetingJoinTarget(joinableMeeting)
+                            : null;
+                          if (joinTarget?.type === "external") {
+                            return (
+                              <a
+                                href={joinTarget.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group flex flex-col items-center gap-2"
+                                title={t("courseDetailsDB.joinLiveSession_19")}
+                              >
+                                <span className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                                  <FiVideo className="w-7 h-7" />
+                                </span>
+                                <span className="text-sm font-semibold text-white drop-shadow">
+                                  {t("courseDetailsDB.joinSession_18")}
+                                </span>
+                              </a>
+                            );
+                          }
+
+                          return (
+                            <Link
+                              to={
+                                joinableMeeting
+                                  ? `/courses/${course.id}/learn?session=${joinableMeeting.id}`
+                                  : `/courses/${course.id}/learn?session=live`
+                              }
+                              className="group flex flex-col items-center gap-2"
+                              title={t("courseDetailsDB.joinLiveSession")}
+                            >
+                              <span className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                                <FiVideo className="w-7 h-7" />
+                              </span>
+                              <span className="text-sm font-semibold text-white drop-shadow">
+                                {t("courseDetailsDB.joinSession")}
+                              </span>
+                            </Link>
+                          );
+                        })()
+                      ) : (
+                        <span className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
+                          <FiPlay className="w-6 h-6 text-primary-500 ms-1" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Price & CTA */}
+                  <div className="p-6 text-secondary-900 dark:text-white">
+                    <div className="text-3xl font-bold text-green-500 mb-4">
+                      {isPaidCourse
+                        ? coursePriceDisplay
+                        : t("courseDetailsDB.free_17")}
+                    </div>
+
+                    {hasCourseAccess ? (
+                      <div className="space-y-3">
+                        {renderJoinSessionLink()}
+                        <Button
+                          to={`/courses/${course.id}/learn`}
+                          fullWidth
+                          icon={ArrowIcon}
+                          iconPosition="end"
+                          variant="outline"
+                        >
+                          {t("courseDetailsDB.continueLearning")}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={handleEnroll}
+                        fullWidth
+                        size="lg"
+                        disabled={enrolling || (isPaidCourse && !isStudent)}
+                      >
+                        {enrolling
+                          ? t("courseDetailsDB.enrolling_16")
+                          : isPaidCourse && !isStudent
+                            ? t("courseDetailsDB.studentsOnly_15")
+                            : isPaidCourse
+                              ? paymentsEnabled
+                                ? t("courseDetailsDB.payToGetCourse")
+                                : t("courseDetailsDB.enrollForFree")
+                              : t("courseDetailsDB.enrollForFree")}
+                      </Button>
+                    )}
+
+                    {isAuthenticated && isStudent && (
+                      <Link
+                        to={`/courses/${course.id}/learn?tab=chat`}
+                        className="btn btn-secondary w-full mt-3 inline-flex items-center justify-center gap-2"
+                      >
+                        <FiMessageCircle className="w-4 h-4" />
+                        {t("dashboardExtra.chatWithInstructor")}
+                      </Link>
+                    )}
+
+                    {/* Features */}
+                    <div className="mt-6 pt-6 border-t border-secondary-200 dark:border-dark-border space-y-3">
+                      {courseFeatures.map((feature, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <feature.icon className="w-5 h-5 text-primary-500" />
+                          <span className="text-sm">{feature.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Mobile Course Card */}
+        <div className="lg:hidden sticky top-16 z-40 bg-white dark:bg-dark-card shadow-md p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-2xl font-bold text-green-500">
+                {isPaidCourse
+                  ? coursePriceDisplay
+                  : t("courseDetailsDB.free_14")}
+              </span>
+            </div>
+            {hasCourseAccess ? (
+              <div className="flex items-center gap-2">
+                {renderJoinSessionLink(
+                  "btn btn-primary btn-sm inline-flex items-center gap-2",
+                )}
+                <Button
+                  to={`/courses/${course.id}/learn`}
+                  icon={ArrowIcon}
+                  iconPosition="end"
+                  variant="outline"
+                  size="sm"
+                >
+                  {t("courseDetailsDB.continue")}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleEnroll}
+                disabled={enrolling || (isPaidCourse && !isStudent)}
+              >
+                {enrolling
+                  ? t("courseDetailsDB.enrolling")
+                  : isPaidCourse && !isStudent
+                    ? t("courseDetailsDB.studentsOnly")
+                    : isPaidCourse
+                      ? paymentsEnabled
+                        ? t("courseDetailsDB.pay")
+                        : t("courseDetailsDB.enrollForFree")
+                      : t("courseDetailsDB.free")}
+              </Button>
             )}
           </div>
         </div>
-      </section>
-    </div>
+
+        {/* Content Section */}
+        <section className="py-8">
+          <div className="container-custom">
+            <div className="lg:w-2/3">
+              {/* Tabs */}
+              <div className="flex overflow-x-auto gap-2 mb-8 border-b border-secondary-200 dark:border-dark-border">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-4 py-3 font-medium whitespace-nowrap border-b-2 transition-colors ${
+                      activeTab === tab.id
+                        ? "border-primary-500 text-primary-500"
+                        : "border-transparent text-secondary-600 hover:text-secondary-900 dark:text-secondary-400 dark:hover:text-white"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab Content */}
+              {activeTab === "overview" && (
+                <div className="space-y-8">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-4">
+                      {t("courseDetailsDB.courseDescription")}
+                    </h2>
+                    <p className="text-secondary-600 dark:text-secondary-400 leading-relaxed">
+                      {course.description}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "curriculum" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-2xl font-bold">
+                        {t("course.curriculum")}
+                      </h2>
+                      <p className="text-sm text-secondary-500">
+                        {totalLessons} {t("courseDetailsDB.lessons_13")}
+                      </p>
+                    </div>
+                    {isCourseOwner && (
+                      <Button onClick={handleAddSection} variant="secondary">
+                        + {t("courseDetailsDB.addSection")}
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Curriculum Sections */}
+                  <div className="space-y-4">
+                    {sectionsToRender.map((section) => (
+                      <div
+                        key={section.id}
+                        className="border border-secondary-200 dark:border-dark-border rounded-xl overflow-hidden"
+                      >
+                        <button
+                          onClick={() => toggleSection(section.id)}
+                          className="w-full flex items-center justify-between p-4 bg-secondary-50 dark:bg-dark-border hover:bg-secondary-100 dark:hover:bg-dark-card transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            {expandedSections.includes(section.id) ? (
+                              <FiChevronUp className="w-5 h-5" />
+                            ) : (
+                              <FiChevronDown className="w-5 h-5" />
+                            )}
+                            <span className="font-medium">
+                              {section.title || t("courseDetailsDB.section")}
+                            </span>
+                          </div>
+                          <span className="text-sm text-secondary-500">
+                            {(section.lessons || []).length}{" "}
+                            {t("courseDetailsDB.lessons")}
+                          </span>
+                        </button>
+
+                        {expandedSections.includes(section.id) && (
+                          <div className="divide-y divide-secondary-100 dark:divide-dark-border">
+                            {(section.lessons || []).map((lesson) => {
+                              const canOpenLesson =
+                                isEnrolled || hasCourseAccess;
+                              return (
+                                <div
+                                  key={lesson.id}
+                                  className="flex flex-col gap-3 p-4 hover:bg-secondary-50 dark:hover:bg-dark-border/50 transition-colors"
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                      {canOpenLesson ? (
+                                        <FiPlay className="w-5 h-5 text-primary-500" />
+                                      ) : (
+                                        <FiLock className="w-5 h-5 text-secondary-400" />
+                                      )}
+                                      {canOpenLesson ? (
+                                        <Link
+                                          to={`/courses/${course.id}/lessons/${lesson.id}`}
+                                          className="font-medium"
+                                        >
+                                          {lesson.title}
+                                        </Link>
+                                      ) : (
+                                        <span className="font-medium text-secondary-400">
+                                          {lesson.title}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {isCourseOwner && (
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          variant="secondary"
+                                          size="sm"
+                                          onClick={() =>
+                                            handleEditLesson(lesson, section.id)
+                                          }
+                                        >
+                                          {t("courseDetailsDB.editLesson")}
+                                        </Button>
+                                        <Button
+                                          variant="danger"
+                                          size="sm"
+                                          onClick={() =>
+                                            handleDeleteLesson(
+                                              lesson,
+                                              section.id,
+                                            )
+                                          }
+                                        >
+                                          {t("courseDetailsDB.deleteLesson")}
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {section.lessons?.length === 0 && (
+                              <div className="p-4 text-center text-secondary-500">
+                                {t("courseDetailsDB.noLessonsYet")}
+                              </div>
+                            )}
+
+                            {isCourseOwner && section.id !== "default" && (
+                              <div className="p-4">
+                                <Button
+                                  variant="secondary"
+                                  onClick={() => openLessonForm(section.id)}
+                                >
+                                  + {t("courseDetailsDB.addLesson")}
+                                </Button>
+                                {openLessonFormFor === section.id && (
+                                  <LessonForm
+                                    form={lessonForm}
+                                    onChange={handleLessonFormChange}
+                                    onSubmit={() =>
+                                      handleSaveLesson(section.id)
+                                    }
+                                    loading={savingLessonFor === section.id}
+                                    onCancel={() => setOpenLessonFormFor(null)}
+                                    mode={editingLessonId ? "edit" : "create"}
+                                  />
+                                )}
+                                {lessonError && (
+                                  <p className="text-sm text-red-500 mt-3">
+                                    {lessonError}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "instructor" && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-6">
+                    {t("course.instructor")}
+                  </h2>
+                  <div className="flex items-start gap-6">
+                    <div className="w-24 h-24 rounded-full bg-primary-500 flex items-center justify-center">
+                      {instructor.avatar_url ? (
+                        <img
+                          src={instructor.avatar_url}
+                          alt={instructor.full_name}
+                          className="w-24 h-24 rounded-full object-cover"
+                        />
+                      ) : (
+                        <FiUser className="w-12 h-12 text-white" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold mb-1">
+                        {instructor.full_name || "Instructor"}
+                      </h3>
+                      <p className="text-secondary-500 mb-4">
+                        {instructor.email}
+                      </p>
+                      {instructor.bio && (
+                        <p className="text-secondary-600 dark:text-secondary-400 leading-relaxed">
+                          {instructor.bio}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+    </>
   );
 };
 

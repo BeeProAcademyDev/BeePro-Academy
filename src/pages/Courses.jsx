@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -13,6 +13,7 @@ import {
   formatCourseForCard,
   isCoursePublishedAndApproved,
 } from "../lib/backendFormatters";
+import SEO from "../components/seo/SEO";
 import {
   FiSearch,
   FiGrid,
@@ -106,6 +107,7 @@ const buildProgressMap = (rows) =>
 const Courses = () => {
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const location = useLocation();
   const { isAuthenticated } = useAuth();
   const isArabic = language === "ar";
   const [searchParams, setSearchParams] = useSearchParams();
@@ -347,230 +349,244 @@ const Courses = () => {
     setCurrentPage((page) => Math.min(totalPages, page + 1));
 
   return (
-    <div className="bepro-page pt-20 pb-16">
-      <section className="py-12">
-        <div className="bepro-container">
-          <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 break-words px-2">
-              {t("courses.title")}
-            </h1>
-            <p className="text-base sm:text-lg md:text-xl text-white font-semibold px-2 max-w-3xl mx-auto">
-              {t("courses.discoverOurCoursesInFinancialM")}
-            </p>
+    <>
+      <SEO
+        title={
+          isArabic ? "BeePro Academy | الدورات" : "BeePro Academy | Courses"
+        }
+        description={
+          isArabic
+            ? "اطّلع على الدورات التدريبية المتوفرة لدى BeePro Academy في البرمجة، البيانات، وتكنولوجيا المعلومات."
+            : "Explore the available BeePro Academy courses in programming, data, and IT."
+        }
+        pathname={location.pathname}
+        lang={language}
+      />
+      <div className="bepro-page pt-20 pb-16">
+        <section className="py-12">
+          <div className="bepro-container">
+            <div className="text-center">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 break-words px-2">
+                {t("courses.title")}
+              </h1>
+              <p className="text-base sm:text-lg md:text-xl text-white font-semibold px-2 max-w-3xl mx-auto">
+                {t("courses.discoverOurCoursesInFinancialM")}
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="pb-8">
-        <div className="bepro-container">
-          <div className="flex flex-wrap justify-center gap-3">
-            <button
-              onClick={() => handleCategoryChange("all")}
-              className={`px-6 py-2 rounded-full border border-white/30 text-white font-bold transition-all ${selectedCategory === "all" ? "bg-gradient-to-r from-[#009FFD] to-[#2A93D5] border-transparent" : "hover:bg-white/10"}`}
-              type="button"
-            >
-              {t("courses.all")}
-            </button>
-            {categories.map((category) => (
+        <section className="pb-8">
+          <div className="bepro-container">
+            <div className="flex flex-wrap justify-center gap-3">
               <button
-                key={category.id}
-                onClick={() => handleCategoryChange(category.id)}
-                className={`px-6 py-2 rounded-full border border-white/30 text-white font-bold transition-all ${selectedCategory === category.id ? "bg-gradient-to-r from-[#009FFD] to-[#2A93D5] border-transparent" : "hover:bg-white/10"}`}
+                onClick={() => handleCategoryChange("all")}
+                className={`px-6 py-2 rounded-full border border-white/30 text-white font-bold transition-all ${selectedCategory === "all" ? "bg-gradient-to-r from-[#009FFD] to-[#2A93D5] border-transparent" : "hover:bg-white/10"}`}
                 type="button"
               >
-                {getCategoryLabel(category, isArabic)}
+                {t("courses.all")}
               </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="pb-8">
-        <div className="bepro-container">
-          <div className="bepro-card p-4 sm:p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-              <div className="flex-1 relative">
-                <FiSearch className="absolute top-1/2 -translate-y-1/2 start-4 w-5 h-5 text-white/50" />
-                <input
-                  type="text"
-                  placeholder={t("courses.search")}
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  className="form-input form-input-glass ps-12"
-                />
-
-                <div className="flex items-center border border-white/20 rounded-xl overflow-hidden self-start">
-                  <button
-                    onClick={() => setViewMode("grid")}
-                    className={`p-3 transition-colors ${viewMode === "grid" ? "bg-[#009FFD] text-white" : "hover:bg-white/10 text-white/70"}`}
-                    aria-label="Grid view"
-                    type="button"
-                  >
-                    <FiGrid className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode("list")}
-                    className={`p-3 transition-colors ${viewMode === "list" ? "bg-[#009FFD] text-white" : "hover:bg-white/10 text-white/70"}`}
-                    aria-label="List view"
-                    type="button"
-                  >
-                    <FiList className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {hasActiveFilters && (
-              <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-white/20">
-                {searchQuery && (
-                  <span className="px-3 py-1 bg-[#009FFD]/30 text-white rounded-full text-sm flex items-center gap-2">
-                    &quot;{searchQuery}&quot;
-                    <button onClick={() => setSearchQuery("")} type="button">
-                      <FiX className="w-4 h-4" />
-                    </button>
-                  </span>
-                )}
-                {selectedCategory !== "all" && (
-                  <span className="px-3 py-1 bg-[#009FFD]/30 text-white rounded-full text-sm flex items-center gap-2">
-                    {getCategoryLabel(
-                      categories.find(
-                        (category) => category.id === selectedCategory,
-                      ),
-                      isArabic,
-                    )}
-                    <button
-                      onClick={() => handleCategoryChange("all")}
-                      type="button"
-                    >
-                      <FiX className="w-4 h-4" />
-                    </button>
-                  </span>
-                )}
+              {categories.map((category) => (
                 <button
-                  onClick={clearFilters}
-                  className="text-sm text-red-400 hover:text-red-300 font-medium"
+                  key={category.id}
+                  onClick={() => handleCategoryChange(category.id)}
+                  className={`px-6 py-2 rounded-full border border-white/30 text-white font-bold transition-all ${selectedCategory === category.id ? "bg-gradient-to-r from-[#009FFD] to-[#2A93D5] border-transparent" : "hover:bg-white/10"}`}
                   type="button"
                 >
-                  {t("courses.clearAll")}
+                  {getCategoryLabel(category, isArabic)}
                 </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="pb-8">
+          <div className="bepro-container">
+            <div className="bepro-card p-4 sm:p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+                <div className="flex-1 relative">
+                  <FiSearch className="absolute top-1/2 -translate-y-1/2 start-4 w-5 h-5 text-white/50" />
+                  <input
+                    type="text"
+                    placeholder={t("courses.search")}
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="form-input form-input-glass ps-12"
+                  />
+
+                  <div className="flex items-center border border-white/20 rounded-xl overflow-hidden self-start">
+                    <button
+                      onClick={() => setViewMode("grid")}
+                      className={`p-3 transition-colors ${viewMode === "grid" ? "bg-[#009FFD] text-white" : "hover:bg-white/10 text-white/70"}`}
+                      aria-label="Grid view"
+                      type="button"
+                    >
+                      <FiGrid className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode("list")}
+                      className={`p-3 transition-colors ${viewMode === "list" ? "bg-[#009FFD] text-white" : "hover:bg-white/10 text-white/70"}`}
+                      aria-label="List view"
+                      type="button"
+                    >
+                      <FiList className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {hasActiveFilters && (
+                <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-white/20">
+                  {searchQuery && (
+                    <span className="px-3 py-1 bg-[#009FFD]/30 text-white rounded-full text-sm flex items-center gap-2">
+                      &quot;{searchQuery}&quot;
+                      <button onClick={() => setSearchQuery("")} type="button">
+                        <FiX className="w-4 h-4" />
+                      </button>
+                    </span>
+                  )}
+                  {selectedCategory !== "all" && (
+                    <span className="px-3 py-1 bg-[#009FFD]/30 text-white rounded-full text-sm flex items-center gap-2">
+                      {getCategoryLabel(
+                        categories.find(
+                          (category) => category.id === selectedCategory,
+                        ),
+                        isArabic,
+                      )}
+                      <button
+                        onClick={() => handleCategoryChange("all")}
+                        type="button"
+                      >
+                        <FiX className="w-4 h-4" />
+                      </button>
+                    </span>
+                  )}
+                  <button
+                    onClick={clearFilters}
+                    className="text-sm text-red-400 hover:text-red-300 font-medium"
+                    type="button"
+                  >
+                    {t("courses.clearAll")}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="pb-4">
+          <div className="bepro-container">
+            <p className="text-white font-bold">
+              Showing {visibleCount || totalFilteredCourses} of{" "}
+              {totalFilteredCourses || totalCourses} courses
+            </p>
+          </div>
+        </section>
+
+        <section className="pb-16">
+          <div className="bepro-container">
+            {isLoading ? (
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                    : "space-y-6"
+                }
+              >
+                {Array.from({ length: PAGE_SIZE }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5 animate-pulse"
+                  >
+                    <div className="aspect-video rounded-xl bg-white/10 mb-4" />
+                    <div className="h-4 w-3/4 rounded bg-white/10 mb-3" />
+                    <div className="h-3 w-1/2 rounded bg-white/10 mb-2" />
+                    <div className="h-3 w-full rounded bg-white/10 mb-2" />
+                    <div className="h-3 w-5/6 rounded bg-white/10 mb-4" />
+                    <div className="flex items-center justify-between">
+                      <div className="h-5 w-20 rounded bg-white/10" />
+                      <div className="h-5 w-16 rounded bg-white/10" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : paginatedCourses.length > 0 ? (
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                    : "space-y-6"
+                }
+              >
+                {paginatedCourses.map((course, index) => (
+                  <div
+                    key={course.id}
+                    className="animate-fadeInUp"
+                    style={{ animationDelay: `${index * 0.05}s` }}
+                  >
+                    <CourseCard
+                      course={course}
+                      variant={viewMode === "list" ? "horizontal" : "default"}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20">
+                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-white/10 flex items-center justify-center">
+                  <FiBookOpen className="w-12 h-12 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">
+                  {totalCourses === 0
+                    ? "No courses available."
+                    : "No matching courses found."}
+                </h3>
+                <p className="text-white font-bold mb-8">
+                  {totalCourses === 0
+                    ? "New courses will appear here once they are published."
+                    : "Try changing your search, category, or sort order."}
+                </p>
+                {totalCourses > 0 && (
+                  <button
+                    onClick={clearFilters}
+                    className="bepro-btn-primary"
+                    type="button"
+                  >
+                    {t("courses.clearFilters")}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {totalFilteredCourses > PAGE_SIZE && (
+              <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-white/80 text-sm font-medium">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={goToPreviousPage}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 rounded-xl border border-white/20 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/10 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 rounded-xl border border-white/20 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/10 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             )}
           </div>
-        </div>
-      </section>
-
-      <section className="pb-4">
-        <div className="bepro-container">
-          <p className="text-white font-bold">
-            Showing {visibleCount || totalFilteredCourses} of{" "}
-            {totalFilteredCourses || totalCourses} courses
-          </p>
-        </div>
-      </section>
-
-      <section className="pb-16">
-        <div className="bepro-container">
-          {isLoading ? (
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                  : "space-y-6"
-              }
-            >
-              {Array.from({ length: PAGE_SIZE }).map((_, index) => (
-                <div
-                  key={index}
-                  className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5 animate-pulse"
-                >
-                  <div className="aspect-video rounded-xl bg-white/10 mb-4" />
-                  <div className="h-4 w-3/4 rounded bg-white/10 mb-3" />
-                  <div className="h-3 w-1/2 rounded bg-white/10 mb-2" />
-                  <div className="h-3 w-full rounded bg-white/10 mb-2" />
-                  <div className="h-3 w-5/6 rounded bg-white/10 mb-4" />
-                  <div className="flex items-center justify-between">
-                    <div className="h-5 w-20 rounded bg-white/10" />
-                    <div className="h-5 w-16 rounded bg-white/10" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : paginatedCourses.length > 0 ? (
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                  : "space-y-6"
-              }
-            >
-              {paginatedCourses.map((course, index) => (
-                <div
-                  key={course.id}
-                  className="animate-fadeInUp"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <CourseCard
-                    course={course}
-                    variant={viewMode === "list" ? "horizontal" : "default"}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20">
-              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-white/10 flex items-center justify-center">
-                <FiBookOpen className="w-12 h-12 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-3">
-                {totalCourses === 0
-                  ? "No courses available."
-                  : "No matching courses found."}
-              </h3>
-              <p className="text-white font-bold mb-8">
-                {totalCourses === 0
-                  ? "New courses will appear here once they are published."
-                  : "Try changing your search, category, or sort order."}
-              </p>
-              {totalCourses > 0 && (
-                <button
-                  onClick={clearFilters}
-                  className="bepro-btn-primary"
-                  type="button"
-                >
-                  {t("courses.clearFilters")}
-                </button>
-              )}
-            </div>
-          )}
-
-          {totalFilteredCourses > PAGE_SIZE && (
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-white/80 text-sm font-medium">
-                Page {currentPage} of {totalPages}
-              </p>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={goToPreviousPage}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 rounded-xl border border-white/20 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/10 transition-colors"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={goToNextPage}
-                  disabled={currentPage === totalPages}
-                  className="px-4 py-2 rounded-xl border border-white/20 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/10 transition-colors"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </>
   );
 };
 

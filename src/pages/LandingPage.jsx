@@ -1,12 +1,14 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../contexts/ThemeContext";
+import { useLanguage } from "../contexts/LanguageContext";
 import { trackEvent } from "../lib/analytics";
 import SiteNavbar from "../components/layout/SiteNavbar";
 import AuthTabs from "../components/auth/AuthTabs";
 import LandingContactSection from "../components/landing/LandingContactSection";
 import LandingFooter from "../components/landing/LandingFooter";
+import SEO from "../components/seo/SEO";
 import {
   FiActivity,
   FiAward,
@@ -697,6 +699,8 @@ const LandingPage = () => {
     tab: "login",
   });
 
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const rawRedirect = searchParams.get("redirect") || "/dashboard";
   const redirectTo =
     rawRedirect.startsWith("/") && !rawRedirect.startsWith("//")
@@ -726,8 +730,21 @@ const LandingPage = () => {
     setSearchParams(next, { replace: true });
   };
 
+  const location = useLocation();
+
   return (
     <div className="landing-page">
+      <SEO
+        title={
+          t("landing.pageTitle") || "BeePro Academy | منصة التعلم المتكاملة"
+        }
+        description={
+          t("landing.pageDescription") ||
+          "BeePro Academy منصة تعليمية رائدة تقدم دورات متكاملة في تكنولوجيا المعلومات، البرمجة، والجرافيك وتحليل الأسواق المالية."
+        }
+        pathname={location.pathname}
+        lang={language}
+      />
       <SiteNavbar onAuthClick={openAuthModal} hideTeacherSignup />
       <HeroSection />
       <StatementsSection />
