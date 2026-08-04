@@ -240,7 +240,10 @@ const TeacherCourseBuilder = () => {
       };
 
       if (editingLessonId) {
-        await lessonService.updateLesson(editingLessonId, payload);
+        await lessonService.updateLesson(editingLessonId, {
+          ...payload,
+          sectionId,
+        });
         toastSuccess("Lesson updated successfully.");
       } else {
         await lessonService.createLessonInSection(sectionId, payload);
@@ -285,7 +288,7 @@ const TeacherCourseBuilder = () => {
       duration: lesson.duration || 0,
       isFree: Boolean(lesson.isFree),
     });
-    setOpenLessonFormFor(lesson.sectionId || null);
+    setOpenLessonFormFor(lesson.sectionId || lesson.section_id || null);
     setLessonError("");
     setLessonSuccess("");
   };
@@ -295,7 +298,10 @@ const TeacherCourseBuilder = () => {
     if (!confirmed) return;
 
     try {
-      await lessonService.deleteLesson(lesson.id);
+      await lessonService.deleteLesson(
+        lesson.id,
+        lesson.sectionId || lesson.section_id,
+      );
       toastSuccess("Lesson deleted successfully.");
       setSections((prev) =>
         prev.map((section) => ({
@@ -363,6 +369,23 @@ const TeacherCourseBuilder = () => {
     setAssessmentError("");
     setAssessmentSuccess("");
     try {
+      let questions = [];
+      try {
+        questions = assessmentForm.questionsText
+          ? JSON.parse(assessmentForm.questionsText)
+          : [];
+      } catch {
+        setAssessmentError("Questions must be valid JSON.");
+        return;
+      }
+
+      if (!Array.isArray(questions) || questions.length === 0) {
+        setAssessmentError(
+          "Add at least one question before saving an assessment.",
+        );
+        return;
+      }
+
       const payload = {
         lessonId: null,
         title: assessmentForm.title.trim(),
@@ -370,10 +393,7 @@ const TeacherCourseBuilder = () => {
         type: "quiz",
         status: assessmentForm.status || "draft",
         durationMinutes: Number(assessmentForm.durationMinutes) || 30,
-        passingGrade: Number(assessmentForm.passingGrade) || 70,
-        questions: assessmentForm.questionsText
-          ? JSON.parse(assessmentForm.questionsText)
-          : [],
+        questions,
       };
 
       const saved = editingAssessmentId
@@ -534,6 +554,7 @@ const TeacherCourseBuilder = () => {
                     <AssessmentList
                       assessments={assessments}
                       onDelete={handleDeleteAssessment}
+                      onEdit={handleEditAssessment}
                       onViewSubmissions={() => {}}
                     />
                   </div>

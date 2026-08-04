@@ -90,6 +90,13 @@ export function toList(value) {
   if (Array.isArray(value?.items)) return value.items;
   if (Array.isArray(value?.data)) return value.data;
   if (Array.isArray(value?.results)) return value.results;
+  if (Array.isArray(value?.courses)) return value.courses;
+  if (Array.isArray(value?.sections)) return value.sections;
+  if (Array.isArray(value?.lessons)) return value.lessons;
+  if (Array.isArray(value?.posts)) return value.posts;
+  if (Array.isArray(value?.reviews)) return value.reviews;
+  if (Array.isArray(value?.enrollments)) return value.enrollments;
+  if (Array.isArray(value?.notifications)) return value.notifications;
   return [];
 }
 
@@ -97,10 +104,165 @@ export function listResponse(response) {
   const value = unwrapResponse(response);
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.courses)) return value.courses;
+  if (Array.isArray(value?.sections)) return value.sections;
+  if (Array.isArray(value?.lessons)) return value.lessons;
+  if (Array.isArray(value?.posts)) return value.posts;
+  if (Array.isArray(value?.reviews)) return value.reviews;
+  if (Array.isArray(value?.enrollments)) return value.enrollments;
+  if (Array.isArray(value?.notifications)) return value.notifications;
   if (Array.isArray(value?.data)) return value.data;
   if (Array.isArray(value?.items)) return value.items;
   if (Array.isArray(value?.results)) return value.results;
   return [];
+}
+
+function omitEmpty(value) {
+  return Object.fromEntries(
+    Object.entries(value || {}).filter(
+      ([, item]) => item !== undefined && item !== "",
+    ),
+  );
+}
+
+function optionalUrl(value) {
+  const trimmed = typeof value === "string" ? value.trim() : value;
+  if (!trimmed) return undefined;
+  return trimmed;
+}
+
+function toIsoDateTime(value) {
+  if (!value) return undefined;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+function normalizeMeeting(raw = {}) {
+  const scheduledAt = raw.scheduledAt || raw.scheduled_at;
+  const durationMinutes = raw.durationMinutes ?? raw.duration_minutes;
+  const roomId = raw.jitsi_room_id || raw.jitsi_room_name || raw.roomName;
+  const meetLink = raw.meet_link || raw.meetLink || raw.joinUrl || raw.join_url;
+  return {
+    ...raw,
+    scheduledAt,
+    scheduled_at: scheduledAt,
+    durationMinutes,
+    duration_minutes: durationMinutes,
+    jitsi_room_id: roomId,
+    jitsi_room_name: roomId,
+    meet_link: meetLink,
+    joinUrl: meetLink || (roomId ? `https://meet.jit.si/${roomId}` : null),
+  };
+}
+
+function lessonPayload(data = {}) {
+  return omitEmpty({
+    title: data.title?.trim(),
+    contentType: data.contentType || data.content_type || "video",
+    contentUrl: optionalUrl(data.contentUrl || data.content_url),
+    textContent: data.textContent || data.text_content || data.description,
+    duration: Number(data.duration) || 0,
+    isFree: Boolean(data.isFree ?? data.is_free),
+    requiresPassingQuiz: Boolean(
+      data.requiresPassingQuiz ?? data.requires_passing_quiz ?? false,
+    ),
+    requiresPassingAssignment: Boolean(
+      data.requiresPassingAssignment ??
+      data.requires_passing_assignment ??
+      false,
+    ),
+    order:
+      data.order === undefined || data.order === null
+        ? undefined
+        : Number(data.order),
+  });
+}
+
+function meetingPayload(data = {}) {
+  return omitEmpty({
+    title: data.title?.trim(),
+    scheduledAt: toIsoDateTime(data.scheduledAt || data.scheduled_at),
+    durationMinutes:
+      Number(data.durationMinutes ?? data.duration_minutes) || 60,
+    status: data.status,
+  });
+}
+
+function blogPayload(data = {}) {
+  const content =
+    data.content?.trim() ||
+    data.content_en?.trim() ||
+    data.excerpt?.trim() ||
+    data.excerpt_en?.trim();
+  return omitEmpty({
+    title: (data.title || data.title_en || "").trim(),
+    content,
+    category: (data.category || "General").trim(),
+    level: data.level || null,
+    imageUrl: optionalUrl(
+      data.imageUrl || data.image_url || data.cover_image_url,
+    ),
+  });
+}
+
+function normalizeBlogPost(post = {}) {
+  return {
+    ...post,
+    imageUrl: post.imageUrl || post.image_url || post.cover_image_url || null,
+    image_url: post.image_url || post.imageUrl || post.cover_image_url || null,
+    cover_image_url:
+      post.cover_image_url || post.image_url || post.imageUrl || null,
+    status:
+      post.status ||
+      (post.is_published || post.isPublished ? "published" : "draft"),
+  };
+}
+
+function assessmentPayload(data = {}) {
+  const questions = Array.isArray(data.questions)
+    ? data.questions
+        .map((question, index) => {
+          const type = question.type === "text" ? "text" : "mcq";
+          const options =
+            type === "mcq"
+              ? (question.options || [])
+                  .map((option) => ({
+                    text: String(option.text || "").trim(),
+                    isCorrect: Boolean(option.isCorrect ?? option.is_correct),
+                  }))
+                  .filter((option) => option.text)
+              : undefined;
+          return omitEmpty({
+            type,
+            text: String(question.text || question.title || "").trim(),
+            grade: Number(question.grade) || 1,
+            order: Number(question.order ?? index),
+            options,
+          });
+        })
+        .filter(
+          (question) =>
+            question.text.length >= 3 &&
+            (question.type !== "mcq" ||
+              ((question.options || []).length >= 2 &&
+                question.options.some((option) => option.isCorrect))),
+        )
+    : [];
+
+  return omitEmpty({
+    lessonId: data.lessonId || data.lesson_id || undefined,
+    title: data.title?.trim(),
+    description: data.description || undefined,
+    type: data.type === "assignment" ? "assignment" : "quiz",
+    status: data.status || "draft",
+    durationMinutes: Number(data.durationMinutes ?? data.duration_minutes) || 0,
+    dueDate: toIsoDateTime(data.dueDate || data.due_date),
+    allowLateSubmissions: Boolean(
+      data.allowLateSubmissions ?? data.allow_late_submissions ?? false,
+    ),
+    showGrades: Boolean(data.showGrades ?? data.show_grades ?? false),
+    showAnswers: Boolean(data.showAnswers ?? data.show_answers ?? false),
+    questions,
+  });
 }
 
 export function buildApiError(error, fallback = "Request failed") {
@@ -376,13 +538,7 @@ export const authService = {
   },
 
   async updatePassword(data) {
-    const payload =
-      typeof data === "string" ? { newPassword: data } : { ...data };
-    return safeRequest(
-      apiClient.patch("/profile/password", payload),
-      null,
-      "Password update failed",
-    );
+    return comingSoon("Password changes are not supported by the backend API.");
   },
 
   getAuthState() {
@@ -469,7 +625,14 @@ export const courseService = {
     return result.data || [];
   },
   async getInstructorCourses(instructorId) {
-    const { data = [] } = await this.getCourses();
+    const result = await safeRequest(
+      apiClient.get("/courses/instructor/my"),
+      null,
+      "Failed to fetch instructor courses",
+    );
+    const data = Array.isArray(result?.courses)
+      ? result.courses
+      : toList(result);
     if (!instructorId) return data;
     return data.filter((course) =>
       [
@@ -629,7 +792,7 @@ export const adminService = {
   async rejectInstructor(userId) {
     if (!userId) return comingSoon("Coming Soon");
     return safeRequest(
-      apiClient.patch(`/admin/users/${userId}/role`, { role: "student" }),
+      apiClient.patch(`/admin/users/${userId}/reject`),
       null,
       "Failed to reject instructor",
     );
@@ -647,12 +810,7 @@ export const adminService = {
     return comingSoon("Coming Soon");
   },
   async updateUserRoleAdmin(userId, role) {
-    if (!userId || !role) return comingSoon("Coming Soon");
-    return safeRequest(
-      apiClient.patch(`/admin/users/${userId}/role`, { role }),
-      null,
-      "Failed to update user role",
-    );
+    return comingSoon("Role updates are not supported by the backend API.");
   },
   async updateCourseStatus(courseId, status) {
     return safeRequest(
@@ -662,12 +820,7 @@ export const adminService = {
     );
   },
   async getUserDetailsAdmin(userId) {
-    if (!userId) return null;
-    return safeRequest(
-      apiClient.get(`/admin/users/${userId}`),
-      null,
-      "Failed to fetch user details",
-    );
+    return null;
   },
   async getUserDetailsFallback() {
     return null;
@@ -693,40 +846,75 @@ export const adminService = {
 
 export const reviewService = {
   async getReviewsByCourse(courseId) {
+    if (!courseId) return [];
     return safeList(
-      apiClient.get("/reviews", { params: courseId ? { courseId } : {} }),
+      apiClient.get(`/courses/${courseId}/reviews`),
       "Failed to fetch reviews",
     );
   },
-  async createReview() {
-    return comingSoon("Coming Soon");
+  async createReview(courseId, data = {}) {
+    if (!courseId) return null;
+    return safeRequest(
+      apiClient.post(`/courses/${courseId}/reviews`, {
+        rating: Number(data.rating),
+        comment: data.comment?.trim() || null,
+      }),
+      null,
+      "Failed to create review",
+    );
   },
-  async updateReview() {
-    return comingSoon("Coming Soon");
+  async updateReview(reviewId, data = {}) {
+    if (!reviewId) return null;
+    return safeRequest(
+      apiClient.patch(
+        `/reviews/${reviewId}`,
+        omitEmpty({
+          rating:
+            data.rating === undefined || data.rating === null
+              ? undefined
+              : Number(data.rating),
+          comment:
+            data.comment === undefined
+              ? undefined
+              : data.comment?.trim() || null,
+        }),
+      ),
+      null,
+      "Failed to update review",
+    );
   },
-  async deleteReview() {
-    return comingSoon("Coming Soon");
+  async deleteReview(reviewId) {
+    if (!reviewId) return null;
+    return safeRequest(
+      apiClient.delete(`/reviews/${reviewId}`),
+      { success: true },
+      "Failed to delete review",
+    );
   },
 };
 
 export const assessmentService = {
   async getCourseAssessments(courseId) {
-    if (!courseId) return [];
-    return safeList(
-      apiClient.get(`/courses/${courseId}/assessments`),
-      "Failed to fetch assessments",
-    );
+    return [];
   },
   async createAssessment(courseId, data) {
+    const payload = assessmentPayload(data);
+    if (!courseId || payload.questions.length === 0) return null;
     return safeRequest(
-      apiClient.post(`/courses/${courseId}/assessments`, data),
+      apiClient.post(`/courses/${courseId}/assessments`, payload),
       null,
       "Failed to create assessment",
     );
   },
   async updateAssessment(courseId, assessmentId, data) {
+    const payload = assessmentPayload(data);
+    if (!courseId || !assessmentId || payload.questions.length === 0)
+      return null;
     return safeRequest(
-      apiClient.patch(`/courses/${courseId}/assessments/${assessmentId}`, data),
+      apiClient.patch(
+        `/courses/${courseId}/assessments/${assessmentId}`,
+        payload,
+      ),
       null,
       "Failed to update assessment",
     );
@@ -739,6 +927,7 @@ export const assessmentService = {
     );
   },
   async getAssessment(courseId, assessmentId) {
+    if (!courseId || !assessmentId) return null;
     return safeRequest(
       apiClient.get(`/courses/${courseId}/assessments/${assessmentId}`),
       null,
@@ -746,20 +935,20 @@ export const assessmentService = {
     );
   },
   async startAssessment(courseId, assessmentId, data = {}) {
+    if (!courseId || !assessmentId) return null;
     return safeRequest(
-      apiClient.post(
-        `/courses/${courseId}/assessments/${assessmentId}/start`,
-        data,
-      ),
+      apiClient.post(`/courses/${courseId}/assessments/${assessmentId}/start`),
       null,
       "Failed to start assessment",
     );
   },
   async submitAssessment(courseId, assessmentId, data) {
+    if (!courseId || !assessmentId) return null;
+    const answers = Array.isArray(data?.answers) ? data.answers : [];
     return safeRequest(
       apiClient.post(
         `/courses/${courseId}/assessments/${assessmentId}/submit`,
-        data,
+        { answers },
       ),
       null,
       "Failed to submit assessment",
@@ -773,6 +962,7 @@ export const assessmentService = {
     );
   },
   async getAssessmentSubmission(courseId, assessmentId, submissionId) {
+    if (!courseId || !assessmentId || !submissionId) return null;
     return safeRequest(
       apiClient.get(
         `/courses/${courseId}/assessments/${assessmentId}/submissions/${submissionId}`,
@@ -781,12 +971,33 @@ export const assessmentService = {
       "Failed to fetch assessment submission",
     );
   },
+  async getAssessmentSubmissions(courseId, assessmentId) {
+    if (!courseId || !assessmentId) return [];
+    return safeList(
+      apiClient.get(
+        `/courses/${courseId}/assessments/${assessmentId}/submissions`,
+      ),
+      "Failed to fetch assessment submissions",
+    );
+  },
+  async reviewSubmission(courseId, assessmentId, submissionId, data = {}) {
+    if (!courseId || !assessmentId || !submissionId) return null;
+    const answers = Array.isArray(data.answers) ? data.answers : [];
+    return safeRequest(
+      apiClient.patch(
+        `/courses/${courseId}/assessments/${assessmentId}/submissions/${submissionId}/review`,
+        { answers },
+      ),
+      null,
+      "Failed to review assessment submission",
+    );
+  },
 };
 
 export const uploadService = {
   async getSignature(params = {}) {
     return safeRequest(
-      apiClient.get("/upload/signature", { params }),
+      apiClient.post("/upload/signature", params),
       null,
       "Failed to get upload signature",
     );
@@ -805,7 +1016,7 @@ export const uploadService = {
 export const userService = {
   async getProfile() {
     return safeRequest(
-      apiClient.get("/profile"),
+      apiClient.get("/auth/me"),
       null,
       "Failed to fetch profile",
     );
@@ -814,8 +1025,14 @@ export const userService = {
     return this.getProfile();
   },
   async updateProfile(data) {
+    const payload = omitEmpty({
+      full_name: data.full_name || data.fullName,
+      phone: data.phone,
+      avatar_url: optionalUrl(data.avatar_url || data.avatarUrl),
+    });
+    if (Object.keys(payload).length === 0) return null;
     return safeRequest(
-      apiClient.patch("/profile", data),
+      apiClient.patch("/auth/me", payload),
       null,
       "Failed to update profile",
     );
@@ -826,7 +1043,7 @@ export const userService = {
   async uploadAvatar(fileOrUrl) {
     if (typeof fileOrUrl === "string") {
       return safeRequest(
-        apiClient.patch("/profile/avatar", { avatarUrl: fileOrUrl }),
+        apiClient.patch("/auth/me", { avatar_url: fileOrUrl }),
         null,
         "Failed to update avatar",
       );
@@ -847,7 +1064,7 @@ export const dashboardService = {
   },
   async getTeacherDashboard() {
     return safeRequest(
-      apiClient.get("/dashboard/teacher"),
+      apiClient.get("/dashboard/instructor"),
       null,
       "Failed to fetch teacher dashboard",
     );
@@ -891,55 +1108,65 @@ export const analyticsService = {
 
 export const meetingService = {
   async getMeetings(params = {}) {
-    return safeList(
-      apiClient.get("/meetings", { params }),
-      "Failed to fetch meetings",
-    );
+    return this.getUpcomingMeetings(params);
   },
   async getMeeting(id) {
-    if (!id) return null;
-    return safeRequest(
-      apiClient.get(`/meetings/${id}`),
+    return null;
+  },
+  async getLessonMeeting(lessonId) {
+    if (!lessonId) return null;
+    const meeting = await safeRequest(
+      apiClient.get(`/lessons/${lessonId}/meetings`),
       null,
-      "Failed to fetch meeting",
+      "Failed to fetch lesson meeting",
     );
+    return meeting ? normalizeMeeting(meeting) : null;
   },
   async createMeeting(data) {
-    return safeRequest(
-      apiClient.post("/meetings", data),
+    const lessonId = data.lessonId || data.lesson_id;
+    if (!lessonId) {
+      return comingSoon("Meeting creation requires a lesson ID.");
+    }
+
+    const meeting = await safeRequest(
+      apiClient.post(`/lessons/${lessonId}/meetings`, meetingPayload(data)),
       null,
       "Failed to create meeting",
     );
+    return meeting ? normalizeMeeting(meeting) : null;
   },
   async getMeetingsByCourse(courseId, options = {}) {
-    const meetings = await this.getMeetings(options);
-    if (!courseId || !Array.isArray(meetings)) return meetings || [];
-    return meetings.filter((meeting) =>
-      [
-        meeting.course_id,
-        meeting.courseId,
-        meeting.course?.id,
-        meeting.course?.course_id,
-      ].includes(courseId),
+    if (!courseId) return [];
+    const sections = await sectionService.getSectionsByCourse(courseId);
+    const lessons = (sections || []).flatMap((section) =>
+      (section.lessons || []).map((lesson) => ({
+        ...lesson,
+        section_id: section.id,
+        course_id: courseId,
+      })),
     );
+    const meetings = await Promise.all(
+      lessons.map((lesson) => this.getLessonMeeting(lesson.id)),
+    );
+    return meetings
+      .filter(Boolean)
+      .map((meeting) => normalizeMeeting({ ...meeting, course_id: courseId }));
   },
   async getUpcomingMeetings(options = {}) {
-    const meetings = await this.getMeetings(options);
-    const now = Date.now();
-    return (meetings || []).filter((meeting) => {
-      const scheduled = meeting.scheduled_at
-        ? new Date(meeting.scheduled_at).getTime()
-        : NaN;
-      return Number.isFinite(scheduled) && scheduled > now;
-    });
+    const meetings = await safeList(
+      apiClient.get("/meetings/upcoming", { params: options }),
+      "Failed to fetch upcoming meetings",
+    );
+    return meetings.map(normalizeMeeting);
   },
   async updateMeeting(id, data) {
     if (!id) return comingSoon("Coming Soon");
-    return safeRequest(
-      apiClient.patch(`/meetings/${id}`, data),
+    const meeting = await safeRequest(
+      apiClient.put(`/meetings/${id}`, meetingPayload(data)),
       null,
       "Failed to update meeting",
     );
+    return meeting ? normalizeMeeting(meeting) : null;
   },
   async deleteMeeting(id) {
     if (!id) return comingSoon("Coming Soon");
@@ -974,9 +1201,12 @@ export const notificationService = {
     });
   },
   async getUnreadCount() {
-    const items = await this.getUserNotifications({ limit: 100 });
-    return (items || []).filter((notification) => !notification?.is_read)
-      .length;
+    const result = await safeRequest(
+      apiClient.get("/notifications/unread-count"),
+      { unreadCount: 0 },
+      "Failed to fetch unread notifications count",
+    );
+    return Number(result?.unreadCount ?? result?.count ?? result ?? 0);
   },
   subscribeToUserNotifications() {
     return null;
@@ -998,12 +1228,7 @@ export const notificationService = {
     );
   },
   async deleteNotification(notificationId) {
-    if (!notificationId) return null;
-    return safeRequest(
-      apiClient.delete(`/notifications/${notificationId}`),
-      null,
-      "Failed to delete notification",
-    );
+    return comingSoon("Notification deletion is not supported by the backend.");
   },
   async notifyStudents() {
     return comingSoon("Coming Soon");
@@ -1060,32 +1285,55 @@ export const paymentService = {
 };
 
 export const blogService = {
-  async getPublishedPosts() {
-    return safeList(
-      apiClient.get("/blog/published"),
+  async getPublishedPosts(params = {}) {
+    const posts = await safeList(
+      apiClient.get("/blog", { params }),
       "Failed to fetch blog posts",
     );
+    return posts.map(normalizeBlogPost);
   },
-  async getAdminPosts() {
-    return safeList(
-      apiClient.get("/blog/admin"),
-      "Failed to fetch admin blog posts",
+  async getMyPosts(params = {}) {
+    const posts = await safeList(
+      apiClient.get("/blog/author/my-posts", { params }),
+      "Failed to fetch my blog posts",
     );
+    return posts.map(normalizeBlogPost);
+  },
+  async getAdminPosts(params = {}) {
+    return this.getMyPosts(params);
+  },
+  async getPendingPosts(params = {}) {
+    const posts = await safeList(
+      apiClient.get("/blog/admin/pending", { params }),
+      "Failed to fetch pending blog posts",
+    );
+    return posts.map(normalizeBlogPost);
+  },
+  async getPostById(id) {
+    if (!id) return null;
+    const post = await safeRequest(
+      apiClient.get(`/blog/${id}`),
+      null,
+      "Failed to fetch blog post",
+    );
+    return post ? normalizeBlogPost(post) : null;
   },
   async createPost(data) {
-    return safeRequest(
-      apiClient.post("/blog", data),
+    const post = await safeRequest(
+      apiClient.post("/blog", blogPayload(data)),
       null,
       "Failed to create blog post",
     );
+    return post ? normalizeBlogPost(post) : null;
   },
   async updatePost(id, data) {
     if (!id) return comingSoon("Coming Soon");
-    return safeRequest(
-      apiClient.patch(`/blog/${id}`, data),
+    const post = await safeRequest(
+      apiClient.patch(`/blog/${id}`, blogPayload(data)),
       null,
       "Failed to update blog post",
     );
+    return post ? normalizeBlogPost(post) : null;
   },
   async deletePost(id) {
     if (!id) return comingSoon("Coming Soon");

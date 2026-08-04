@@ -436,30 +436,41 @@ const CreateCourse = () => {
 
       // Existing lesson fields are not saved here; course builder will manage lessons by section.
 
-      // Create meetings if any
+      // Create meetings only when linked to a lesson, since the backend requires lesson-scoped meetings.
+      const createdMeetings = [];
       for (const meeting of scheduledMeetings) {
-        await meetingService.createMeeting({
-          ...meeting,
-          course_id: course.id,
+        const lessonId = meeting.lessonId || meeting.lesson_id;
+        if (!lessonId) {
+          console.warn(
+            "Skipping meeting creation because no lesson association is available.",
+            meeting,
+          );
+          continue;
+        }
+
+        const created = await meetingService.createMeeting({
+          lessonId,
+          title: meeting.title,
+          description: meeting.description,
+          scheduled_at: meeting.scheduled_at,
+          duration_minutes: meeting.duration_minutes,
+          meet_link: meeting.meet_link,
+          platform: meeting.platform,
+          jitsi_room_name: meeting.jitsi_room_name,
         });
+        if (created) {
+          createdMeetings.push(created);
+        }
       }
 
       if (courseMeetLink) {
-        await meetingService.createMeeting({
-          course_id: course.id,
-          title: `Google Meet - ${courseData.title}`,
-          description: "رابط الجلسة المباشرة — متاح للطلاب بعد قبول الدفع",
-          meet_link: courseMeetLink,
-          platform: "google_meet",
-          scheduled_at: new Date().toISOString(),
-          duration_minutes: 60,
-          status: "scheduled",
-          created_by: user?.id,
-        });
+        console.warn(
+          "Skipping course-level Google Meet creation because backend meetings are lesson-scoped.",
+        );
       }
 
-      // Send notification to all enrolled students if the backend supports it.
-      if (scheduledMeetings.length > 0 || courseMeetLink) {
+      // Send notification to all enrolled students only if meetings were actually created.
+      if (createdMeetings.length > 0) {
         try {
           await notificationService.notifyStudents({
             course_id: course.id,

@@ -55,13 +55,15 @@ const AssessmentList = ({
               >
                 Submissions
               </Button>
-              <Button
-                onClick={() => onEdit(assessment)}
-                size="sm"
-                variant="secondary"
-              >
-                <FiEdit3 className="me-2" /> Edit
-              </Button>
+              {onEdit && (
+                <Button
+                  onClick={() => onEdit(assessment)}
+                  size="sm"
+                  variant="secondary"
+                >
+                  <FiEdit3 className="me-2" /> Edit
+                </Button>
+              )}
               <Button
                 onClick={() => onDelete(assessment)}
                 size="sm"

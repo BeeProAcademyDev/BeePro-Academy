@@ -5,6 +5,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { useTranslation } from "react-i18next";
 import {
   courseService,
+  lessonService,
   meetingService,
   notificationService,
 } from "../../services/api";
@@ -53,6 +54,8 @@ const TeacherLiveSession = () => {
 
   const [courses, setCourses] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [courseLessons, setCourseLessons] = useState([]);
+  const [selectedLessonId, setSelectedLessonId] = useState("");
   const [sessions, setSessions] = useState([]);
   const [form, setForm] = useState(defaultForm);
   const [loadingCourses, setLoadingCourses] = useState(true);
@@ -197,6 +200,10 @@ const TeacherLiveSession = () => {
       setError(t("teacherLiveSession.selectACourseFirst"));
       return;
     }
+    if (!selectedLessonId) {
+      setError("Select a lesson before creating a live session.");
+      return;
+    }
 
     const sessionTitle =
       (titleOverride || form.title).trim() ||
@@ -227,67 +234,17 @@ const TeacherLiveSession = () => {
     setSuccess("");
 
     try {
-      let meetingPayload;
-
-      if (sessionPlatform === "jitsi") {
-        const jitsiRoomName =
-          getCourseLiveRoomName(selectedCourseId) ||
-          generateJitsiRoomName(
-            selectedCourse?.title || "course",
-            sessionTitle,
-          );
-
-        meetingPayload = {
-          course_id: selectedCourseId,
-          created_by: user.id,
-          title: sessionTitle,
-          description: form.description.trim() || null,
-          scheduled_at: new Date(scheduledAt).toISOString(),
-          duration_minutes: Number(form.duration_minutes) || 60,
-          platform: "jitsi",
-          jitsi_room_name: jitsiRoomName,
-          meet_link: null,
-          status: startNow ? "live" : "scheduled",
-        };
-      } else if (isManualGoogleMeet) {
-        const meetLink = normalizeGoogleMeetLink(form.manual_meet_link);
-        meetingPayload = {
-          course_id: selectedCourseId,
-          created_by: user.id,
-          title: sessionTitle,
-          description: form.description.trim() || null,
-          scheduled_at: new Date(scheduledAt).toISOString(),
-          duration_minutes: Number(form.duration_minutes) || 60,
-          platform: "google_meet",
-          meet_link: meetLink,
-          jitsi_room_name: null,
-          status: startNow ? "live" : "scheduled",
-        };
-      } else {
-        const { meetLink, eventId } =
-          await googleCalendarService.createGoogleMeetEvent({
-            title: sessionTitle,
-            description: form.description.trim() || "",
-            scheduledAt: scheduledAt,
-            durationMinutes: Number(form.duration_minutes) || 60,
-          });
-
-        meetingPayload = {
-          course_id: selectedCourseId,
-          created_by: user.id,
-          title: sessionTitle,
-          description: form.description.trim() || null,
-          scheduled_at: new Date(scheduledAt).toISOString(),
-          duration_minutes: Number(form.duration_minutes) || 60,
-          platform: "google_meet",
-          meet_link: meetLink,
-          calendar_event_id: eventId,
-          jitsi_room_name: null,
-          status: startNow ? "live" : "scheduled",
-        };
-      }
+      const meetingPayload = {
+        lessonId: selectedLessonId,
+        title: sessionTitle,
+        scheduledAt: new Date(scheduledAt).toISOString(),
+        durationMinutes: Number(form.duration_minutes) || 60,
+      };
 
       const meeting = await meetingService.createMeeting(meetingPayload);
+      if (!meeting) {
+        throw new Error("The backend did not create a meeting.");
+      }
 
       const resolvedMeeting =
         sessionPlatform === "jitsi"
@@ -368,15 +325,21 @@ const TeacherLiveSession = () => {
     const loadSessions = async () => {
       if (!selectedCourseId) {
         setSessions([]);
+        setCourseLessons([]);
+        setSelectedLessonId("");
         return;
       }
 
       setLoadingSessions(true);
       try {
-        const data = await meetingService.getMeetingsByCourse(
-          selectedCourseId,
-          { instructorView: true },
-        );
+        const [lessonRows, data] = await Promise.all([
+          lessonService.getLessonsByCourse(selectedCourseId),
+          meetingService.getMeetingsByCourse(selectedCourseId, {
+            instructorView: true,
+          }),
+        ]);
+        setCourseLessons(lessonRows || []);
+        setSelectedLessonId((current) => current || lessonRows?.[0]?.id || "");
         setSessions(data || []);
       } catch (err) {
         setError(err.message || t("teacherLiveSession.failedToLoadSessions"));
@@ -691,6 +654,22 @@ const TeacherLiveSession = () => {
 
               {renderPlatformPicker()}
 
+              <div>
+                <label className="label">Lesson</label>
+                <select
+                  className="input"
+                  value={selectedLessonId}
+                  onChange={(e) => setSelectedLessonId(e.target.value)}
+                >
+                  <option value="">Select lesson</option>
+                  {courseLessons.map((lesson) => (
+                    <option key={lesson.id} value={lesson.id}>
+                      {lesson.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {sessionPlatform === "jitsi" &&
                 selectedCourseId &&
                 renderShareLinkCard(
@@ -751,6 +730,22 @@ const TeacherLiveSession = () => {
               {renderPlatformPicker()}
 
               <div className="grid md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="label">Lesson</label>
+                  <select
+                    className="input"
+                    value={selectedLessonId}
+                    onChange={(e) => setSelectedLessonId(e.target.value)}
+                  >
+                    <option value="">Select lesson</option>
+                    {courseLessons.map((lesson) => (
+                      <option key={lesson.id} value={lesson.id}>
+                        {lesson.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="md:col-span-2">
                   <label className="label">
                     {t("teacherLiveSession.sessionTitle")}

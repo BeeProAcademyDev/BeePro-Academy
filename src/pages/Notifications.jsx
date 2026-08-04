@@ -53,10 +53,6 @@ const Notifications = () => {
       ),
     );
   };
-  const remove = async (id) => {
-    await notificationService.deleteNotification(id);
-    setItems((current) => current.filter((item) => item.id !== id));
-  };
 
   return (
     <div className="min-h-screen bg-secondary-50 px-4 py-6 dark:bg-dark-bg sm:px-6 lg:px-8">
@@ -170,8 +166,9 @@ const Notifications = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => remove(item.id)}
-                        className="text-red-600"
+                        disabled
+                        className="text-red-400 cursor-not-allowed"
+                        title="Notification deletion is not supported"
                       >
                         <FiTrash2 />
                       </button>

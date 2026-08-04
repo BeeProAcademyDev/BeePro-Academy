@@ -511,12 +511,17 @@ const EditCourse = () => {
 
       // Delete removed lessons
       for (const lessonId of deletedLessons) {
-        await lessonService.deleteLesson(lessonId);
+        const lesson = lessons.find((item) => item.id === lessonId);
+        const sectionId = lesson?.sectionId || lesson?.section_id;
+        if (sectionId) {
+          await lessonService.deleteLesson(lessonId, sectionId);
+        }
       }
 
       // Update existing lessons and create new ones
       for (let i = 0; i < lessons.length; i++) {
         const lesson = lessons[i];
+        const sectionId = lesson.sectionId || lesson.section_id;
         const lessonData = {
           title: lesson.title,
           description: lesson.description,
@@ -527,17 +532,18 @@ const EditCourse = () => {
         };
 
         if (lesson.isNew) {
-          // Create new lesson
-          await lessonService.createLesson({
-            ...lessonData,
-            course_id: id,
-            status: "pending",
-            is_published: false,
-          });
-        } else if (lesson.isExisting && lesson.id) {
-          // Update existing lesson
+          // Create new lesson only when a section is provided.
+          if (sectionId) {
+            await lessonService.createLessonInSection(sectionId, {
+              ...lessonData,
+              status: "pending",
+              is_published: false,
+            });
+          }
+        } else if (lesson.isExisting && lesson.id && sectionId) {
           await lessonService.updateLesson(lesson.id, {
             ...lessonData,
+            sectionId,
             status: "pending",
             is_published: false,
           });
@@ -549,9 +555,13 @@ const EditCourse = () => {
         await meetingService.deleteMeeting(meetingId);
       }
 
-      // Create new meetings
+      // Create new meetings only when linked to a lesson.
       for (const meeting of scheduledMeetings.filter((m) => m.isNew)) {
+        const lessonId = meeting.lessonId || meeting.lesson_id;
+        if (!lessonId) continue;
+
         await meetingService.createMeeting({
+          lessonId,
           title: meeting.title,
           description: meeting.description,
           scheduled_at: meeting.scheduled_at,
@@ -559,8 +569,6 @@ const EditCourse = () => {
           meet_link: meeting.meet_link,
           platform: meeting.platform || "google_meet",
           jitsi_room_name: meeting.jitsi_room_name || null,
-          course_id: id,
-          created_by: meeting.created_by,
         });
       }
 
@@ -573,18 +581,9 @@ const EditCourse = () => {
             description: "رابط الجلسة المباشرة — متاح للطلاب بعد قبول الدفع",
           });
         } else {
-          const created = await meetingService.createMeeting({
-            course_id: id,
-            title: `Google Meet - ${courseData.title}`,
-            description: "رابط الجلسة المباشرة — متاح للطلاب بعد قبول الدفع",
-            meet_link: courseMeetLink,
-            platform: "google_meet",
-            scheduled_at: new Date().toISOString(),
-            duration_minutes: 60,
-            status: "scheduled",
-            created_by: user?.id,
-          });
-          setPrimaryGoogleMeetId(created?.id || null);
+          console.warn(
+            "Skipping course-level Google Meet creation because backend meetings are lesson-scoped.",
+          );
         }
       }
 

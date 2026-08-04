@@ -385,13 +385,13 @@ const CourseDetailsDB = () => {
       };
 
       if (editingLessonId) {
-        await lessonService.updateLesson(editingLessonId, payload);
+        await lessonService.updateLesson(editingLessonId, {
+          ...payload,
+          sectionId,
+        });
         toastSuccess(t("courseDetailsDB.lessonUpdatedSuccessfully"));
       } else {
-        await lessonService.createLessonInSection(sectionId, {
-          ...payload,
-          course_id: course?.id,
-        });
+        await lessonService.createLessonInSection(sectionId, payload);
         toastSuccess(t("courseDetailsDB.lessonAddedSuccessfully"));
       }
 
@@ -429,7 +429,7 @@ const CourseDetailsDB = () => {
     if (!confirmed) return;
 
     try {
-      await lessonService.deleteLesson(lesson.id);
+      await lessonService.deleteLesson(lesson.id, sectionId);
       await refreshSectionLessons(sectionId);
       toastSuccess(t("courseDetailsDB.lessonDeletedSuccessfully"));
     } catch (err) {

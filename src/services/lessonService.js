@@ -4,13 +4,43 @@ export function createLessonService({
   safeList,
   comingSoon,
 }) {
+  const cleanLessonPayload = (data = {}) => {
+    const contentUrl = (data.contentUrl || data.content_url || "").trim();
+    const payload = {
+      title: data.title?.trim(),
+      contentType: data.contentType || data.content_type || "video",
+      textContent: data.textContent || data.text_content || data.description,
+      duration: Number(data.duration) || 0,
+      isFree: Boolean(data.isFree ?? data.is_free),
+      requiresPassingQuiz: Boolean(
+        data.requiresPassingQuiz ?? data.requires_passing_quiz ?? false,
+      ),
+      requiresPassingAssignment: Boolean(
+        data.requiresPassingAssignment ??
+          data.requires_passing_assignment ??
+          false,
+      ),
+    };
+    if (contentUrl) payload.contentUrl = contentUrl;
+    if (data.order !== undefined && data.order !== null) {
+      payload.order = Number(data.order);
+    }
+    return Object.fromEntries(
+      Object.entries(payload).filter(([, value]) => value !== undefined),
+    );
+  };
+
   const service = {
     async getLessonsByCourse(courseId) {
       if (!courseId) return [];
-      return safeList(
-        apiClient.get(`/courses/${courseId}/lessons`),
-        "Failed to fetch course lessons",
+      const sections = await safeList(
+        apiClient.get(`/courses/${courseId}/sections`),
+        "Failed to fetch course sections",
       );
+      const sectionLessons = await Promise.all(
+        (sections || []).map((section) => this.getLessonsBySection(section.id)),
+      );
+      return sectionLessons.flat();
     },
 
     async getPublishedLessonsByCourse(courseId) {
@@ -19,62 +49,59 @@ export function createLessonService({
 
     async getLessonById(id) {
       if (!id) return null;
-      return safeRequest(
-        apiClient.get(`/lessons/${id}`),
-        null,
-        "Failed to fetch lesson",
-      );
+      return null;
     },
 
-    async getLessonsBySection(sectionId, courseId) {
-      if (!sectionId || !courseId) return [];
-      const lessons = await this.getLessonsByCourse(courseId);
-      return (lessons || []).filter(
-        (lesson) =>
-          lesson.section_id === sectionId || lesson.sectionId === sectionId,
+    async getLessonsBySection(sectionId) {
+      if (!sectionId) return [];
+      const lessons = await safeList(
+        apiClient.get(`/sections/${sectionId}/lessons`),
+        "Failed to fetch section lessons",
       );
+      return (lessons || []).map((lesson) => ({
+        ...lesson,
+        section_id: lesson.section_id || sectionId,
+        sectionId: lesson.sectionId || lesson.section_id || sectionId,
+      }));
     },
 
     async createLesson(data) {
-      const courseId = data?.course_id || data?.courseId;
-      if (!courseId) return comingSoon("Lesson creation requires a course ID");
-      return safeRequest(
-        apiClient.post(`/courses/${courseId}/lessons`, data),
-        null,
-        "Failed to create lesson",
-      );
+      const sectionId = data?.section_id || data?.sectionId;
+      if (!sectionId) return comingSoon("Lesson creation requires a section ID");
+      return this.createLessonInSection(sectionId, data);
     },
 
     async createLessonInSection(sectionId, data) {
-      const courseId = data?.course_id || data?.courseId;
-      if (!sectionId || !courseId)
-        return comingSoon(
-          "Lesson creation in section requires section and course IDs",
-        );
-      return safeRequest(
-        apiClient.post(`/courses/${courseId}/lessons`, {
-          ...data,
-          section_id: sectionId,
-        }),
+      if (!sectionId) return comingSoon("Lesson creation requires a section ID");
+      const lesson = await safeRequest(
+        apiClient.post(`/sections/${sectionId}/lessons`, cleanLessonPayload(data)),
         null,
         "Failed to create lesson in section",
       );
+      return lesson ? { ...lesson, section_id: sectionId, sectionId } : null;
     },
 
-    async updateLesson(id, data) {
-      if (!id) return comingSoon("Lesson ID is required");
-      return safeRequest(
-        apiClient.patch(`/lessons/${id}`, data),
+    async updateLesson(id, data = {}) {
+      const sectionId = data.section_id || data.sectionId;
+      if (!id || !sectionId)
+        return comingSoon("Lesson update requires lesson and section IDs");
+      const lesson = await safeRequest(
+        apiClient.patch(
+          `/sections/${sectionId}/lessons/${id}`,
+          cleanLessonPayload(data),
+        ),
         null,
         "Failed to update lesson",
       );
+      return lesson ? { ...lesson, section_id: sectionId, sectionId } : null;
     },
 
-    async deleteLesson(id) {
-      if (!id) return comingSoon("Lesson ID is required");
+    async deleteLesson(id, sectionId) {
+      if (!id || !sectionId)
+        return comingSoon("Lesson deletion requires lesson and section IDs");
       return safeRequest(
-        apiClient.delete(`/lessons/${id}`),
-        null,
+        apiClient.delete(`/sections/${sectionId}/lessons/${id}`),
+        { success: true },
         "Failed to delete lesson",
       );
     },
