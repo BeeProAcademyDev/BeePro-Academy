@@ -189,15 +189,10 @@ function meetingPayload(data = {}) {
 }
 
 function blogPayload(data = {}) {
-  const content =
-    data.content?.trim() ||
-    data.content_en?.trim() ||
-    data.excerpt?.trim() ||
-    data.excerpt_en?.trim();
   return omitEmpty({
     title: (data.title || data.title_en || "").trim(),
-    content,
-    category: (data.category || "General").trim(),
+    content: (data.content || data.content_en || "").trim(),
+    category: (data.category || "").trim(),
     level: data.level || null,
     imageUrl: optionalUrl(
       data.imageUrl || data.image_url || data.cover_image_url,
@@ -208,13 +203,31 @@ function blogPayload(data = {}) {
 function normalizeBlogPost(post = {}) {
   return {
     ...post,
+    author_id: post.author_id || post.authorId || post.author?.id,
     imageUrl: post.imageUrl || post.image_url || post.cover_image_url || null,
     image_url: post.image_url || post.imageUrl || post.cover_image_url || null,
     cover_image_url:
       post.cover_image_url || post.image_url || post.imageUrl || null,
+    created_at: post.created_at || post.createdAt || null,
+    createdAt: post.createdAt || post.created_at || null,
+    updated_at: post.updated_at || post.updatedAt || null,
+    updatedAt: post.updatedAt || post.updated_at || null,
+    is_published: Boolean(post.is_published ?? post.isPublished),
+    isPublished: Boolean(post.isPublished ?? post.is_published),
     status:
       post.status ||
       (post.is_published || post.isPublished ? "published" : "draft"),
+    author: post.author
+      ? {
+          ...post.author,
+          full_name:
+            post.author.full_name || post.author.fullName || post.author.name,
+          fullName:
+            post.author.fullName || post.author.full_name || post.author.name,
+          avatar_url: post.author.avatar_url || post.author.avatarUrl || null,
+          avatarUrl: post.author.avatarUrl || post.author.avatar_url || null,
+        }
+      : post.author,
   };
 }
 
@@ -308,7 +321,7 @@ export async function safeRequest(
   try {
     return unwrapResponse(await request);
   } catch (error) {
-    console.warn(label, buildApiError(error, label).message);
+    if (import.meta.env.DEV) console.warn(label, buildApiError(error, label).message);
     return fallback;
   }
 }
@@ -317,7 +330,7 @@ export async function safeList(request, label = "Failed to load list") {
   try {
     return listResponse(await request);
   } catch (error) {
-    console.warn(label, buildApiError(error, label).message);
+    if (import.meta.env.DEV) console.warn(label, buildApiError(error, label).message);
     return [];
   }
 }
@@ -506,7 +519,7 @@ export const authService = {
         "Failed to sign out",
       );
     } catch (err) {
-      console.warn("Logout request failed:", err);
+      if (import.meta.env.DEV) console.warn("Logout request failed:", err);
     }
     persistSession(null);
     notifyAuth("SIGNED_OUT");
@@ -1301,7 +1314,19 @@ export const blogService = {
     return posts.map(normalizeBlogPost);
   },
   async getAdminPosts(params = {}) {
-    return this.getMyPosts(params);
+    const [published, pending] = await Promise.all([
+      this.getPublishedPosts(params),
+      this.getPendingPosts(params),
+    ]);
+    const byId = new Map();
+    [...pending, ...published].forEach((post) => {
+      if (post?.id) byId.set(post.id, post);
+    });
+    return Array.from(byId.values()).sort((a, b) => {
+      const left = new Date(a.created_at || a.createdAt || 0).getTime();
+      const right = new Date(b.created_at || b.createdAt || 0).getTime();
+      return right - left;
+    });
   },
   async getPendingPosts(params = {}) {
     const posts = await safeList(
@@ -1338,11 +1363,26 @@ export const blogService = {
   },
   async deletePost(id) {
     if (!id) return comingSoon("Coming Soon");
-    return safeRequest(
-      apiClient.delete(`/blog/${id}`),
+    await apiClient.delete(`/blog/${id}`);
+    return { success: true };
+  },
+  async approvePost(id) {
+    if (!id) return comingSoon("Coming Soon");
+    const post = await safeRequest(
+      apiClient.patch(`/blog/${id}/approve`),
       null,
-      "Failed to delete blog post",
+      "Failed to approve blog post",
     );
+    return post ? normalizeBlogPost(post) : null;
+  },
+  async rejectPost(id) {
+    if (!id) return comingSoon("Coming Soon");
+    const post = await safeRequest(
+      apiClient.patch(`/blog/${id}/reject`),
+      null,
+      "Failed to reject blog post",
+    );
+    return post ? normalizeBlogPost(post) : null;
   },
 };
 

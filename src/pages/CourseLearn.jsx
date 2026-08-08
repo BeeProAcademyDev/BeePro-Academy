@@ -21,6 +21,8 @@ import { requireInstructor } from "../lib/authGuards";
 import CourseChat from "../components/chat/CourseChat";
 import JitsiMeetingRoom from "../components/jitsi/JitsiMeetingRoom";
 import { useTranslation } from "react-i18next";
+import { notifyError } from "../lib/uiNotify";
+import { getFriendlyErrorMessage } from "../lib/friendlyErrors";
 import {
   FiCalendar,
   FiClock,
@@ -197,8 +199,14 @@ const CourseLearn = () => {
         await loadMeetings(id, { instructorView: false });
         setHasFullAccess(true);
       } catch (err) {
-        console.error("Failed to load learning page:", err);
-        setError(err.message || t("courseLearn.failedToLoadLearningPage"));
+        if (import.meta.env.DEV)
+          if (import.meta.env.DEV) console.error("Failed to load learning page:", err);
+        const friendly = getFriendlyErrorMessage(
+          err,
+          t("courseLearn.failedToLoadLearningPage"),
+        );
+        setError(friendly);
+        notifyError(friendly);
       } finally {
         setLoading(false);
       }
@@ -214,7 +222,8 @@ const CourseLearn = () => {
       try {
         await loadMeetings(id);
       } catch (err) {
-        console.error("Failed to refresh meetings:", err);
+        if (import.meta.env.DEV)
+          if (import.meta.env.DEV) console.error("Failed to refresh meetings:", err);
       }
     };
 
@@ -236,7 +245,8 @@ const CourseLearn = () => {
         }
       }
     } catch (err) {
-      console.error("Failed to refresh meetings:", err);
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Failed to refresh meetings:", err);
     } finally {
       setRefreshingMeetings(false);
     }

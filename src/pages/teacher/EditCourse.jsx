@@ -171,7 +171,9 @@ const EditCourse = () => {
         })),
       );
     } catch (err) {
-      console.error("Error loading course:", err);
+      if (import.meta.env.DEV) {
+        if (import.meta.env.DEV) console.error("Error loading course:", err);
+      }
       setError(t("teacherWizard.errLoadFailed"));
     } finally {
       setIsLoading(false);
@@ -444,12 +446,10 @@ const EditCourse = () => {
           : "تم إنشاء جلسة Google Meet من Google Calendar بنجاح!",
       );
     } catch (err) {
-      setError(
-        err.message ||
-          (meetingPlatform === "jitsi"
-            ? "فشل إنشاء جلسة Jitsi"
-            : "فشل إنشاء جلسة Google Meet"),
-      );
+      if (import.meta.env.DEV) {
+        if (import.meta.env.DEV) console.error("Error creating meeting session:", err);
+      }
+      setError(err.message || "فشل إنشاء جلسة");
     } finally {
       setIsLoading(false);
     }
@@ -581,7 +581,7 @@ const EditCourse = () => {
             description: "رابط الجلسة المباشرة — متاح للطلاب بعد قبول الدفع",
           });
         } else {
-          console.warn(
+          if (import.meta.env.DEV) console.warn(
             "Skipping course-level Google Meet creation because backend meetings are lesson-scoped.",
           );
         }
@@ -596,7 +596,7 @@ const EditCourse = () => {
           type: "course_update",
         });
       } catch (err) {
-        console.warn("Notification API unavailable:", err);
+        if (import.meta.env.DEV) console.warn("Notification API unavailable:", err);
       }
 
       setSuccess(

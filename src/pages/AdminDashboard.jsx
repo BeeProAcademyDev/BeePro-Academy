@@ -15,7 +15,12 @@ import {
   FiX,
 } from "react-icons/fi";
 import DashboardCard from "../components/dashboard/DashboardCard";
-import { adminService, blogService, courseService } from "../services/api";
+import {
+  adminService,
+  blogService,
+  courseService,
+  dashboardService,
+} from "../services/api";
 
 const asArray = (value) => {
   if (Array.isArray(value)) return value;
@@ -124,6 +129,15 @@ const detailValue = (row = {}) =>
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalUsers: 0,
+    pendingInstructorAccounts: 0,
+    pendingCourses: 0,
+    pendingPosts: 0,
+    publishedPosts: 0,
+    totalPosts: 0,
+    totalCourses: 0,
+  });
   const [pendingInstructors, setPendingInstructors] = useState([]);
   const [courses, setCourses] = useState([]);
   const [posts, setPosts] = useState([]);
@@ -136,12 +150,13 @@ const AdminDashboard = () => {
     setIsLoading(true);
     setError("");
     try {
-      const [usersRows, pendingRows, courseResult, postRows] =
+      const [statsResult, usersRows, pendingRows, courseResult, postRows] =
         await Promise.all([
+          dashboardService.getAdminDashboard(),
           adminService.getAllUsers(),
           adminService.getPendingInstructors(),
           courseService.getCourses(),
-          blogService.getAdminPosts(),
+          blogService.getAdminPosts({ limit: 100 }),
         ]);
 
       const usersList = asArray(usersRows);
@@ -150,7 +165,23 @@ const AdminDashboard = () => {
         ? courseResult.data
         : asArray(courseResult);
       const postList = asArray(postRows);
+      const publishedPostCount = postList.filter(isApprovedStatus).length;
+      const pendingPostCount = postList.filter(
+        (post) =>
+          isPendingStatus(post) ||
+          (!isApprovedStatus(post) && !isRejectedStatus(post)),
+      ).length;
 
+      setDashboardStats({
+        totalUsers: statsResult?.totalUsers ?? usersList.length,
+        pendingInstructorAccounts:
+          statsResult?.pendingInstructorAccounts ?? pendingList.length,
+        pendingCourses: statsResult?.pendingCourses ?? 0,
+        pendingPosts: statsResult?.pendingPosts ?? pendingPostCount,
+        publishedPosts: publishedPostCount,
+        totalPosts: postList.length,
+        totalCourses: statsResult?.totalCourses ?? courseList.length,
+      });
       setUsers(usersList);
       setPendingInstructors(
         pendingList.length > 0
@@ -199,11 +230,17 @@ const AdminDashboard = () => {
   }, [courses, posts]);
 
   const stats = [
-    ["Total Users", users.length, FiUsers],
-    ["Pending Instructor Accounts", pendingInstructors.length, FiShield],
-    ["Pending Courses", moderationModel.pendingCourses.length, FiAlertTriangle],
-    ["Pending Posts", moderationModel.pendingPosts.length, FiBookOpen],
-    ["Total Courses", courses.length, FiBookOpen],
+    ["Total Users", dashboardStats.totalUsers, FiUsers],
+    [
+      "Pending Instructor Accounts",
+      dashboardStats.pendingInstructorAccounts,
+      FiShield,
+    ],
+    ["Pending Courses", dashboardStats.pendingCourses, FiAlertTriangle],
+    ["Blog Posts", dashboardStats.totalPosts, FiBookOpen],
+    ["Pending Posts", dashboardStats.pendingPosts, FiBookOpen],
+    ["Published Posts", dashboardStats.publishedPosts, FiCheckCircle],
+    ["Total Courses", dashboardStats.totalCourses, FiBookOpen],
   ];
 
   const refreshAfterAction = async (loadingKey, callback) => {
@@ -260,7 +297,9 @@ const AdminDashboard = () => {
 
   const updatePostStatus = async (postId, status) => {
     await refreshAfterAction(`post:${postId}:${status}`, () =>
-      blogService.updatePost(postId, { status }),
+      status === "published"
+        ? blogService.approvePost(postId)
+        : blogService.rejectPost(postId),
     );
   };
 
@@ -318,6 +357,25 @@ const AdminDashboard = () => {
                 </div>
               ))}
             </div>
+
+            <DashboardCard
+              title="Blog Management"
+              subtitle="Create posts, publish pending posts, and review authors"
+              action={
+                <Link to="/admin/blog" className="btn btn-primary text-sm">
+                  <FiBookOpen className="mr-2" /> Open Blog
+                </Link>
+              }
+            >
+              <div className="grid gap-3 sm:grid-cols-3">
+                <MiniStat label="Total Posts" value={dashboardStats.totalPosts} />
+                <MiniStat
+                  label="Published"
+                  value={dashboardStats.publishedPosts}
+                />
+                <MiniStat label="Pending" value={dashboardStats.pendingPosts} />
+              </div>
+            </DashboardCard>
 
             <DashboardCard
               title="Pending Instructor Accounts"
@@ -559,6 +617,15 @@ const ModerationRow = ({ title, subtitle, actions }) => (
       </div>
       <div className="flex flex-wrap gap-2">{actions}</div>
     </div>
+  </div>
+);
+
+const MiniStat = ({ label, value }) => (
+  <div className="rounded-xl border border-secondary-100 p-4 dark:border-dark-border">
+    <div className="text-xl font-semibold text-secondary-900 dark:text-white">
+      {value}
+    </div>
+    <div className="mt-1 text-sm text-secondary-500">{label}</div>
   </div>
 );
 

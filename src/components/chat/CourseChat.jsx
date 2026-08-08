@@ -5,6 +5,8 @@ import { requireInstructor } from "../../lib/authGuards";
 import "./CourseChat.css";
 import "./chat.css";
 import { useTranslation } from "react-i18next";
+import { notifyError } from "../../lib/uiNotify";
+import { getFriendlyErrorMessage } from "../../lib/friendlyErrors";
 
 const CourseChat = ({
   courseId,
@@ -127,7 +129,10 @@ const CourseChat = ({
 
   const initStudentChat = useCallback(async () => {
     if (!courseId || !user?.id || !instructorId) {
-      throw new Error(t("courseChat.courseOrInstructorDataIsMissin"));
+      const msg = t("courseChat.courseOrInstructorDataIsMissin");
+      notifyError(msg);
+      setError(msg);
+      return null;
     }
 
     const conversation = await chatService.getOrCreateConversation({
@@ -137,7 +142,10 @@ const CourseChat = ({
     });
 
     if (!conversation?.id) {
-      throw new Error(t("courseChat.couldNotOpenChatConversation"));
+      const msg = t("courseChat.couldNotOpenChatConversation");
+      notifyError(msg);
+      setError(msg);
+      return null;
     }
 
     setActiveConversation(conversation);
@@ -176,8 +184,13 @@ const CourseChat = ({
         await initStudentChat();
       }
     } catch (err) {
-      console.error("Chat init error:", err);
-      setError(err.message || t("courseChat.failedToLoadChat"));
+      if (import.meta.env.DEV) console.error("Chat init error:", err);
+      const friendly = getFriendlyErrorMessage(
+        err,
+        t("courseChat.failedToLoadChat"),
+      );
+      setError(friendly);
+      notifyError(friendly);
     } finally {
       setLoading(false);
     }

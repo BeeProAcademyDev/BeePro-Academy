@@ -4,6 +4,8 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { articleScheduleService } from "../../services/api";
 import { useTranslation } from "react-i18next";
+import { notifyError } from "../../lib/uiNotify";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import {
   FiCalendar,
   FiCheckCircle,
@@ -78,6 +80,7 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
   const [isRunningDue, setIsRunningDue] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const loadSchedules = useCallback(async () => {
     setIsLoading(true);
@@ -109,7 +112,9 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
           const successCount = results.filter((item) => item.success).length;
           if (successCount > 0) {
             setMessage(
-              t("articleSchedulePanel.successcountArticlesGeneratedA"),
+              t("articleSchedulePanel.successcountArticlesGeneratedA", {
+                count: successCount,
+              }),
             );
           }
         }
@@ -166,7 +171,10 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
     try {
       const scheduledAt = new Date(form.scheduled_at);
       if (Number.isNaN(scheduledAt.getTime())) {
-        throw new Error(t("articleSchedulePanel.invalidScheduleDate"));
+        const msg = t("articleSchedulePanel.invalidScheduleDate");
+        notifyError?.(msg);
+        setError(msg);
+        return;
       }
 
       const created = await articleScheduleService.createSchedule({
@@ -235,7 +243,12 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
         setMessage(t("articleSchedulePanel.noDueTasksRightNow"));
       } else {
         const successCount = results.filter((item) => item.success).length;
-        setMessage(t("articleSchedulePanel.executedSuccesscountOfResultsl"));
+        setMessage(
+          t("articleSchedulePanel.executedSuccesscountOfResultsl", {
+            successCount,
+            total: results.length,
+          }),
+        );
       }
     } catch (err) {
       setError(err?.message || t("articleSchedulePanel.couldNotRunDueTasks"));
@@ -260,15 +273,21 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
   };
 
   const deleteSchedule = async (scheduleId) => {
-    if (!window.confirm(t("articleSchedulePanel.deleteThisScheduledTask")))
-      return;
-
-    try {
-      await articleScheduleService.deleteSchedule(scheduleId);
-      setSchedules((current) => current.filter((row) => row.id !== scheduleId));
-    } catch (err) {
-      setError(err?.message || t("articleSchedulePanel.couldNotDeleteTask"));
-    }
+    setConfirmDialog({
+      title: t("articleSchedulePanel.delete"),
+      message: t("articleSchedulePanel.deleteThisScheduledTask"),
+      confirmLabel: t("common.delete"),
+      onConfirm: async () => {
+        try {
+          await articleScheduleService.deleteSchedule(scheduleId);
+          setSchedules((current) =>
+            current.filter((row) => row.id !== scheduleId),
+          );
+        } catch (err) {
+          setError(err?.message || t("articleSchedulePanel.couldNotDeleteTask"));
+        }
+      },
+    });
   };
 
   return (
@@ -599,6 +618,16 @@ const ArticleSchedulePanel = ({ courses = [], onPostGenerated }) => {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title}
+        message={confirmDialog?.message}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel={t("common.cancel")}
+        tone="danger"
+        onConfirm={confirmDialog?.onConfirm}
+        onClose={() => setConfirmDialog(null)}
+      />
     </div>
   );
 };

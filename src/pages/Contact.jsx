@@ -38,7 +38,11 @@ const Contact = () => {
     // Simulate form submission
     setTimeout(() => {
       setIsSubmitting(false);
-      setSubmitMessage(t("contact.thankYouFormdatanameMessageSen"));
+      setSubmitMessage(
+        t("contact.thankYouFormdatanameMessageSen", {
+          name: formData.name.trim() || t("roles.user"),
+        }),
+      );
       setFormData({ name: "", phone: "", email: "", subject: "", message: "" });
 
       setTimeout(() => setSubmitMessage(""), 5000);

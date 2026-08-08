@@ -239,6 +239,15 @@ function App() {
       />
 
       <Route
+        path="/blog"
+        element={
+          <Layout>
+            <Blogs />
+          </Layout>
+        }
+      />
+
+      <Route
         path="/blogs"
         element={
           <Layout>
@@ -574,11 +583,33 @@ function App() {
       />
 
       <Route
+        path="/teacher/blog"
+        element={
+          <TeacherRoute>
+            <Layout showFooter={false}>
+              <BlogAdmin scope="teacher" />
+            </Layout>
+          </TeacherRoute>
+        }
+      />
+
+      <Route
+        path="/admin/blog"
+        element={
+          <AdminRoute>
+            <Layout showFooter={false}>
+              <BlogAdmin scope="admin" />
+            </Layout>
+          </AdminRoute>
+        }
+      />
+
+      <Route
         path="/admin/blogs"
         element={
           <AdminRoute>
             <Layout showFooter={false}>
-              <BlogAdmin />
+              <BlogAdmin scope="admin" />
             </Layout>
           </AdminRoute>
         }

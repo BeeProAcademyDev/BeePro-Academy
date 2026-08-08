@@ -18,7 +18,11 @@ import { getMeetingJoinTarget, pickJoinableMeeting } from "../lib/jitsi";
 import { isStudentUser } from "../lib/roles";
 import { getLandingAuthUrl } from "../lib/authRoutes";
 import { toastSuccess, toastError } from "../lib/toast";
+import { notifyError } from "../lib/uiNotify";
+import { getFriendlyErrorMessage } from "../lib/friendlyErrors";
 import Button from "../components/ui/Button";
+import ActionButton from "../components/ui/ActionButton";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
 import LessonForm from "../components/course/LessonForm";
 import SEO from "../components/seo/SEO";
 import StructuredData from "../components/seo/StructuredData";
@@ -84,6 +88,14 @@ const CourseDetailsDB = () => {
   const [editingLessonId, setEditingLessonId] = useState(null);
   const [savingLessonFor, setSavingLessonFor] = useState(null);
   const [lessonError, setLessonError] = useState("");
+  const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
+  const [sectionForm, setSectionForm] = useState({
+    title: "",
+    description: "",
+  });
+  const [sectionFormError, setSectionFormError] = useState("");
+  const [isSavingSection, setIsSavingSection] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [hasApprovedPayment, setHasApprovedPayment] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -107,7 +119,11 @@ const CourseDetailsDB = () => {
     [liveMeetings],
   );
 
-  const courseLevel = course?.level?.trim() || "beginner";
+  const supportedLevels = ["beginner", "intermediate", "advanced"];
+  const rawCourseLevel = course?.level?.trim() || "beginner";
+  const courseLevel = supportedLevels.includes(rawCourseLevel)
+    ? rawCourseLevel
+    : "beginner";
   const isCourseOwner = user?.id && course?.instructor_id === user.id;
   const totalLessons = useMemo(() => {
     if (sections.length > 0) {
@@ -119,16 +135,16 @@ const CourseDetailsDB = () => {
     return lessons.length;
   }, [sections, lessons]);
 
-  const sectionsToRender =
-    sections.length > 0
-      ? sections
-      : [
-          {
-            id: "default",
-            title: t("courseDetailsDB.courseContent"),
-            lessons,
-          },
-        ];
+  const hasCourseSections = sections.length > 0;
+  const sectionsToRender = hasCourseSections
+    ? sections
+    : [
+        {
+          id: "default",
+          title: t("courseDetailsDB.section"),
+          lessons,
+        },
+      ];
 
   const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight;
 
@@ -199,7 +215,9 @@ const CourseDetailsDB = () => {
         const meetings = await meetingService.getMeetingsByCourse(course.id);
         setLiveMeetings(meetings || []);
       } catch (err) {
-        console.error("Live meetings fetch error:", err);
+        if (import.meta.env.DEV)
+          if (import.meta.env.DEV)
+            console.error("Live meetings fetch error:", err);
         setLiveMeetings([]);
       }
     };
@@ -236,8 +254,10 @@ const CourseDetailsDB = () => {
       const lessonsData = await lessonService.getPublishedLessonsByCourse(id);
       setLessons(lessonsData || []);
     } catch (err) {
-      console.error("Fetch error:", err);
-      setError("Failed to load course");
+      if (import.meta.env.DEV) console.error("Fetch error:", err);
+      const friendly = getFriendlyErrorMessage(err, "Failed to load course");
+      setError(friendly);
+      notifyError(friendly);
     } finally {
       setLoading(false);
     }
@@ -257,7 +277,9 @@ const CourseDetailsDB = () => {
         ),
       );
     } catch (err) {
-      console.error("Failed to refresh section lessons:", err);
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV)
+          console.error("Failed to refresh section lessons:", err);
     }
   };
 
@@ -277,7 +299,9 @@ const CourseDetailsDB = () => {
       setSections(sectionsWithLessons);
       return sectionsWithLessons;
     } catch (err) {
-      console.error("Failed to load course sections:", err);
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV)
+          console.error("Failed to load course sections:", err);
       return [];
     }
   };
@@ -304,7 +328,7 @@ const CourseDetailsDB = () => {
         setHasApprovedPayment(false);
       }
     } catch (err) {
-      console.error("Enrollment check error:", err);
+      if (import.meta.env.DEV) console.error("Enrollment check error:", err);
       setIsEnrolled(false);
       setHasApprovedPayment(false);
     }
@@ -323,7 +347,9 @@ const CourseDetailsDB = () => {
     if (!user || !course) return;
 
     if (!isStudent && isPaidCourse) {
-      setError(t("courseDetailsDB.paymentIsAllowedForStudentsOnl"));
+      const message = t("courseDetailsDB.paymentIsAllowedForStudentsOnl");
+      setError(message);
+      toastError(message);
       return;
     }
 
@@ -335,7 +361,10 @@ const CourseDetailsDB = () => {
         setIsEnrolled(true);
         navigate(`/courses/${course.id}/learn`);
       } catch (err) {
-        setError(err.message || t("courseDetailsDB.failedToEnrollInCourse"));
+        const message =
+          err.message || t("courseDetailsDB.failedToEnrollInCourse");
+        setError(message);
+        toastError(message);
       } finally {
         setEnrolling(false);
       }
@@ -353,17 +382,41 @@ const CourseDetailsDB = () => {
     );
   };
 
-  const handleAddSection = async () => {
-    const title = window.prompt(t("courseDetailsDB.enterSectionTitle"));
-    if (!title?.trim()) return;
+  const openAddSectionModal = () => {
+    setSectionForm({ title: "", description: "" });
+    setSectionFormError("");
+    setIsSectionModalOpen(true);
+  };
+
+  const closeAddSectionModal = () => {
+    if (isSavingSection) return;
+    setIsSectionModalOpen(false);
+    setSectionFormError("");
+  };
+
+  const handleAddSection = async (event) => {
+    event?.preventDefault?.();
+    const title = sectionForm.title.trim();
+    const description = sectionForm.description.trim();
+
+    if (!title) {
+      setSectionFormError(t("courseDetailsDB.sectionTitleRequired"));
+      return;
+    }
 
     try {
-      await sectionService.createSection(course.id, { title: title.trim() });
+      setIsSavingSection(true);
+      setSectionFormError("");
+      await sectionService.createSection(course.id, { title, description });
       await loadCourseSections(course.id);
+      setIsSectionModalOpen(false);
       toastSuccess(t("courseDetailsDB.sectionAddedSuccessfully"));
     } catch (err) {
       const message = err.message || t("courseDetailsDB.failedToCreateSection");
+      setSectionFormError(message);
       toastError(message);
+    } finally {
+      setIsSavingSection(false);
     }
   };
 
@@ -437,25 +490,33 @@ const CourseDetailsDB = () => {
       contentUrl:
         lesson.contentUrl || lesson.content_url || lesson.video_url || "",
       duration: lesson.duration || 0,
-      isFree: Boolean(lesson.isFree),
+      isFree: Boolean(lesson.isFree ?? lesson.is_free),
     });
     setLessonError("");
   };
 
   const handleDeleteLesson = async (lesson, sectionId) => {
-    const confirmed = window.confirm(
-      t("courseDetailsDB.confirmDeleteLesson", { title: lesson.title }),
-    );
-    if (!confirmed) return;
+    const lessonTitle =
+      lesson.title?.trim() || t("courseDetailsDB.untitledLesson");
 
-    try {
-      await lessonService.deleteLesson(lesson.id, sectionId);
-      await refreshSectionLessons(sectionId);
-      toastSuccess(t("courseDetailsDB.lessonDeletedSuccessfully"));
-    } catch (err) {
-      const message = err.message || t("courseDetailsDB.failedToDeleteLesson");
-      toastError(message);
-    }
+    setConfirmDialog({
+      title: t("courseDetailsDB.deleteLesson"),
+      message: t("courseDetailsDB.confirmDeleteLesson", {
+        title: lessonTitle,
+      }),
+      confirmLabel: t("common.delete"),
+      onConfirm: async () => {
+        try {
+          await lessonService.deleteLesson(lesson.id, sectionId);
+          await refreshSectionLessons(sectionId);
+          toastSuccess(t("courseDetailsDB.lessonDeletedSuccessfully"));
+        } catch (err) {
+          const message =
+            err.message || t("courseDetailsDB.failedToDeleteLesson");
+          toastError(message);
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -482,9 +543,18 @@ const CourseDetailsDB = () => {
   }
 
   const instructor = course.instructor || course.users || {};
+  const displayCourseTitle =
+    courseTitle?.trim() || t("courseDetailsDB.untitledCourse");
+  const displayCourseDescription =
+    courseDescription?.trim() || t("courseDetailsDB.noCourseDescription");
+  const displayCourseCategory =
+    course.category?.trim() || t("courseDetailsDB.uncategorized");
   const courseFeatures = [
     { icon: FiClock, label: t("courseDetailsDB.comprehensiveContent") },
-    { icon: FiBookOpen, label: t("courseDetailsDB.lessonslengthLessons") },
+    {
+      icon: FiBookOpen,
+      label: t("courseDetailsDB.lessonsCount", { count: totalLessons }),
+    },
     { icon: FiGlobe, label: t("courseDetailsDB.lifetimeAccess") },
     { icon: FiAward, label: t("courseDetailsDB.certificateOfCompletion") },
   ];
@@ -498,9 +568,9 @@ const CourseDetailsDB = () => {
   return (
     <>
       <SEO
-        title={courseTitle || "BeePro Academy | Course details"}
+        title={displayCourseTitle || "BeePro Academy | Course details"}
         description={
-          courseDescription ||
+          displayCourseDescription ||
           (language === "ar"
             ? "اطّلع على تفاصيل هذا الكورس، المحتوى، المدة، والمدرب في BeePro Academy."
             : "Explore course details, curriculum, duration, and instructor information at BeePro Academy.")
@@ -514,12 +584,8 @@ const CourseDetailsDB = () => {
           course
             ? [
                 createCourseSchema({
-                  name: courseTitle || course.title || course.title_en,
-                  description:
-                    courseDescription ||
-                    course.short_description ||
-                    course.excerpt ||
-                    "",
+                  name: displayCourseTitle,
+                  description: displayCourseDescription,
                   url: `${SITE_URL}${location.pathname}`,
                   image: courseImage,
                   author: {
@@ -549,7 +615,7 @@ const CourseDetailsDB = () => {
                   </Link>
                   <span className="shrink-0">/</span>
                   <span className="text-white break-words min-w-0">
-                    {course.title}
+                    {displayCourseTitle}
                   </span>
                 </div>
 
@@ -567,15 +633,15 @@ const CourseDetailsDB = () => {
                     {t(`course.level.${courseLevel}`)}
                   </span>
                   <span className="badge bg-primary-500 text-white px-3 py-1">
-                    {course.category}
+                    {displayCourseCategory}
                   </span>
                 </div>
 
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 break-words">
-                  {course.title}
+                  {displayCourseTitle}
                 </h1>
                 <p className="text-base sm:text-lg text-secondary-300 mb-6 break-words">
-                  {course.description}
+                  {displayCourseDescription}
                 </p>
 
                 {isCourseOwner && (
@@ -583,15 +649,18 @@ const CourseDetailsDB = () => {
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <h2 className="text-xl font-semibold">
-                          Course Management
+                          {t("courseDetailsDB.courseManagement")}
                         </h2>
                         <p className="text-sm text-secondary-500">
-                          Manage sections and lessons for this course.
+                          {t("courseDetailsDB.manageSectionsLessons")}
                         </p>
                       </div>
-                      <Button onClick={handleAddSection} variant="secondary">
-                        + Add Section
-                      </Button>
+                      <ActionButton
+                        onClick={openAddSectionModal}
+                        variant="primary"
+                      >
+                        {t("courseDetailsDB.addSection")}
+                      </ActionButton>
                     </div>
                   </div>
                 )}
@@ -638,7 +707,7 @@ const CourseDetailsDB = () => {
                     {course.thumbnail_url ? (
                       <img
                         src={course.thumbnail_url}
-                        alt={course.title}
+                        alt={displayCourseTitle}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -837,7 +906,7 @@ const CourseDetailsDB = () => {
                       {t("courseDetailsDB.courseDescription")}
                     </h2>
                     <p className="text-secondary-600 dark:text-secondary-400 leading-relaxed">
-                      {course.description}
+                      {displayCourseDescription}
                     </p>
                   </div>
                 </div>
@@ -855,9 +924,12 @@ const CourseDetailsDB = () => {
                       </p>
                     </div>
                     {isCourseOwner && (
-                      <Button onClick={handleAddSection} variant="secondary">
-                        + {t("courseDetailsDB.addSection")}
-                      </Button>
+                      <ActionButton
+                        onClick={openAddSectionModal}
+                        variant="primary"
+                      >
+                        {t("courseDetailsDB.addSection")}
+                      </ActionButton>
                     )}
                   </div>
 
@@ -879,7 +951,8 @@ const CourseDetailsDB = () => {
                               <FiChevronDown className="w-5 h-5" />
                             )}
                             <span className="font-medium">
-                              {section.title || t("courseDetailsDB.section")}
+                              {section.title?.trim() ||
+                                t("courseDetailsDB.section")}
                             </span>
                           </div>
                           <span className="text-sm text-secondary-500">
@@ -893,6 +966,9 @@ const CourseDetailsDB = () => {
                             {(section.lessons || []).map((lesson) => {
                               const canOpenLesson =
                                 isEnrolled || hasCourseAccess;
+                              const lessonTitle =
+                                lesson.title?.trim() ||
+                                t("courseDetailsDB.untitledLesson");
                               return (
                                 <div
                                   key={lesson.id}
@@ -910,39 +986,43 @@ const CourseDetailsDB = () => {
                                           to={`/courses/${course.id}/lessons/${lesson.id}`}
                                           className="font-medium"
                                         >
-                                          {lesson.title}
+                                          {lessonTitle}
                                         </Link>
                                       ) : (
                                         <span className="font-medium text-secondary-400">
-                                          {lesson.title}
+                                          {lessonTitle}
                                         </span>
                                       )}
                                     </div>
-                                    {isCourseOwner && (
-                                      <div className="flex items-center gap-2">
-                                        <Button
-                                          variant="secondary"
-                                          size="sm"
-                                          onClick={() =>
-                                            handleEditLesson(lesson, section.id)
-                                          }
-                                        >
-                                          {t("courseDetailsDB.editLesson")}
-                                        </Button>
-                                        <Button
-                                          variant="danger"
-                                          size="sm"
-                                          onClick={() =>
-                                            handleDeleteLesson(
-                                              lesson,
-                                              section.id,
-                                            )
-                                          }
-                                        >
-                                          {t("courseDetailsDB.deleteLesson")}
-                                        </Button>
-                                      </div>
-                                    )}
+                                    {isCourseOwner &&
+                                      section.id !== "default" && (
+                                        <div className="flex items-center gap-3">
+                                          <ActionButton
+                                            variant="edit"
+                                            size="sm"
+                                            onClick={() =>
+                                              handleEditLesson(
+                                                lesson,
+                                                section.id,
+                                              )
+                                            }
+                                          >
+                                            {t("common.edit")}
+                                          </ActionButton>
+                                          <ActionButton
+                                            variant="delete"
+                                            size="sm"
+                                            onClick={() =>
+                                              handleDeleteLesson(
+                                                lesson,
+                                                section.id,
+                                              )
+                                            }
+                                          >
+                                            {t("common.delete")}
+                                          </ActionButton>
+                                        </div>
+                                      )}
                                   </div>
                                 </div>
                               );
@@ -956,12 +1036,12 @@ const CourseDetailsDB = () => {
 
                             {isCourseOwner && section.id !== "default" && (
                               <div className="p-4">
-                                <Button
+                                <ActionButton
                                   variant="secondary"
                                   onClick={() => openLessonForm(section.id)}
                                 >
-                                  + {t("courseDetailsDB.addLesson")}
-                                </Button>
+                                  {t("courseDetailsDB.addLesson")}
+                                </ActionButton>
                                 {openLessonFormFor === section.id && (
                                   <LessonForm
                                     form={lessonForm}
@@ -979,6 +1059,11 @@ const CourseDetailsDB = () => {
                                     {lessonError}
                                   </p>
                                 )}
+                              </div>
+                            )}
+                            {isCourseOwner && section.id === "default" && (
+                              <div className="p-4 text-sm text-secondary-500">
+                                {t("courseDetailsDB.addSectionToBegin")}
                               </div>
                             )}
                           </div>
@@ -1026,6 +1111,118 @@ const CourseDetailsDB = () => {
           </div>
         </section>
       </div>
+
+      {isSectionModalOpen && (
+        <div
+          className="fixed inset-0 z-[1050] flex items-center justify-center bg-black/60 p-4"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeAddSectionModal();
+            }
+          }}
+        >
+          <form
+            onSubmit={handleAddSection}
+            className="w-full max-w-lg rounded-lg border border-secondary-200 bg-white p-6 shadow-2xl dark:border-dark-border dark:bg-dark-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="section-modal-title"
+          >
+            <div className="mb-5">
+              <h2
+                id="section-modal-title"
+                className="text-xl font-bold text-secondary-900 dark:text-white"
+              >
+                {t("courseDetailsDB.createSection")}
+              </h2>
+              <p className="mt-1 text-sm text-secondary-500">
+                {t("courseDetailsDB.createSectionHelp")}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="label" htmlFor="section-title">
+                  {t("courseDetailsDB.sectionTitle")}
+                </label>
+                <input
+                  id="section-title"
+                  type="text"
+                  className="input w-full"
+                  value={sectionForm.title}
+                  onChange={(event) =>
+                    setSectionForm((current) => ({
+                      ...current,
+                      title: event.target.value,
+                    }))
+                  }
+                  placeholder={t("courseDetailsDB.sectionTitlePlaceholder")}
+                  autoFocus
+                  disabled={isSavingSection}
+                />
+              </div>
+
+              <div>
+                <label className="label" htmlFor="section-description">
+                  {t("courseDetailsDB.sectionDescription")}
+                </label>
+                <textarea
+                  id="section-description"
+                  className="input min-h-[110px] w-full resize-y"
+                  value={sectionForm.description}
+                  onChange={(event) =>
+                    setSectionForm((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
+                  }
+                  placeholder={t(
+                    "courseDetailsDB.sectionDescriptionPlaceholder",
+                  )}
+                  disabled={isSavingSection}
+                />
+              </div>
+
+              {sectionFormError && (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {sectionFormError}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={closeAddSectionModal}
+                disabled={isSavingSection}
+                className="w-full sm:w-auto"
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="submit"
+                loading={isSavingSection}
+                className="w-full sm:w-auto"
+              >
+                {t("courseDetailsDB.create")}
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title}
+        message={confirmDialog?.message}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel={t("common.cancel")}
+        tone="danger"
+        onConfirm={confirmDialog?.onConfirm}
+        onClose={() => setConfirmDialog(null)}
+      />
     </>
   );
 };

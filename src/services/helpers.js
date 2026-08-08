@@ -55,7 +55,7 @@ export const isMissingTableError = (error) => {
 }
 
 export const warnMissingMeetingsTable = () => {
-  console.warn(
+  if (import.meta.env.DEV) console.warn(
     'meetings table is missing in Supabase. Run supabase/migrations/022_ensure_meetings_table.sql in the SQL Editor.'
   )
 }
@@ -85,7 +85,7 @@ export async function syncSignupUserProfile({ userId, email, fullName, phone = '
       .eq('id', userId)
 
     if (updateError) {
-      console.warn('[signup] Could not update profile name:', updateError.message)
+      if (import.meta.env.DEV) console.warn('[signup] Could not update profile name:', updateError.message)
     }
 
     return profileById

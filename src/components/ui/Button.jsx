@@ -1,5 +1,45 @@
 import { forwardRef } from "react";
 import { Link } from "react-router-dom";
+import { cva } from "class-variance-authority";
+
+const buttonStyles = cva(
+  "inline-flex items-center justify-center h-11 rounded-xl px-5 gap-2 font-semibold transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0",
+  {
+    variants: {
+      variant: {
+        none: "",
+        primary:
+          "bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 text-white shadow-lg shadow-indigo-500/30 hover:from-indigo-500 hover:to-blue-500 hover:-translate-y-0.5",
+        secondary:
+          "bg-slate-800 border border-slate-700 text-slate-200 shadow-sm shadow-slate-950/20 hover:bg-slate-700 hover:border-indigo-500 hover:shadow-indigo-500/20 hover:-translate-y-0.5",
+        edit: "bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500 hover:text-white hover:-translate-y-0.5",
+        delete:
+          "bg-red-500/10 border border-red-500/30 text-red-400 shadow-sm shadow-red-500/30 hover:bg-red-500 hover:text-white hover:-translate-y-0.5",
+        ghost:
+          "bg-transparent border border-slate-600 text-slate-300 hover:bg-slate-700 hover:-translate-y-0.5",
+        outline:
+          "border-2 border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white",
+        danger: "bg-red-500 text-white hover:bg-red-600",
+        success: "bg-green-500 text-white hover:bg-green-600",
+        link: "text-primary-500 hover:text-primary-600 underline-offset-4 hover:underline",
+      },
+      size: {
+        xs: "text-[12px] gap-1.5",
+        sm: "text-sm gap-2",
+        md: "text-sm gap-2",
+        lg: "text-sm gap-2",
+        xl: "text-sm gap-2",
+      },
+      fullWidth: {
+        true: "w-full",
+      },
+    },
+    defaultVariants: {
+      variant: "primary",
+      size: "md",
+    },
+  },
+);
 
 const Button = forwardRef(
   (
@@ -20,40 +60,8 @@ const Button = forwardRef(
     },
     ref,
   ) => {
-    const baseStyles =
-      "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
-
-    const variants = {
-      primary:
-        "bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500 active:scale-95",
-      secondary:
-        "bg-secondary-100 text-secondary-700 hover:bg-secondary-200 dark:bg-dark-card dark:text-dark-text dark:hover:bg-dark-border focus:ring-secondary-500",
-      outline:
-        "border-2 border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white focus:ring-primary-500",
-      ghost:
-        "text-secondary-600 hover:bg-secondary-100 dark:text-dark-text dark:hover:bg-dark-card focus:ring-secondary-500",
-      danger:
-        "bg-red-500 text-white hover:bg-red-600 focus:ring-red-500 active:scale-95",
-      success:
-        "bg-green-500 text-white hover:bg-green-600 focus:ring-green-500 active:scale-95",
-      link: "text-primary-500 hover:text-primary-600 underline-offset-4 hover:underline focus:ring-primary-500",
-    };
-
-    const sizes = {
-      xs: "px-3 py-1.5 text-xs gap-1.5",
-      sm: "px-4 py-2 text-sm gap-2",
-      md: "px-6 py-3 text-base gap-2",
-      lg: "px-8 py-4 text-lg gap-3",
-      xl: "px-10 py-5 text-xl gap-3",
-    };
-
-    const classes = `
-    ${baseStyles}
-    ${variants[variant]}
-    ${sizes[size]}
-    ${fullWidth ? "w-full" : ""}
-    ${className}
-  `.trim();
+    const classes =
+      `${buttonStyles({ variant, size, fullWidth })} ${className}`.trim();
 
     const content = (
       <>
@@ -80,16 +88,15 @@ const Button = forwardRef(
           </svg>
         )}
         {Icon && iconPosition === "start" && !loading && (
-          <Icon className="w-5 h-5" />
+          <Icon className="w-4 h-4" />
         )}
         {children}
         {Icon && iconPosition === "end" && !loading && (
-          <Icon className="w-5 h-5" />
+          <Icon className="w-4 h-4" />
         )}
       </>
     );
 
-    // Render as Link (internal)
     if (to) {
       return (
         <Link to={to} ref={ref} className={classes} {...props}>
@@ -98,7 +105,6 @@ const Button = forwardRef(
       );
     }
 
-    // Render as anchor (external)
     if (href) {
       return (
         <a
@@ -114,7 +120,6 @@ const Button = forwardRef(
       );
     }
 
-    // Render as custom element
     if (as !== "button") {
       const Component = as;
       return (
@@ -129,7 +134,6 @@ const Button = forwardRef(
       );
     }
 
-    // Default button
     return (
       <button
         ref={ref}

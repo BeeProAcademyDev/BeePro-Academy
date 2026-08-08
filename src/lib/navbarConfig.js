@@ -99,6 +99,7 @@ export function getNavbarLinks(
     },
     { label: "Users", href: "/admin-dashboard", type: "route" },
     { label: t("nav.courses"), href: "/courses", type: "route" },
+    { label: "Blog", href: "/admin/blog", type: "route" },
     { label: "Categories", href: "/settings", type: "route" },
     { label: t("navExtra.payments"), href: "/payments", type: "route" },
     { label: "Reports", href: "/reports", type: "route" },
@@ -112,6 +113,7 @@ export function getNavbarLinks(
     { label: "Assessments", href: "/course-analytics", type: "route" },
     { label: "Meetings", href: "/calendar", type: "route" },
     { label: "Students", href: "/my-courses", type: "route" },
+    { label: "Blog", href: "/teacher/blog", type: "route" },
     { label: t("nav.profile"), href: "/profile", type: "route" },
   ];
 

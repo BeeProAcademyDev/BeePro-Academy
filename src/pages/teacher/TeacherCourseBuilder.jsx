@@ -11,7 +11,8 @@ import {
   uploadService,
 } from "../../services/api";
 import { isApprovedInstructor, isAdmin } from "../../lib/roles";
-import Button from "../../components/ui/Button";
+import ActionButton from "../../components/ui/ActionButton";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import LessonCard from "../../components/course/LessonCard";
 import LessonForm from "../../components/course/LessonForm";
 import ProgressCard from "../../components/course/ProgressCard";
@@ -19,7 +20,10 @@ import ReviewList from "../../components/course/ReviewList";
 import AssessmentList from "../../components/course/AssessmentList";
 import AssessmentForm from "../../components/course/AssessmentForm";
 import { toastError, toastSuccess } from "../../lib/toast";
+import { notifyError } from "../../lib/uiNotify";
+import { getFriendlyErrorMessage } from "../../lib/friendlyErrors";
 import { FiPlus, FiEdit3, FiTrash2 } from "react-icons/fi";
+import { Save } from "lucide-react";
 
 const TeacherCourseBuilder = () => {
   const { id: courseId } = useParams();
@@ -62,6 +66,7 @@ const TeacherCourseBuilder = () => {
   const [savingAssessment, setSavingAssessment] = useState(false);
   const [editingAssessmentId, setEditingAssessmentId] = useState(null);
   const [uploadingLessonFile, setUploadingLessonFile] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const loadCourseAndSections = async () => {
     setIsLoading(true);
@@ -104,8 +109,14 @@ const TeacherCourseBuilder = () => {
       );
       setSections(sectionsWithLessons);
     } catch (err) {
-      console.error("Failed to load course builder data:", err);
-      setSectionError("Failed to load course sections. Please refresh.");
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Failed to load course builder data:", err);
+      const friendly = getFriendlyErrorMessage(
+        err,
+        "Failed to load course sections. Please refresh.",
+      );
+      setSectionError(friendly);
+      notifyError(friendly);
     } finally {
       setIsLoading(false);
     }
@@ -124,8 +135,14 @@ const TeacherCourseBuilder = () => {
         ),
       );
     } catch (err) {
-      console.error("Failed to refresh section lessons:", err);
-      setLessonError("Could not refresh lessons. Please try again.");
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Failed to refresh section lessons:", err);
+      const friendly = getFriendlyErrorMessage(
+        err,
+        "Could not refresh lessons. Please try again.",
+      );
+      setLessonError(friendly);
+      notifyError(friendly);
     }
   };
 
@@ -150,27 +167,42 @@ const TeacherCourseBuilder = () => {
       setOpenLessonFormFor(section.id);
       toastSuccess("Section added successfully.");
     } catch (err) {
-      console.error("Failed to create section:", err);
-      setSectionError(err.message || "Failed to create section.");
+      if (import.meta.env.DEV) console.error("Failed to create section:", err);
+      const friendly = getFriendlyErrorMessage(
+        err,
+        "Failed to create section.",
+      );
+      setSectionError(friendly);
+      notifyError(friendly);
     } finally {
       setIsSavingSection(false);
     }
   };
 
   const handleDeleteSection = async (sectionId) => {
-    const confirmed = window.confirm(
-      "Delete this section and all its lessons? This cannot be undone.",
-    );
-    if (!confirmed) return;
-
-    try {
-      await sectionService.deleteSection(courseId, sectionId);
-      setSections((prev) => prev.filter((section) => section.id !== sectionId));
-      toastSuccess("Section deleted successfully.");
-    } catch (err) {
-      console.error("Failed to delete section:", err);
-      setSectionError(err.message || "Failed to delete section.");
-    }
+    setConfirmDialog({
+      title: "Delete section",
+      message: "Delete this section and all its lessons? This cannot be undone.",
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        try {
+          await sectionService.deleteSection(courseId, sectionId);
+          setSections((prev) =>
+            prev.filter((section) => section.id !== sectionId),
+          );
+          toastSuccess("Section deleted successfully.");
+        } catch (err) {
+          if (import.meta.env.DEV)
+            console.error("Failed to delete section:", err);
+          const friendly = getFriendlyErrorMessage(
+            err,
+            "Failed to delete section.",
+          );
+          setSectionError(friendly);
+          notifyError(friendly);
+        }
+      },
+    });
   };
 
   const handleEditSection = async (sectionId) => {
@@ -195,8 +227,13 @@ const TeacherCourseBuilder = () => {
       setSectionSuccess("Section title updated.");
       toastSuccess("Section title updated.");
     } catch (err) {
-      console.error("Failed to update section:", err);
-      setSectionError(err.message || "Failed to update section title.");
+      if (import.meta.env.DEV) console.error("Failed to update section:", err);
+      const friendly = getFriendlyErrorMessage(
+        err,
+        "Failed to update section title.",
+      );
+      setSectionError(friendly);
+      notifyError(friendly);
     }
   };
 
@@ -267,7 +304,7 @@ const TeacherCourseBuilder = () => {
       setOpenLessonFormFor(null);
       await refreshSectionLessons(sectionId);
     } catch (err) {
-      console.error("Failed to create lesson:", err);
+      if (import.meta.env.DEV) console.error("Failed to create lesson:", err);
       const message = err.message || "Failed to create lesson.";
       setLessonError(message);
       toastError(message);
@@ -294,27 +331,32 @@ const TeacherCourseBuilder = () => {
   };
 
   const handleDeleteLesson = async (lesson) => {
-    const confirmed = window.confirm(`Delete lesson "${lesson.title}"?`);
-    if (!confirmed) return;
-
-    try {
-      await lessonService.deleteLesson(
-        lesson.id,
-        lesson.sectionId || lesson.section_id,
-      );
-      toastSuccess("Lesson deleted successfully.");
-      setSections((prev) =>
-        prev.map((section) => ({
-          ...section,
-          lessons: (section.lessons || []).filter(
-            (item) => item.id !== lesson.id,
-          ),
-        })),
-      );
-    } catch (err) {
-      const message = err.message || "Failed to delete lesson.";
-      toastError(message);
-    }
+    const lessonTitle = lesson.title?.trim() || "Untitled lesson";
+    setConfirmDialog({
+      title: "Delete lesson",
+      message: `Delete lesson "${lessonTitle}"?`,
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        try {
+          await lessonService.deleteLesson(
+            lesson.id,
+            lesson.sectionId || lesson.section_id,
+          );
+          toastSuccess("Lesson deleted successfully.");
+          setSections((prev) =>
+            prev.map((section) => ({
+              ...section,
+              lessons: (section.lessons || []).filter(
+                (item) => item.id !== lesson.id,
+              ),
+            })),
+          );
+        } catch (err) {
+          const message = err.message || "Failed to delete lesson.";
+          toastError(message);
+        }
+      },
+    });
   };
 
   const handleUploadLessonFile = async (file) => {
@@ -341,7 +383,11 @@ const TeacherCourseBuilder = () => {
         null;
 
       if (!url) {
-        throw new Error("The upload did not return a usable URL.");
+        const msg = "The upload did not return a usable URL.";
+        if (import.meta.env.DEV) console.error(msg, uploaded);
+        setLessonError(msg);
+        toastError(msg);
+        return;
       }
 
       setLessonForm((prev) => ({ ...prev, contentUrl: url }));
@@ -457,20 +503,23 @@ const TeacherCourseBuilder = () => {
   };
 
   const handleDeleteAssessment = async (assessment) => {
-    const confirmed = window.confirm(
-      `Delete assessment "${assessment.title}"?`,
-    );
-    if (!confirmed) return;
-
-    try {
-      await assessmentService.deleteAssessment(courseId, assessment.id);
-      setAssessments((prev) =>
-        prev.filter((item) => item.id !== assessment.id),
-      );
-      toastSuccess("Assessment deleted successfully.");
-    } catch (err) {
-      toastError(err.message || "Failed to delete assessment.");
-    }
+    const assessmentTitle = assessment.title?.trim() || "Untitled assessment";
+    setConfirmDialog({
+      title: "Delete assessment",
+      message: `Delete assessment "${assessmentTitle}"?`,
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        try {
+          await assessmentService.deleteAssessment(courseId, assessment.id);
+          setAssessments((prev) =>
+            prev.filter((item) => item.id !== assessment.id),
+          );
+          toastSuccess("Assessment deleted successfully.");
+        } catch (err) {
+          toastError(err.message || "Failed to delete assessment.");
+        }
+      },
+    });
   };
 
   return (
@@ -500,13 +549,14 @@ const TeacherCourseBuilder = () => {
                   placeholder="Section title"
                   className="input w-full"
                 />
-                <Button
+                <ActionButton
                   onClick={handleCreateSection}
                   loading={isSavingSection}
                   className="w-full sm:w-auto"
+                  variant="primary"
                 >
-                  <FiPlus className="me-2" /> Add Section
-                </Button>
+                  Add Section
+                </ActionButton>
               </div>
               {sectionError && (
                 <p className="text-red-500 mt-3">{sectionError}</p>
@@ -568,9 +618,9 @@ const TeacherCourseBuilder = () => {
               <div className="card card-body text-center">
                 <p className="text-secondary-500 mb-4">No sections yet.</p>
                 {isInstructor ? (
-                  <Button onClick={handleCreateSection}>
-                    <FiPlus className="me-2" /> Add New Section
-                  </Button>
+                  <ActionButton onClick={handleCreateSection}>
+                    Add New Section
+                  </ActionButton>
                 ) : (
                   <p className="text-secondary-500">
                     Sections will appear here once the instructor adds them.
@@ -595,23 +645,24 @@ const TeacherCourseBuilder = () => {
                             }
                             className="input w-full"
                           />
-                          <Button
+                          <ActionButton
                             onClick={() => handleEditSection(section.id)}
                             size="sm"
                             variant="primary"
+                            icon={Save}
                           >
                             Save
-                          </Button>
-                          <Button
+                          </ActionButton>
+                          <ActionButton
                             onClick={() => {
                               setEditingSectionId(null);
                               setEditingSectionTitle("");
                             }}
                             size="sm"
-                            variant="secondary"
+                            variant="ghost"
                           >
                             Cancel
-                          </Button>
+                          </ActionButton>
                         </div>
                       ) : (
                         <div className="flex items-center gap-3">
@@ -627,34 +678,34 @@ const TeacherCourseBuilder = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       {isInstructor && (
                         <>
-                          <Button
+                          <ActionButton
                             onClick={() => {
                               setEditingSectionId(section.id);
                               setEditingSectionTitle(section.title || "");
                             }}
                             size="sm"
-                            variant="secondary"
+                            variant="edit"
                           >
-                            <FiEdit3 className="me-2" /> Edit
-                          </Button>
-                          <Button
+                            Edit
+                          </ActionButton>
+                          <ActionButton
                             onClick={() => handleDeleteSection(section.id)}
                             size="sm"
-                            variant="danger"
+                            variant="delete"
                           >
-                            <FiTrash2 className="me-2" /> Delete
-                          </Button>
-                          <Button
+                            Delete
+                          </ActionButton>
+                          <ActionButton
                             onClick={() =>
                               openLessonFormFor === section.id
                                 ? setOpenLessonFormFor(null)
                                 : openLessonForm(section.id)
                             }
                             size="sm"
-                            variant="primary"
+                            variant="secondary"
                           >
-                            <FiPlus className="me-2" /> Add Lesson
-                          </Button>
+                            Add Lesson
+                          </ActionButton>
                         </>
                       )}
                     </div>
@@ -716,6 +767,16 @@ const TeacherCourseBuilder = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title}
+        message={confirmDialog?.message}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel="Cancel"
+        tone="danger"
+        onConfirm={confirmDialog?.onConfirm}
+        onClose={() => setConfirmDialog(null)}
+      />
     </div>
   );
 };

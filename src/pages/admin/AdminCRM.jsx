@@ -122,7 +122,9 @@ const AdminCRM = () => {
     const phone = toWhatsappPhone(rawPhone);
     if (!phone) return "";
 
-    const message = t("adminCRM.hiContactfullnameBeeproTeamHer");
+    const message = t("adminCRM.hiContactfullnameBeeproTeamHer", {
+      name: contact.full_name || "",
+    });
 
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };

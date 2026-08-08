@@ -1,4 +1,6 @@
-import Button from "../ui/Button";
+import ActionButton from "../ui/ActionButton";
+import { Save } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const LessonForm = ({
   form,
@@ -8,49 +10,54 @@ const LessonForm = ({
   onCancel,
   mode = "create",
 }) => {
+  const { t } = useTranslation();
   const updateField = (field, value) => onChange(field, value);
 
   return (
     <div className="mt-6 border border-secondary-200 dark:border-dark-border rounded-xl p-4 bg-secondary-50 dark:bg-dark-border">
       <h4 className="font-semibold mb-4">
-        {mode === "edit" ? "Edit Lesson" : "New Lesson"}
+        {mode === "edit"
+          ? t("lessonForm.editLesson")
+          : t("lessonForm.newLesson")}
       </h4>
       <div className="grid gap-4 lg:grid-cols-2">
         <div>
-          <label className="label">Lesson Title</label>
+          <label className="label">{t("lessonForm.lessonTitle")}</label>
           <input
             type="text"
             value={form.title || ""}
             onChange={(event) => updateField("title", event.target.value)}
             className="input w-full"
-            placeholder="Lesson title"
+            placeholder={t("lessonForm.lessonTitlePlaceholder")}
           />
         </div>
         <div>
-          <label className="label">Description</label>
+          <label className="label">{t("lessonForm.description")}</label>
           <input
             type="text"
             value={form.description || ""}
             onChange={(event) => updateField("description", event.target.value)}
             className="input w-full"
-            placeholder="Optional lesson description"
+            placeholder={t("lessonForm.descriptionPlaceholder")}
           />
         </div>
         <div>
-          <label className="label">Content Type</label>
+          <label className="label">{t("lessonForm.contentType")}</label>
           <select
             value={form.contentType || "video"}
             onChange={(event) => updateField("contentType", event.target.value)}
             className="input w-full"
           >
-            <option value="video">Video</option>
-            <option value="pdf">PDF</option>
-            <option value="article">Article</option>
-            <option value="file">File</option>
+            <option value="video">{t("lessonForm.contentTypes.video")}</option>
+            <option value="pdf">{t("lessonForm.contentTypes.pdf")}</option>
+            <option value="article">
+              {t("lessonForm.contentTypes.article")}
+            </option>
+            <option value="file">{t("lessonForm.contentTypes.file")}</option>
           </select>
         </div>
         <div>
-          <label className="label">Content URL</label>
+          <label className="label">{t("lessonForm.contentUrl")}</label>
           <input
             type="text"
             value={form.contentUrl || ""}
@@ -60,7 +67,7 @@ const LessonForm = ({
           />
         </div>
         <div>
-          <label className="label">Duration (minutes)</label>
+          <label className="label">{t("lessonForm.durationMinutes")}</label>
           <input
             type="number"
             value={form.duration || 0}
@@ -78,18 +85,25 @@ const LessonForm = ({
             className="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
           />
           <label htmlFor={`free-${form.id || "lesson"}`} className="text-sm">
-            Make lesson free
+            {t("lessonForm.makeLessonFree")}
           </label>
         </div>
       </div>
       <div className="mt-4 flex flex-wrap gap-3">
-        <Button onClick={onSubmit} loading={loading}>
-          {mode === "edit" ? "Save Changes" : "Create Lesson"}
-        </Button>
+        <ActionButton
+          onClick={onSubmit}
+          loading={loading}
+          variant="primary"
+          icon={mode === "edit" ? Save : undefined}
+        >
+          {mode === "edit"
+            ? t("lessonForm.saveChanges")
+            : t("lessonForm.createLesson")}
+        </ActionButton>
         {onCancel && (
-          <Button onClick={onCancel} variant="secondary">
-            Cancel
-          </Button>
+          <ActionButton onClick={onCancel} variant="ghost">
+            {t("common.cancel")}
+          </ActionButton>
         )}
       </div>
     </div>

@@ -113,7 +113,8 @@ const StudentChatBell = () => {
       setCourses(sortedCourses);
       setChatAlerts((notifications || []).filter(isChatNotification));
     } catch (err) {
-      console.error("Failed to load chat bell data:", err);
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Failed to load chat bell data:", err);
     } finally {
       setLoading(false);
     }

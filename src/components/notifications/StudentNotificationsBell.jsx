@@ -6,6 +6,8 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { notificationService } from "../../services/api";
 import { isValidGoogleMeetLink } from "../../lib/meetLinks";
 import { useTranslation } from "react-i18next";
+import { notifyError } from "../../lib/uiNotify";
+import { getFriendlyErrorMessage } from "../../lib/friendlyErrors";
 
 const extractMeetingUrl = (message = "") => {
   const match = message.match(/https:\/\/[^\s]+/gi);
@@ -133,7 +135,13 @@ const StudentNotificationsBell = () => {
         });
       }
     } catch (err) {
-      console.error("Failed to load notifications:", err);
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Failed to load notifications:", err);
+      const friendly = getFriendlyErrorMessage(
+        err,
+        "Failed to load notifications",
+      );
+      notifyError(friendly);
     } finally {
       setLoading(false);
     }
@@ -202,7 +210,8 @@ const StudentNotificationsBell = () => {
             Math.max(0, prev - (notification.is_read ? 0 : 1)),
           );
         } catch (err) {
-          console.error("Failed to mark notification as read:", err);
+          if (import.meta.env.DEV)
+            if (import.meta.env.DEV) console.error("Failed to mark notification as read:", err);
         }
       } else {
         knownIdsRef.current.add(notification.id);

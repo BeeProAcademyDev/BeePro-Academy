@@ -441,10 +441,11 @@ const CreateCourse = () => {
       for (const meeting of scheduledMeetings) {
         const lessonId = meeting.lessonId || meeting.lesson_id;
         if (!lessonId) {
-          console.warn(
-            "Skipping meeting creation because no lesson association is available.",
-            meeting,
-          );
+          if (import.meta.env.DEV)
+            if (import.meta.env.DEV) console.warn(
+              "Skipping meeting creation because no lesson association is available.",
+              meeting,
+            );
           continue;
         }
 
@@ -464,9 +465,10 @@ const CreateCourse = () => {
       }
 
       if (courseMeetLink) {
-        console.warn(
-          "Skipping course-level Google Meet creation because backend meetings are lesson-scoped.",
-        );
+        if (import.meta.env.DEV)
+          if (import.meta.env.DEV) console.warn(
+            "Skipping course-level Google Meet creation because backend meetings are lesson-scoped.",
+          );
       }
 
       // Send notification to all enrolled students only if meetings were actually created.
@@ -479,7 +481,8 @@ const CreateCourse = () => {
             type: "meeting",
           });
         } catch (err) {
-          console.warn("Notification API unavailable:", err);
+          if (import.meta.env.DEV)
+            if (import.meta.env.DEV) console.warn("Notification API unavailable:", err);
         }
       }
 

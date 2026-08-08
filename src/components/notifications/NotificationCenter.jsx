@@ -43,7 +43,8 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       setNotifications(data || []);
       setUnreadCount(data?.filter((n) => !n.is_read).length || 0);
     } catch (error) {
-      console.error("Error loading notifications:", error);
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Error loading notifications:", error);
       toast.error("Failed to load notifications");
     } finally {
       setLoading(false);
@@ -80,7 +81,8 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Error marking notification as read:", error);
     }
   };
 
@@ -93,7 +95,8 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       setUnreadCount(0);
       toast.success("All notifications marked as read");
     } catch (error) {
-      console.error("Error marking all as read:", error);
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Error marking all as read:", error);
       toast.error("Failed to mark all as read");
     }
   };
@@ -112,7 +115,8 @@ const NotificationCenter = ({ isOpen, onClose }) => {
         return notification && !notification.is_read ? prev - 1 : prev;
       });
     } catch (error) {
-      console.error("Error deleting notification:", error);
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Error deleting notification:", error);
       toast.error("Failed to delete notification");
     }
   };

@@ -13,6 +13,7 @@ import {
 } from "react-icons/fi";
 import DashboardCard from "../components/dashboard/DashboardCard";
 import {
+  blogService,
   courseService,
   enrollmentService,
   reviewService,
@@ -50,9 +51,13 @@ const isTeacherCoursePendingApproval = (course = {}) => {
   );
 };
 
+const isPublishedPost = (post = {}) =>
+  post.isPublished || post.is_published || post.status === "published";
+
 const TeacherDashboard = () => {
   const { user } = useAuth();
   const [courses, setCourses] = useState([]);
+  const [blogPosts, setBlogPosts] = useState([]);
   const [sections, setSections] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -63,11 +68,13 @@ const TeacherDashboard = () => {
     setLoading(true);
     setError("");
     try {
-      const [courseRows, enrollmentRows, reviewRows] = await Promise.all([
-        courseService.getInstructorCourses(user?.id),
-        enrollmentService.getEnrollments(),
-        reviewService.getReviewsByCourse(),
-      ]);
+      const [courseRows, enrollmentRows, reviewRows, blogRows] =
+        await Promise.all([
+          courseService.getInstructorCourses(user?.id),
+          enrollmentService.getEnrollments(),
+          reviewService.getReviewsByCourse(),
+          blogService.getMyPosts({ limit: 100 }),
+        ]);
 
       const sectionGroups = await Promise.all(
         (courseRows || [])
@@ -76,8 +83,9 @@ const TeacherDashboard = () => {
       );
 
       setCourses(courseRows || []);
+      setBlogPosts(blogRows || []);
       setEnrollments(enrollmentRows || []);
-      setReviews(reviewRows || []);
+      setReviews(Array.isArray(reviewRows) ? reviewRows : []);
       setSections(sectionGroups.flat());
     } catch (err) {
       setError(err?.message || "Failed to load instructor dashboard.");
@@ -108,6 +116,8 @@ const TeacherDashboard = () => {
     const lessons = sections.flatMap(
       (section) => section.lessons || section.Lessons || [],
     );
+    const publishedPosts = blogPosts.filter(isPublishedPost);
+    const pendingPosts = blogPosts.filter((post) => !isPublishedPost(post));
     const averageRating =
       reviews.length > 0
         ? (
@@ -124,9 +134,11 @@ const TeacherDashboard = () => {
       pending,
       courseEnrollments,
       lessons,
+      publishedPosts,
+      pendingPosts,
       averageRating,
     };
-  }, [courses, enrollments, reviews, sections]);
+  }, [blogPosts, courses, enrollments, reviews, sections]);
 
   const stats = [
     ["My Courses", courses.length, FiBookOpen],
@@ -136,6 +148,9 @@ const TeacherDashboard = () => {
     ["Total Students", model.courseEnrollments.length, FiUsers],
     ["Lessons", model.lessons.length, FiLayers],
     ["Sections", sections.length, FiLayers],
+    ["My Posts", blogPosts.length, FiFileText],
+    ["Published Posts", model.publishedPosts.length, FiBookOpen],
+    ["Pending Posts", model.pendingPosts.length, FiEdit],
     ["Average Rating", model.averageRating, FiStar],
   ];
 
@@ -195,6 +210,24 @@ const TeacherDashboard = () => {
             </div>
 
             <div className="grid gap-6 xl:grid-cols-3">
+              <DashboardCard
+                title="Blog"
+                subtitle="Manage your posts and publication status"
+                action={
+                  <Link to="/teacher/blog" className="btn btn-primary text-sm">
+                    <FiFileText className="mr-2" /> Open Blog
+                  </Link>
+                }
+              >
+                <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                  <MiniStat label="My Posts" value={blogPosts.length} />
+                  <MiniStat
+                    label="Published"
+                    value={model.publishedPosts.length}
+                  />
+                  <MiniStat label="Pending" value={model.pendingPosts.length} />
+                </div>
+              </DashboardCard>
               <ListCard
                 title="My Courses"
                 rows={courses}
@@ -213,6 +246,11 @@ const TeacherDashboard = () => {
             </div>
 
             <div className="grid gap-6 xl:grid-cols-3">
+              <ListCard
+                title="My Blog Posts"
+                rows={blogPosts.slice(0, 5)}
+                empty="No blog posts yet."
+              />
               <ListCard
                 title="Students"
                 rows={model.courseEnrollments.slice(0, 5)}
@@ -267,6 +305,15 @@ const ListCard = ({ title, rows, empty }) => (
       )}
     </div>
   </DashboardCard>
+);
+
+const MiniStat = ({ label, value }) => (
+  <div className="rounded-xl border border-secondary-100 p-4 dark:border-dark-border">
+    <div className="text-xl font-semibold text-secondary-900 dark:text-white">
+      {value}
+    </div>
+    <div className="mt-1 text-sm text-secondary-500">{label}</div>
+  </div>
 );
 
 export default TeacherDashboard;

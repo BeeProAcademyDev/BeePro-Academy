@@ -3,6 +3,7 @@ import i18n from "../i18n/i18n";
 import { authService, userService } from "../services/api";
 import { resolveUserRole, isPendingInstructor } from "../lib/roles";
 import { formatErrorMessage } from "../lib/supabaseErrors";
+import { notifyError } from "../lib/uiNotify";
 
 const AuthContext = createContext(null);
 
@@ -50,12 +51,15 @@ export const AuthProvider = ({ children }) => {
     try {
       await authService.logout();
     } catch (signOutError) {
-      console.warn("Error signing out suspended user:", signOutError);
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.warn("Error signing out suspended user:", signOutError);
     }
 
     setUser(null);
     setSession(null);
-    throw new Error(i18n.t("authExtra.accountBlocked"));
+    const msg = i18n.t("authExtra.accountBlocked");
+    notifyError(msg);
+    throw new Error(msg);
   };
 
   const isBlockedAccountError = (err) =>
@@ -115,7 +119,7 @@ export const AuthProvider = ({ children }) => {
       setUser(applyRoleFallback(profile));
       setSession(activeSession);
     } catch (err) {
-      console.error("Error checking user:", err);
+      if (import.meta.env.DEV) console.error("Error checking user:", err);
       if (isBlockedAccountError(err)) {
         setUser(null);
         setSession(null);
@@ -132,13 +136,14 @@ export const AuthProvider = ({ children }) => {
           try {
             await authService.logout();
           } catch (sErr) {
-            console.warn("Error signing out after expired JWT:", sErr);
+            if (import.meta.env.DEV)
+              if (import.meta.env.DEV) console.warn("Error signing out after expired JWT:", sErr);
           }
           // Clear local state and prompt user to re-authenticate
           setUser(null);
           setSession(null);
           try {
-            alert(i18n.t("authExtra.sessionExpired"));
+            notifyError(i18n.t("authExtra.sessionExpired"));
           } catch {} // graceful in non-browser env
           return;
         }
@@ -187,7 +192,7 @@ export const AuthProvider = ({ children }) => {
               authService.isSessionExpired?.(sessionSnapshot)
             ) {
               authService.logout().catch((logoutError) => {
-                console.warn("Error clearing expired session:", logoutError);
+                if (import.meta.env.DEV) console.warn("Error clearing expired session:", logoutError);
               });
             }
           }, 60_000)
@@ -325,7 +330,9 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (result?.disabled) {
-        return { success: false, error: result.reason };
+        const reason = result.reason || i18n.t("authExtra.updateDisabled");
+        notifyError(reason);
+        return { success: false, error: reason };
       }
       return { success: true };
     } catch (err) {
@@ -345,7 +352,10 @@ export const AuthProvider = ({ children }) => {
         profileData,
       );
       if (updatedProfile?.disabled) {
-        return { success: false, error: updatedProfile.reason };
+        const reason =
+          updatedProfile.reason || i18n.t("authExtra.updateDisabled");
+        notifyError(reason);
+        return { success: false, error: reason };
       }
       setUser((prev) => ({ ...prev, ...updatedProfile }));
       return { success: true, profile: updatedProfile };

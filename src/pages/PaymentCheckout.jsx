@@ -62,7 +62,11 @@ const PaymentCheckout = () => {
 
         const courseData = await courseService.getCourseCheckoutSummary(id);
 
-        if (!courseData) throw new Error("Course not found");
+        if (!courseData) {
+          const msg = "Course not found";
+          setError(msg);
+          return;
+        }
 
         setCourse(courseData);
         setFormData((prev) => ({

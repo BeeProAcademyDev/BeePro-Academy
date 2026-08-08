@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Star, DollarSign, CreditCard } from 'lucide-react'
+import ConfirmDialog from '../../src/components/ui/ConfirmDialog'
 import { 
   getInstructorPaymentMethods, 
   createPaymentMethod, 
@@ -17,6 +18,7 @@ const InstructorPaymentMethods = ({ instructorId }) => {
   const [showForm, setShowForm] = useState(false)
   const [editingMethod, setEditingMethod] = useState(null)
   const [error, setError] = useState(null)
+  const [confirmDialog, setConfirmDialog] = useState(null)
 
   useEffect(() => {
     loadPaymentMethods()
@@ -67,16 +69,21 @@ const InstructorPaymentMethods = ({ instructorId }) => {
   }
 
   const handleDeleteMethod = async (methodId) => {
-    if (!confirm('Are you sure you want to delete this payment method?')) return
-
-    try {
-      await deletePaymentMethod(methodId)
-      setPaymentMethods(paymentMethods.filter(m => m.id !== methodId))
-      setError(null)
-    } catch (err) {
-      setError('Failed to delete payment method')
-      console.error('Error deleting payment method:', err)
-    }
+    setConfirmDialog({
+      title: 'Delete payment method',
+      message: 'Are you sure you want to delete this payment method?',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        try {
+          await deletePaymentMethod(methodId)
+          setPaymentMethods(paymentMethods.filter(m => m.id !== methodId))
+          setError(null)
+        } catch (err) {
+          setError('Failed to delete payment method')
+          console.error('Error deleting payment method:', err)
+        }
+      },
+    })
   }
 
   const handleSetPrimary = async (methodId) => {
@@ -256,6 +263,16 @@ const InstructorPaymentMethods = ({ instructorId }) => {
           }}
         />
       )}
+      <ConfirmDialog
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title}
+        message={confirmDialog?.message}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel="Cancel"
+        tone="danger"
+        onConfirm={confirmDialog?.onConfirm}
+        onClose={() => setConfirmDialog(null)}
+      />
     </div>
   )
 }

@@ -34,6 +34,8 @@ import {
   FiUsers,
   FiVideo,
 } from "react-icons/fi";
+import { notifyError } from "../../lib/uiNotify";
+import { getFriendlyErrorMessage } from "../../lib/friendlyErrors";
 
 const defaultForm = {
   title: "",
@@ -158,13 +160,20 @@ const TeacherLiveSession = () => {
       try {
         notifyResult = await notificationService.notifyEligibleStudents({
           course_id: selectedCourseId,
-          title: t("teacherLiveSession.liveSessionInvitationSessionti"),
-          message: t("teacherLiveSession.youAreInvitedToALiveSessionInS"),
+          title: t("teacherLiveSession.liveSessionInvitationSessionti", {
+            sessionTitle,
+          }),
+          message: t("teacherLiveSession.youAreInvitedToALiveSessionInS", {
+            courseTitle: selectedCourse?.title || t("dashboardExtra.course"),
+            platformLabel,
+            shareUrl: shareInfo.shareUrl,
+          }),
           type: "meeting",
           action_url: shareInfo.learnUrl,
         });
       } catch (notifyErr) {
-        console.warn("Notification API unavailable:", notifyErr);
+        if (import.meta.env.DEV)
+          if (import.meta.env.DEV) console.warn("Notification API unavailable:", notifyErr);
       }
 
       if (!silent) {
@@ -176,7 +185,13 @@ const TeacherLiveSession = () => {
         if ((notifyResult?.count ?? 0) === 0) {
           setError(t("teacherLiveSession.noStudentsReceivedTheNotificat"));
         } else {
-          setSuccess(t("teacherLiveSession.platformlabelLinkSentToNotifyr"));
+          setSuccess(
+            t("teacherLiveSession.platformlabelLinkSentToNotifyr", {
+              platformLabel,
+              count: notifyResult.count,
+              audienceText,
+            }),
+          );
         }
       }
 
@@ -201,7 +216,7 @@ const TeacherLiveSession = () => {
       return;
     }
     if (!selectedLessonId) {
-      setError("Select a lesson before creating a live session.");
+      setError(t("teacherLiveSession.selectLessonBeforeCreating"));
       return;
     }
 
@@ -243,7 +258,12 @@ const TeacherLiveSession = () => {
 
       const meeting = await meetingService.createMeeting(meetingPayload);
       if (!meeting) {
-        throw new Error("The backend did not create a meeting.");
+        const msg =
+          t("teacherLiveSession.backendDidNotCreateMeeting") ||
+          "The backend did not create a meeting.";
+        notifyError(msg);
+        setError(msg);
+        return;
       }
 
       const resolvedMeeting =
@@ -263,7 +283,10 @@ const TeacherLiveSession = () => {
       setSuccess(
         (notifyResult?.count ?? 0) === 0
           ? t("teacherLiveSession.sessionOpenedButNoNotification")
-          : t("teacherLiveSession.sessionOpenedAndPlatformlabelL"),
+          : t("teacherLiveSession.sessionOpenedAndPlatformlabelL", {
+              platformLabel,
+              count: notifyResult.count,
+            }),
       );
 
       setForm(defaultForm);
@@ -275,7 +298,14 @@ const TeacherLiveSession = () => {
       );
       setSessions(refreshed || []);
     } catch (err) {
-      setError(err.message || t("teacherLiveSession.failedToCreateSession"));
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Failed to create live session:", err);
+      const friendly = getFriendlyErrorMessage(
+        err,
+        t("teacherLiveSession.failedToCreateSession"),
+      );
+      setError(friendly);
+      notifyError(friendly);
     } finally {
       setSubmitting(false);
     }
@@ -399,7 +429,9 @@ const TeacherLiveSession = () => {
               onClick={() =>
                 copyText(
                   shareInfo.shareUrl,
-                  t("teacherLiveSession.platformlabelLinkCopied"),
+                  t("teacherLiveSession.platformlabelLinkCopied", {
+                    platformLabel,
+                  }),
                 )
               }
             >
@@ -655,13 +687,15 @@ const TeacherLiveSession = () => {
               {renderPlatformPicker()}
 
               <div>
-                <label className="label">Lesson</label>
+                <label className="label">
+                  {t("teacherLiveSession.lesson")}
+                </label>
                 <select
                   className="input"
                   value={selectedLessonId}
                   onChange={(e) => setSelectedLessonId(e.target.value)}
                 >
-                  <option value="">Select lesson</option>
+                  <option value="">{t("teacherLiveSession.selectLesson")}</option>
                   {courseLessons.map((lesson) => (
                     <option key={lesson.id} value={lesson.id}>
                       {lesson.title}
@@ -731,13 +765,17 @@ const TeacherLiveSession = () => {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="label">Lesson</label>
+                  <label className="label">
+                    {t("teacherLiveSession.lesson")}
+                  </label>
                   <select
                     className="input"
                     value={selectedLessonId}
                     onChange={(e) => setSelectedLessonId(e.target.value)}
                   >
-                    <option value="">Select lesson</option>
+                    <option value="">
+                      {t("teacherLiveSession.selectLesson")}
+                    </option>
                     {courseLessons.map((lesson) => (
                       <option key={lesson.id} value={lesson.id}>
                         {lesson.title}

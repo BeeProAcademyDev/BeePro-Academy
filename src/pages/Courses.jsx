@@ -191,7 +191,7 @@ const Courses = () => {
       setCourses(formattedCourses);
       setBackendCategories(normalizedCategories);
     } catch (error) {
-      console.error("Error fetching courses:", error);
+      if (import.meta.env.DEV) console.error("Error fetching courses:", error);
       setCourses([]);
       setBackendCategories([]);
     } finally {

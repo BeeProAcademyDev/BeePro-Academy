@@ -1,295 +1,350 @@
-﻿import { useState, useEffect } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { useLanguage } from '../../contexts/LanguageContext'
-import { adminService } from '../../services/api'
-import { getRoleLabel as getSharedRoleLabel, normalizeDbRole } from '../../lib/roles'
-import { requireAdmin } from '../../lib/authGuards'
-import { useTranslation } from 'react-i18next'
-import { 
-  FiUsers, 
-  FiSearch, 
-  FiEdit, 
-  FiTrash2, 
-  FiUserCheck, 
+﻿import { useState, useEffect } from "react";
+import { useAuth } from "../../contexts/AuthContext";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { adminService } from "../../services/api";
+import {
+  getRoleLabel as getSharedRoleLabel,
+  normalizeDbRole,
+} from "../../lib/roles";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import { requireAdmin } from "../../lib/authGuards";
+import { notifyError, notifySuccess } from "../../lib/uiNotify";
+import { useTranslation } from "react-i18next";
+import {
+  FiUsers,
+  FiSearch,
+  FiEdit,
+  FiTrash2,
+  FiUserCheck,
   FiUserX,
   FiLoader,
   FiRefreshCw,
   FiMoreVertical,
   FiBook,
   FiAward,
-  FiFilter
-} from 'react-icons/fi'
+  FiFilter,
+} from "react-icons/fi";
 
 const UserManagement = () => {
-  const { t } = useTranslation()
-  const { user } = useAuth()
-  const { language } = useLanguage()
-  const isAdminUser = requireAdmin(user)
-  const [users, setUsers] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [roleFilter, setRoleFilter] = useState('all')
-  const [selectedUser, setSelectedUser] = useState(null)
-  const [showUserDetails, setShowUserDetails] = useState(false)
-  const [actionLoading, setActionLoading] = useState(null)
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const { language } = useLanguage();
+  const isAdminUser = requireAdmin(user);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showUserDetails, setShowUserDetails] = useState(false);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const getAccessDeniedHint = () => {
-    return t('userManagement.adminAccessMustBeStoredInTheDa')
-  }
+    return t("userManagement.adminAccessMustBeStoredInTheDa");
+  };
 
   const isAccessDeniedError = (error) => {
-    const text = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase()
-    return error?.code === 'P0001' || text.includes('access denied') || text.includes('admin role required')
-  }
+    const text =
+      `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`.toLowerCase();
+    return (
+      error?.code === "P0001" ||
+      text.includes("access denied") ||
+      text.includes("admin role required")
+    );
+  };
 
   // Fetch all users (admin only)
   const fetchUsers = async () => {
-    if (!user?.id || !isAdminUser) return
-    
-    setLoading(true)
+    if (!user?.id || !isAdminUser) return;
+
+    setLoading(true);
     try {
-      const data = await adminService.getAllUsersAdmin()
-      setUsers(data || [])
+      const data = await adminService.getAllUsersAdmin();
+      setUsers(data || []);
     } catch (error) {
-      console.error('Error fetching users:', error)
+      if (import.meta.env.DEV) console.error("Error fetching users:", error);
 
       if (isAccessDeniedError(error)) {
-        const adminHint = getAccessDeniedHint()
-        alert(t('userManagement.accessDeniedAdminhint'))
-        return
+        const adminHint = getAccessDeniedHint();
+        notifyError(t("userManagement.accessDeniedAdminhint", { adminHint }));
+        return;
       }
 
-      const details = error?.message || error?.details || error?.hint || ''
-      alert(
-        `${t('userManagement.errorLoadingUsers')}${details ? `: ${details}` : ''}`
-      )
+      const details = error?.message || error?.details || error?.hint || "";
+      notifyError(
+        `${t("userManagement.errorLoadingUsers")}${details ? `: ${details}` : ""}`,
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const showRoleUpdateSuccess = (newRole) => {
-    alert(t('userManagement.userRoleUpdatedToGetrolelabeln'))
-    fetchUsers()
-  }
+    notifySuccess(
+      t("userManagement.userRoleUpdatedToGetrolelabeln", {
+        role: getRoleLabel(newRole),
+      }),
+    );
+    fetchUsers();
+  };
 
   const handleRoleChangeError = (error, actionLabelEn, actionLabelAr) => {
-    console.error(`Role change failed (${actionLabelEn}):`, error)
-    const details = error?.message || ''
-    const hint = isAccessDeniedError(error) ? getAccessDeniedHint() : details
-    alert(
-      `${t('userManagement.roleChangeFailed', { action: language === 'ar' ? actionLabelAr : actionLabelEn })}${hint ? `: ${hint}` : ''}`
-    )
-  }
+    if (import.meta.env.DEV)
+      if (import.meta.env.DEV) console.error(`Role change failed (${actionLabelEn}):`, error);
+    const details = error?.message || "";
+    const hint = isAccessDeniedError(error) ? getAccessDeniedHint() : details;
+    notifyError(
+      `${t("userManagement.roleChangeFailed", { action: language === "ar" ? actionLabelAr : actionLabelEn })}${hint ? `: ${hint}` : ""}`,
+    );
+  };
 
   const applyRoleChange = async (targetUserId, newRole) => {
     try {
-      await adminService.updateUserRoleAdmin(targetUserId, newRole)
-      return
+      await adminService.updateUserRoleAdmin(targetUserId, newRole);
+      return;
     } catch (rpcError) {
       if (!isAccessDeniedError(rpcError)) {
-        throw rpcError
+        throw rpcError;
       }
     }
 
-    await adminService.updateUserRole(targetUserId, newRole)
-  }
+    await adminService.updateUserRole(targetUserId, newRole);
+  };
 
   const approveInstructor = async (targetUserId) => {
     if (!user?.id) {
-      alert(t('userManagement.youMustBeSignedIn'))
-      return
+      notifyError(t("userManagement.youMustBeSignedIn"));
+      return;
     }
 
     if (!isAdminUser) {
-      alert(t('userManagement.adminAccessIsRequired'))
-      return
+      notifyError(t("userManagement.adminAccessIsRequired"));
+      return;
     }
 
-    setActionLoading(targetUserId)
+    setActionLoading(targetUserId);
     try {
-      await adminService.approveInstructor(targetUserId)
-      showRoleUpdateSuccess('instructor')
+      await adminService.approveInstructor(targetUserId);
+      showRoleUpdateSuccess("instructor");
     } catch (error) {
       try {
-        await applyRoleChange(targetUserId, 'instructor')
-        showRoleUpdateSuccess('instructor')
+        await applyRoleChange(targetUserId, "instructor");
+        showRoleUpdateSuccess("instructor");
       } catch (fallbackError) {
-        handleRoleChangeError(fallbackError, 'approve instructor', '\u0642\u0628\u0648\u0644 \u0627\u0644\u0645\u062f\u0631\u0633')
+        handleRoleChangeError(
+          fallbackError,
+          "approve instructor",
+          "\u0642\u0628\u0648\u0644 \u0627\u0644\u0645\u062f\u0631\u0633",
+        );
       }
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
   const rejectInstructor = async (targetUserId) => {
-    if (!user?.id || !isAdminUser) return
+    if (!user?.id || !isAdminUser) return;
 
-    setActionLoading(targetUserId)
+    setActionLoading(targetUserId);
     try {
-      await adminService.rejectInstructor(targetUserId)
-      showRoleUpdateSuccess('student')
+      await adminService.rejectInstructor(targetUserId);
+      showRoleUpdateSuccess("student");
     } catch (error) {
       try {
-        await applyRoleChange(targetUserId, 'student')
-        showRoleUpdateSuccess('student')
+        await applyRoleChange(targetUserId, "student");
+        showRoleUpdateSuccess("student");
       } catch (fallbackError) {
-        handleRoleChangeError(fallbackError, 'reject instructor application', '\u0631\u0641\u0636 \u0637\u0644\u0628 \u0627\u0644\u0645\u062f\u0631\u0633')
+        handleRoleChangeError(
+          fallbackError,
+          "reject instructor application",
+          "\u0631\u0641\u0636 \u0637\u0644\u0628 \u0627\u0644\u0645\u062f\u0631\u0633",
+        );
       }
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
   const toggleUserBlock = async (targetUser) => {
-    if (!user?.id || !isAdminUser || !targetUser?.id) return
+    if (!user?.id || !isAdminUser || !targetUser?.id) return;
 
-    const shouldSuspend = !targetUser.is_suspended
+    const shouldSuspend = !targetUser.is_suspended;
     if (targetUser.id === user.id && shouldSuspend) {
-      alert(t('userManagement.youCannotBlockYourOwnAccount'))
-      return
+      notifyError(t("userManagement.youCannotBlockYourOwnAccount"));
+      return;
     }
 
-    const confirmed = window.confirm(
-      shouldSuspend
-        ? (t('userManagement.blockTargetuseremailFromThePla'))
-        : (t('userManagement.unblockTargetuseremail'))
-    )
-
-    if (!confirmed) return
-
-    setActionLoading(targetUser.id)
-    try {
-      await adminService.setUserSuspended(targetUser.id, shouldSuspend)
-      setUsers((prev) => prev.map((item) => (
-        item.id === targetUser.id ? { ...item, is_suspended: shouldSuspend } : item
-      )))
-      alert(
-        shouldSuspend
-          ? (t('userManagement.userBlockedFromThePlatform'))
-          : (t('userManagement.userUnblocked'))
-      )
-    } catch (error) {
-      alert(
-        t('userManagement.failedToUpdateUserStatusErrorm')
-      )
-    } finally {
-      setActionLoading(null)
-    }
-  }
+    setConfirmDialog({
+      title: shouldSuspend
+        ? t("userManagement.blockFromPlatform")
+        : t("userManagement.unblockUser"),
+      message: shouldSuspend
+        ? t("userManagement.blockTargetuseremailFromThePla", {
+            email: targetUser.email || t("roles.user"),
+          })
+        : t("userManagement.unblockTargetuseremail", {
+            email: targetUser.email || t("roles.user"),
+          }),
+      confirmLabel: shouldSuspend
+        ? t("userManagement.blockFromPlatform")
+        : t("userManagement.unblockUser"),
+      onConfirm: async () => {
+        setActionLoading(targetUser.id);
+        try {
+          await adminService.setUserSuspended(targetUser.id, shouldSuspend);
+          setUsers((prev) =>
+            prev.map((item) =>
+              item.id === targetUser.id
+                ? { ...item, is_suspended: shouldSuspend }
+                : item,
+            ),
+          );
+          notifySuccess(
+            shouldSuspend
+              ? t("userManagement.userBlockedFromThePlatform")
+              : t("userManagement.userUnblocked"),
+          );
+        } catch (error) {
+          notifyError(
+            t("userManagement.failedToUpdateUserStatusErrorm", {
+              message: error?.message || "",
+            }),
+          );
+        } finally {
+          setActionLoading(null);
+        }
+      },
+    });
+  };
 
   const deleteUser = async (targetUser) => {
-    if (!user?.id || !isAdminUser || !targetUser?.id) return
+    if (!user?.id || !isAdminUser || !targetUser?.id) return;
 
     if (targetUser.id === user.id) {
-      alert(t('userManagement.youCannotDeleteYourOwnAccount'))
-      return
+      notifyError(t("userManagement.youCannotDeleteYourOwnAccount"));
+      return;
     }
 
-    const confirmed = window.confirm(
-      t('userManagement.deleteTargetuseremailPermanent')
-    )
-
-    if (!confirmed) return
-
-    setActionLoading(targetUser.id)
-    try {
-      await adminService.deletePlatformUser(targetUser.id)
-      setUsers((prev) => prev.filter((item) => item.id !== targetUser.id))
-      alert(t('userManagement.userDeleted'))
-    } catch (error) {
-      alert(
-        t('userManagement.failedToDeleteUserErrormessage')
-      )
-    } finally {
-      setActionLoading(null)
-    }
-  }
+    setConfirmDialog({
+      title: t("userManagement.deleteUser"),
+      message: t("userManagement.deleteTargetuseremailPermanent", {
+        email: targetUser.email || t("roles.user"),
+      }),
+      confirmLabel: t("common.delete"),
+      onConfirm: async () => {
+        setActionLoading(targetUser.id);
+        try {
+          await adminService.deletePlatformUser(targetUser.id);
+          setUsers((prev) => prev.filter((item) => item.id !== targetUser.id));
+          notifySuccess(t("userManagement.userDeleted"));
+        } catch (error) {
+          notifyError(
+            t("userManagement.failedToDeleteUserErrormessage", {
+              message: error?.message || "",
+            }),
+          );
+        } finally {
+          setActionLoading(null);
+        }
+      },
+    });
+  };
 
   // Update user role
   const updateUserRole = async (targetUserId, newRole) => {
-    if (!user?.id || !isAdminUser) return
+    if (!user?.id || !isAdminUser) return;
 
-    setActionLoading(targetUserId)
+    setActionLoading(targetUserId);
     try {
-      await applyRoleChange(targetUserId, newRole)
-      showRoleUpdateSuccess(newRole)
+      await applyRoleChange(targetUserId, newRole);
+      showRoleUpdateSuccess(newRole);
     } catch (error) {
-      handleRoleChangeError(error, 'update user role', '\u062a\u062d\u062f\u064a\u062b \u062f\u0648\u0631 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645')
+      handleRoleChangeError(
+        error,
+        "update user role",
+        "\u062a\u062d\u062f\u064a\u062b \u062f\u0648\u0631 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645",
+      );
     } finally {
-      setActionLoading(null)
+      setActionLoading(null);
     }
-  }
+  };
 
   // Get user details
   const getUserDetails = async (targetUserId) => {
-    if (!user?.id || !isAdminUser) return
+    if (!user?.id || !isAdminUser) return;
 
-    const selectedFromList = users.find((listUser) => listUser.id === targetUserId)
+    const selectedFromList = users.find(
+      (listUser) => listUser.id === targetUserId,
+    );
 
     try {
-      const data = await adminService.getUserDetailsAdmin(targetUserId)
+      const data = await adminService.getUserDetailsAdmin(targetUserId);
 
       if (data.success) {
-        setSelectedUser(data)
-        setShowUserDetails(true)
+        setSelectedUser(data);
+        setShowUserDetails(true);
       }
     } catch (error) {
-      console.error('Error getting user details:', error)
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Error getting user details:", error);
 
       if (selectedFromList && !isAccessDeniedError(error)) {
         setSelectedUser({
           success: true,
           user: selectedFromList,
           courses: [],
-          enrollments: []
-        })
-        setShowUserDetails(true)
-        return
+          enrollments: [],
+        });
+        setShowUserDetails(true);
+        return;
       }
 
-      alert(t('userManagement.unableToLoadUserDetails'))
+      notifyError(t("userManagement.unableToLoadUserDetails"));
     }
-  }
+  };
 
-  const getRoleLabel = (role) => getSharedRoleLabel(role, language)
+  const getRoleLabel = (role) => getSharedRoleLabel(role, language);
 
   const getRoleColor = (role) => {
     const colors = {
-      'student': 'bg-blue-100 text-blue-800',
-      'pending_instructor': 'bg-amber-100 text-amber-800',
-      'instructor': 'bg-green-100 text-green-800',
-      'admin': 'bg-red-100 text-red-800'
-    }
-    return colors[role] || 'bg-gray-100 text-gray-800'
-  }
+      student: "bg-blue-100 text-blue-800",
+      pending_instructor: "bg-amber-100 text-amber-800",
+      instructor: "bg-green-100 text-green-800",
+      admin: "bg-red-100 text-red-800",
+    };
+    return colors[role] || "bg-gray-100 text-gray-800";
+  };
 
-  const pendingInstructors = users.filter((u) => normalizeDbRole(u.role) === 'pending_instructor')
+  const pendingInstructors = users.filter(
+    (u) => normalizeDbRole(u.role) === "pending_instructor",
+  );
 
   // Filter users based on search term and role
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = roleFilter === 'all' || normalizeDbRole(user.role) === roleFilter
-    return matchesSearch && matchesRole
-  })
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole =
+      roleFilter === "all" || normalizeDbRole(user.role) === roleFilter;
+    return matchesSearch && matchesRole;
+  });
 
   useEffect(() => {
-    fetchUsers()
-  }, [user])
+    fetchUsers();
+  }, [user]);
 
   if (!isAdminUser) {
     return (
       <div className="text-center py-12">
         <FiUsers className="w-16 h-16 mx-auto mb-4 text-red-400" />
         <h3 className="text-xl font-bold mb-2 text-red-600">
-          {t('userManagement.accessDenied')}
+          {t("userManagement.accessDenied")}
         </h3>
         <p className="text-gray-500">
-          {t('userManagement.youMustBeAnAdminToAccessThisPa')}
+          {t("userManagement.youMustBeAnAdminToAccessThisPa")}
         </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -298,10 +353,10 @@ const UserManagement = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">
-            {t('dashboardExtra.userManagement')}
+            {t("dashboardExtra.userManagement")}
           </h2>
           <p className="text-gray-500">
-            {t('userManagement.manageAllUsersAndConvertTheirR')}
+            {t("userManagement.manageAllUsersAndConvertTheirR")}
           </p>
         </div>
         <button
@@ -314,7 +369,7 @@ const UserManagement = () => {
           ) : (
             <FiRefreshCw className="w-5 h-5" />
           )}
-          {t('userManagement.refresh')}
+          {t("userManagement.refresh")}
         </button>
       </div>
 
@@ -322,14 +377,23 @@ const UserManagement = () => {
       {pendingInstructors.length > 0 && (
         <div className="card card-body border border-amber-200 bg-amber-50 dark:bg-amber-900/20">
           <h3 className="font-bold mb-4">
-            {t('userManagement.pendingInstructorApplicationsP')}
+            {t("userManagement.pendingInstructorApplicationsP", {
+              count: pendingInstructors.length,
+            })}
           </h3>
           <div className="space-y-3">
             {pendingInstructors.map((pendingUser) => (
-              <div key={pendingUser.id} className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+              <div
+                key={pendingUser.id}
+                className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg"
+              >
                 <div>
-                  <div className="font-medium">{pendingUser.full_name || pendingUser.email}</div>
-                  <div className="text-sm text-gray-500">{pendingUser.email}</div>
+                  <div className="font-medium">
+                    {pendingUser.full_name || pendingUser.email}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {pendingUser.email}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -338,15 +402,15 @@ const UserManagement = () => {
                     className="btn btn-primary text-sm"
                   >
                     {actionLoading === pendingUser.id
-                      ? (t('userManagement.processing'))
-                      : t('dashboardExtra.approve')}
+                      ? t("userManagement.processing")
+                      : t("dashboardExtra.approve")}
                   </button>
                   <button
                     onClick={() => rejectInstructor(pendingUser.id)}
                     disabled={actionLoading === pendingUser.id}
                     className="btn btn-secondary text-sm"
                   >
-                    {t('dashboardExtra.reject')}
+                    {t("dashboardExtra.reject")}
                   </button>
                 </div>
               </div>
@@ -358,28 +422,50 @@ const UserManagement = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div className="card card-body text-center">
-          <div className="text-2xl font-bold text-blue-600">{users.filter(u => u.role === 'student').length}</div>
-          <div className="text-sm text-gray-500">{t('userManagement.students')}</div>
+          <div className="text-2xl font-bold text-blue-600">
+            {users.filter((u) => u.role === "student").length}
+          </div>
+          <div className="text-sm text-gray-500">
+            {t("userManagement.students")}
+          </div>
         </div>
         <div className="card card-body text-center">
-          <div className="text-2xl font-bold text-amber-600">{pendingInstructors.length}</div>
-          <div className="text-sm text-gray-500">{t('userManagement.pending')}</div>
+          <div className="text-2xl font-bold text-amber-600">
+            {pendingInstructors.length}
+          </div>
+          <div className="text-sm text-gray-500">
+            {t("userManagement.pending")}
+          </div>
         </div>
         <div className="card card-body text-center">
-          <div className="text-2xl font-bold text-green-600">{users.filter(u => u.role === 'instructor').length}</div>
-          <div className="text-sm text-gray-500">{t('userManagement.instructors')}</div>
+          <div className="text-2xl font-bold text-green-600">
+            {users.filter((u) => u.role === "instructor").length}
+          </div>
+          <div className="text-sm text-gray-500">
+            {t("userManagement.instructors")}
+          </div>
         </div>
         <div className="card card-body text-center">
-          <div className="text-2xl font-bold text-red-600">{users.filter(u => u.role === 'admin').length}</div>
-          <div className="text-sm text-gray-500">{t('userManagement.admins')}</div>
+          <div className="text-2xl font-bold text-red-600">
+            {users.filter((u) => u.role === "admin").length}
+          </div>
+          <div className="text-sm text-gray-500">
+            {t("userManagement.admins")}
+          </div>
         </div>
         <div className="card card-body text-center">
-          <div className="text-2xl font-bold text-orange-600">{users.filter(u => u.is_suspended).length}</div>
-          <div className="text-sm text-gray-500">{t('userManagement.blocked_5')}</div>
+          <div className="text-2xl font-bold text-orange-600">
+            {users.filter((u) => u.is_suspended).length}
+          </div>
+          <div className="text-sm text-gray-500">
+            {t("userManagement.blocked_5")}
+          </div>
         </div>
         <div className="card card-body text-center">
           <div className="text-2xl font-bold text-gray-600">{users.length}</div>
-          <div className="text-sm text-gray-500">{t('userManagement.total')}</div>
+          <div className="text-sm text-gray-500">
+            {t("userManagement.total")}
+          </div>
         </div>
       </div>
 
@@ -391,7 +477,7 @@ const UserManagement = () => {
             <FiSearch className="absolute start-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder={t('userManagement.searchByNameOrEmail')}
+              placeholder={t("userManagement.searchByNameOrEmail")}
               className="input ps-10 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -404,11 +490,15 @@ const UserManagement = () => {
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
             >
-              <option value="all">{t('userManagement.allRoles')}</option>
-              <option value="student">{t('roles.student')}</option>
-              <option value="pending_instructor">{t('userManagement.pendingInstructor')}</option>
-              <option value="instructor">{t('userManagement.instructor_4')}</option>
-              <option value="admin">{t('userManagement.admin')}</option>
+              <option value="all">{t("userManagement.allRoles")}</option>
+              <option value="student">{t("roles.student")}</option>
+              <option value="pending_instructor">
+                {t("userManagement.pendingInstructor")}
+              </option>
+              <option value="instructor">
+                {t("userManagement.instructor_4")}
+              </option>
+              <option value="admin">{t("userManagement.admin")}</option>
             </select>
             <FiFilter className="absolute end-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           </div>
@@ -420,9 +510,7 @@ const UserManagement = () => {
         {loading ? (
           <div className="p-12 text-center">
             <FiLoader className="w-8 h-8 animate-spin mx-auto mb-4 text-primary-500" />
-            <p className="text-gray-500">
-              {t('userManagement.loadingUsers')}
-            </p>
+            <p className="text-gray-500">{t("userManagement.loadingUsers")}</p>
           </div>
         ) : filteredUsers.length > 0 ? (
           <div className="overflow-x-auto">
@@ -430,30 +518,37 @@ const UserManagement = () => {
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
                   <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('userManagement.user')}
+                    {t("userManagement.user")}
                   </th>
                   <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('userManagement.role')}
+                    {t("userManagement.role")}
                   </th>
                   <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('dashboardExtra.coursesTab')}
+                    {t("dashboardExtra.coursesTab")}
                   </th>
                   <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('userManagement.joinDate')}
+                    {t("userManagement.joinDate")}
                   </th>
                   <th className="px-6 py-3 text-end text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('userManagement.actions')}
+                    {t("userManagement.actions")}
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredUsers.map((userData) => (
-                  <tr key={userData.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <tr
+                    key={userData.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           {userData.avatar_url ? (
-                            <img className="h-10 w-10 rounded-full" src={userData.avatar_url} alt="" />
+                            <img
+                              className="h-10 w-10 rounded-full"
+                              src={userData.avatar_url}
+                              alt=""
+                            />
                           ) : (
                             <div className="h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center">
                               <FiUsers className="h-5 w-5 text-gray-500" />
@@ -462,23 +557,25 @@ const UserManagement = () => {
                         </div>
                         <div className="ms-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {userData.full_name || 'N/A'}
+                            {userData.full_name || "N/A"}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-500">
                             <span>{userData.email}</span>
                             {userData.is_suspended && (
                               <span className="inline-flex px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[11px] font-semibold">
-                                {t('userManagement.blocked')}
+                                {t("userManagement.blocked")}
                               </span>
                             )}
                             <button
                               type="button"
                               onClick={() => toggleUserBlock(userData)}
                               disabled={actionLoading === userData.id}
-                              className={`disabled:opacity-50 ${userData.is_suspended ? 'text-green-600 hover:text-green-800' : 'text-orange-600 hover:text-orange-800'}`}
-                              title={userData.is_suspended
-                                ? (t('userManagement.unblockUser'))
-                                : (t('userManagement.blockFromPlatform'))}
+                              className={`disabled:opacity-50 ${userData.is_suspended ? "text-green-600 hover:text-green-800" : "text-orange-600 hover:text-orange-800"}`}
+                              title={
+                                userData.is_suspended
+                                  ? t("userManagement.unblockUser")
+                                  : t("userManagement.blockFromPlatform")
+                              }
                             >
                               {actionLoading === userData.id ? (
                                 <FiLoader className="w-4 h-4 animate-spin" />
@@ -491,7 +588,7 @@ const UserManagement = () => {
                               onClick={() => deleteUser(userData)}
                               disabled={actionLoading === userData.id}
                               className="text-red-600 hover:text-red-800 disabled:opacity-50"
-                              title={t('userManagement.deleteUser')}
+                              title={t("userManagement.deleteUser")}
                             >
                               <FiTrash2 className="w-4 h-4" />
                             </button>
@@ -500,7 +597,9 @@ const UserManagement = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(userData.role)}`}>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(userData.role)}`}
+                      >
                         {getRoleLabel(normalizeDbRole(userData.role))}
                       </span>
                     </td>
@@ -525,19 +624,20 @@ const UserManagement = () => {
                         <button
                           onClick={() => getUserDetails(userData.id)}
                           className="text-blue-600 hover:text-blue-900"
-                          title={t('userManagement.viewDetails')}
+                          title={t("userManagement.viewDetails")}
                         >
                           <FiEdit className="w-4 h-4" />
                         </button>
-                        
+
                         {/* Role Conversion Buttons */}
-                        {normalizeDbRole(userData.role) === 'pending_instructor' && (
+                        {normalizeDbRole(userData.role) ===
+                          "pending_instructor" && (
                           <>
                             <button
                               onClick={() => approveInstructor(userData.id)}
                               disabled={actionLoading === userData.id}
                               className="text-green-600 hover:text-green-900 disabled:opacity-50"
-                              title={t('userManagement.approveInstructor')}
+                              title={t("userManagement.approveInstructor")}
                             >
                               {actionLoading === userData.id ? (
                                 <FiLoader className="w-4 h-4 animate-spin" />
@@ -549,19 +649,21 @@ const UserManagement = () => {
                               onClick={() => rejectInstructor(userData.id)}
                               disabled={actionLoading === userData.id}
                               className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                              title={t('userManagement.rejectApplication')}
+                              title={t("userManagement.rejectApplication")}
                             >
                               <FiUserX className="w-4 h-4" />
                             </button>
                           </>
                         )}
 
-                        {normalizeDbRole(userData.role) === 'student' && (
+                        {normalizeDbRole(userData.role) === "student" && (
                           <button
-                            onClick={() => updateUserRole(userData.id, 'instructor')}
+                            onClick={() =>
+                              updateUserRole(userData.id, "instructor")
+                            }
                             disabled={actionLoading === userData.id}
                             className="text-green-600 hover:text-green-900 disabled:opacity-50"
-                            title={t('userManagement.promoteToInstructor')}
+                            title={t("userManagement.promoteToInstructor")}
                           >
                             {actionLoading === userData.id ? (
                               <FiLoader className="w-4 h-4 animate-spin" />
@@ -570,21 +672,24 @@ const UserManagement = () => {
                             )}
                           </button>
                         )}
-                        
-                        {normalizeDbRole(userData.role) !== 'student' && normalizeDbRole(userData.role) !== 'admin' && (
-                          <button
-                            onClick={() => updateUserRole(userData.id, 'student')}
-                            disabled={actionLoading === userData.id}
-                            className="text-blue-600 hover:text-blue-900 disabled:opacity-50"
-                            title={t('userManagement.convertToStudent')}
-                          >
-                            {actionLoading === userData.id ? (
-                              <FiLoader className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <FiUsers className="w-4 h-4" />
-                            )}
-                          </button>
-                        )}
+
+                        {normalizeDbRole(userData.role) !== "student" &&
+                          normalizeDbRole(userData.role) !== "admin" && (
+                            <button
+                              onClick={() =>
+                                updateUserRole(userData.id, "student")
+                              }
+                              disabled={actionLoading === userData.id}
+                              className="text-blue-600 hover:text-blue-900 disabled:opacity-50"
+                              title={t("userManagement.convertToStudent")}
+                            >
+                              {actionLoading === userData.id ? (
+                                <FiLoader className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <FiUsers className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
                       </div>
                     </td>
                   </tr>
@@ -596,10 +701,10 @@ const UserManagement = () => {
           <div className="p-12 text-center">
             <FiUsers className="w-16 h-16 mx-auto mb-4 text-gray-400" />
             <h3 className="text-lg font-medium mb-2">
-              {t('userManagement.noResults')}
+              {t("userManagement.noResults")}
             </h3>
             <p className="text-gray-500">
-              {t('userManagement.noUsersFoundMatchingYourSearch')}
+              {t("userManagement.noUsersFoundMatchingYourSearch")}
             </p>
           </div>
         )}
@@ -612,7 +717,7 @@ const UserManagement = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold">
-                  {t('userManagement.userDetails')}
+                  {t("userManagement.userDetails")}
                 </h3>
                 <button
                   onClick={() => setShowUserDetails(false)}
@@ -621,15 +726,15 @@ const UserManagement = () => {
                   ×
                 </button>
               </div>
-              
+
               {selectedUser.user && (
                 <div className="space-y-6">
                   {/* User Info */}
                   <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     {selectedUser.user.avatar_url ? (
-                      <img 
-                        src={selectedUser.user.avatar_url} 
-                        alt="" 
+                      <img
+                        src={selectedUser.user.avatar_url}
+                        alt=""
                         className="w-16 h-16 rounded-full"
                       />
                     ) : (
@@ -638,67 +743,103 @@ const UserManagement = () => {
                       </div>
                     )}
                     <div>
-                      <h4 className="text-xl font-bold">{selectedUser.user.full_name}</h4>
+                      <h4 className="text-xl font-bold">
+                        {selectedUser.user.full_name}
+                      </h4>
                       <p className="text-gray-600">{selectedUser.user.email}</p>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(selectedUser.user.role)}`}>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(selectedUser.user.role)}`}
+                      >
                         {getRoleLabel(selectedUser.user.role)}
                       </span>
                     </div>
                   </div>
 
                   {/* Courses (if instructor) */}
-                  {selectedUser.user.role === 'instructor' && selectedUser.courses && selectedUser.courses.length > 0 && (
-                    <div>
-                      <h5 className="font-bold mb-3">
-                        {t('dashboardExtra.coursesTab')}
-                      </h5>
-                      <div className="space-y-2">
-                        {selectedUser.courses.map(course => (
-                          <div key={course.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg flex justify-between">
-                            <div>
-                              <div className="font-medium">{course.title}</div>
-                              <div className="text-sm text-gray-500">{course.enrollments} enrollments</div>
+                  {selectedUser.user.role === "instructor" &&
+                    selectedUser.courses &&
+                    selectedUser.courses.length > 0 && (
+                      <div>
+                        <h5 className="font-bold mb-3">
+                          {t("dashboardExtra.coursesTab")}
+                        </h5>
+                        <div className="space-y-2">
+                          {selectedUser.courses.map((course) => (
+                            <div
+                              key={course.id}
+                              className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg flex justify-between"
+                            >
+                              <div>
+                                <div className="font-medium">
+                                  {course.title}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {course.enrollments} enrollments
+                                </div>
+                              </div>
+                              <span
+                                className={`px-2 py-1 text-xs rounded ${course.status === "published" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}
+                              >
+                                {course.status}
+                              </span>
                             </div>
-                            <span className={`px-2 py-1 text-xs rounded ${course.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                              {course.status}
-                            </span>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Enrollments (if student) */}
-                  {selectedUser.user.role === 'student' && selectedUser.enrollments && selectedUser.enrollments.length > 0 && (
-                    <div>
-                      <h5 className="font-bold mb-3">
-                        {t('userManagement.enrollments')}
-                      </h5>
-                      <div className="space-y-2">
-                        {selectedUser.enrollments.map(enrollment => (
-                          <div key={enrollment.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div className="font-medium">{enrollment.course_title}</div>
-                            <div className="text-sm text-gray-500">
-                              {t('userManagement.instructor')} {enrollment.instructor_name}
+                  {selectedUser.user.role === "student" &&
+                    selectedUser.enrollments &&
+                    selectedUser.enrollments.length > 0 && (
+                      <div>
+                        <h5 className="font-bold mb-3">
+                          {t("userManagement.enrollments")}
+                        </h5>
+                        <div className="space-y-2">
+                          {selectedUser.enrollments.map((enrollment) => (
+                            <div
+                              key={enrollment.id}
+                              className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                            >
+                              <div className="font-medium">
+                                {enrollment.course_title}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {t("userManagement.instructor")}{" "}
+                                {enrollment.instructor_name}
+                              </div>
+                              <div className="flex justify-between items-center mt-2">
+                                <span className="text-sm">
+                                  {t("userManagement.progress")}
+                                </span>
+                                <span className="font-bold">
+                                  {enrollment.progress}%
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-sm">{t('userManagement.progress')}</span>
-                              <span className="font-bold">{enrollment.progress}%</span>
-                            </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               )}
             </div>
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title}
+        message={confirmDialog?.message}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel={t("common.cancel")}
+        tone="danger"
+        onConfirm={confirmDialog?.onConfirm}
+        onClose={() => setConfirmDialog(null)}
+      />
     </div>
-  )
-}
+  );
+};
 
-export default UserManagement
-
+export default UserManagement;

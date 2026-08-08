@@ -58,7 +58,8 @@ const Blogs = () => {
         setPosts(data || []);
         setSelectedPost(data?.[0] || null);
       } catch (err) {
-        console.error("Error loading blog posts:", err);
+        if (import.meta.env.DEV)
+          if (import.meta.env.DEV) console.error("Error loading blog posts:", err);
         setError(t("blogs.couldNotLoadBlogPostsRightNow"));
       } finally {
         setIsLoading(false);

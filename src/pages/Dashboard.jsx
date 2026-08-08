@@ -5,6 +5,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { useAuth } from "../contexts/AuthContext";
 import { formatStoredAmount } from "../lib/currency";
 import CourseCard from "../components/ui/CourseCard";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
 import CourseChat from "../components/chat/CourseChat";
 import HomeworkPanel from "../components/dashboard/HomeworkPanel";
 import {
@@ -13,6 +14,7 @@ import {
   notificationService,
   chatService,
 } from "../services/api";
+import { notifyError } from "../lib/uiNotify";
 import { paymentService, PAYMENT_TYPES } from "../services/paymentAPI";
 import UserManagement from "./admin/UserManagement";
 import AdminCRM from "./admin/AdminCRM";
@@ -76,6 +78,7 @@ const Dashboard = () => {
   const [courseActionError, setCourseActionError] = useState("");
   const [courseActionSuccess, setCourseActionSuccess] = useState("");
   const [courseActionLoadingId, setCourseActionLoadingId] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
   const [adminSubTab, setAdminSubTab] = useState("users");
 
   useEffect(() => {
@@ -319,7 +322,8 @@ const Dashboard = () => {
         const inbox = await chatService.getStudentChatInbox();
         setStudentChatInbox(inbox || []);
       } catch (err) {
-        console.error("Failed to load student chat inbox:", err);
+        if (import.meta.env.DEV)
+          if (import.meta.env.DEV) console.error("Failed to load student chat inbox:", err);
       }
     };
     loadInbox();
@@ -398,11 +402,21 @@ const Dashboard = () => {
 
     // If admin provides JSON object, keep full structured data.
     if (raw.startsWith("{")) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        return parsed;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          return parsed;
+        }
+        const msg = "Payment details JSON must be an object";
+        notifyError?.(msg);
+        return {};
+      } catch (err) {
+        if (import.meta.env.DEV)
+          if (import.meta.env.DEV) console.error("Invalid payment details JSON:", err);
+        const msg = "Payment details JSON must be an object";
+        notifyError?.(msg);
+        return {};
       }
-      throw new Error("Payment details JSON must be an object");
     }
 
     // Fallback: accept plain text for quick admin input.
@@ -440,7 +454,8 @@ const Dashboard = () => {
           setMyCourses(data || []);
         }
       } catch (error) {
-        console.error("Error fetching my courses:", error);
+        if (import.meta.env.DEV)
+          if (import.meta.env.DEV) console.error("Error fetching my courses:", error);
         setCourseActionError(t("dashboardExtra.loadCoursesFailed"));
       } finally {
         setIsLoadingCourses(false);
@@ -524,7 +539,8 @@ const Dashboard = () => {
         setStudentPayments(payments || []);
         setStudentNotifications(notifications || []);
       } catch (error) {
-        console.error("Error fetching student history:", error);
+        if (import.meta.env.DEV)
+          if (import.meta.env.DEV) console.error("Error fetching student history:", error);
       } finally {
         setIsLoadingStudentHistory(false);
       }
@@ -552,7 +568,8 @@ const Dashboard = () => {
         ),
       );
     } catch (err) {
-      console.error("Failed to mark notification as read:", err);
+      if (import.meta.env.DEV)
+        if (import.meta.env.DEV) console.error("Failed to mark notification as read:", err);
     }
 
     navigate(joinPath);
@@ -656,26 +673,29 @@ const Dashboard = () => {
       return;
     }
 
-    const confirmed = window.confirm(
-      t("dashboard.deleteCourseCoursetitlePermane"),
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setCourseActionError("");
-      setCourseActionSuccess("");
-      setCourseActionLoadingId(course.id);
-      await courseService.deleteCourse(course.id);
-      setMyCourses((prev) => prev.filter((item) => item.id !== course.id));
-      setCourseActionSuccess(t("dashboardExtra.courseDeleted"));
-    } catch (error) {
-      setCourseActionError(
-        error.message || t("dashboardExtra.courseDeleteFailed"),
-      );
-    } finally {
-      setCourseActionLoadingId(null);
-    }
+    setConfirmDialog({
+      title: t("dashboardExtra.deleteCourse"),
+      message: t("dashboard.deleteCourseCoursetitlePermane", {
+        title: course.title || t("dashboard.course"),
+      }),
+      confirmLabel: t("common.delete"),
+      onConfirm: async () => {
+        try {
+          setCourseActionError("");
+          setCourseActionSuccess("");
+          setCourseActionLoadingId(course.id);
+          await courseService.deleteCourse(course.id);
+          setMyCourses((prev) => prev.filter((item) => item.id !== course.id));
+          setCourseActionSuccess(t("dashboardExtra.courseDeleted"));
+        } catch (error) {
+          setCourseActionError(
+            error.message || t("dashboardExtra.courseDeleteFailed"),
+          );
+        } finally {
+          setCourseActionLoadingId(null);
+        }
+      },
+    });
   };
 
   const handleProfileSave = async (event) => {
@@ -691,7 +711,10 @@ const Dashboard = () => {
       });
 
       if (!result.success) {
-        throw new Error(result.error);
+        const msg = result.error || t("dashboardExtra.profileSaveFailed");
+        setProfileStatus({ type: "error", message: msg });
+        notifyError?.(msg);
+        return;
       }
 
       setProfileStatus({
@@ -718,7 +741,10 @@ const Dashboard = () => {
 
       const result = await uploadAvatar(file);
       if (!result.success) {
-        throw new Error(result.error);
+        const msg = result.error || t("dashboardExtra.photoUploadFailed");
+        setProfileStatus({ type: "error", message: msg });
+        notifyError?.(msg);
+        return;
       }
 
       setProfileStatus({
@@ -760,7 +786,10 @@ const Dashboard = () => {
       setIsSavingPassword(true);
       const result = await updatePassword(passwordForm.password);
       if (!result.success) {
-        throw new Error(result.error);
+        const msg = result.error || t("profileSettings.passwordUpdateFailed");
+        setPasswordStatus({ type: "error", message: msg });
+        notifyError?.(msg);
+        return;
       }
       setPasswordForm({ password: "", confirmPassword: "" });
       setPasswordStatus({
@@ -1092,6 +1121,9 @@ const Dashboard = () => {
                                     {(course.message_count || 0) > 0
                                       ? t(
                                           "dashboard.coursemessagecountMessages",
+                                          {
+                                            count: course.message_count || 0,
+                                          },
                                         )
                                       : t("dashboardExtra.messageInstructor")}
                                   </p>
@@ -2635,6 +2667,16 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title}
+        message={confirmDialog?.message}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel={t("common.cancel")}
+        tone="danger"
+        onConfirm={confirmDialog?.onConfirm}
+        onClose={() => setConfirmDialog(null)}
+      />
     </div>
   );
 };

@@ -52,7 +52,8 @@ const Home = () => {
         setAllCourses(formatted);
         setPopularCourses(formatted.slice(0, 4));
       } catch (error) {
-        console.error("Error loading featured courses:", error);
+        if (import.meta.env.DEV)
+          if (import.meta.env.DEV) console.error("Error loading featured courses:", error);
         setAllCourses([]);
         setPopularCourses([]);
       } finally {

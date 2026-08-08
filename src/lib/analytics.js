@@ -176,7 +176,7 @@ export function initAnalytics() {
   Promise.allSettled(tasks).then((results) => {
     results.forEach((result) => {
       if (result.status === 'rejected') {
-        console.warn('[Analytics] Script load failed:', result.reason)
+        if (import.meta.env.DEV) console.warn('[Analytics] Script load failed:', result.reason)
       }
     })
   })
