@@ -21,6 +21,7 @@ import {
   courseService,
   dashboardService,
 } from "../services/api";
+import { notifySuccess, notifyError } from "../lib/uiNotify";
 
 const asArray = (value) => {
   if (Array.isArray(value)) return value;
@@ -111,6 +112,27 @@ const getInstructorName = (course = {}) =>
   course.created_by?.full_name ||
   "Instructor";
 
+const getCategoryName = (course = {}) =>
+  course.category?.name ||
+  course.category_name ||
+  course.categoryName ||
+  course.category_id ||
+  course.categoryId ||
+  "Uncategorized";
+
+const getLevel = (course = {}) => course.level || course.rank || "Not set";
+
+const getPrice = (course = {}) => {
+  const price = Number(course.price || 0);
+  return Number.isFinite(price) ? `$${price}` : "Not set";
+};
+
+const detailsLine = (items) =>
+  items
+    .filter((item) => item?.value !== undefined && item?.value !== null)
+    .map((item) => `${item.label}: ${item.value || "Not set"}`)
+    .join(" | ");
+
 const getPostAuthorName = (post = {}) =>
   post.author?.full_name ||
   post.author_name ||
@@ -150,20 +172,22 @@ const AdminDashboard = () => {
     setIsLoading(true);
     setError("");
     try {
-      const [statsResult, usersRows, pendingRows, courseResult, postRows] =
+      const [statsResult, usersRows, pendingRows, pendingCourseRows, postRows] =
         await Promise.all([
           dashboardService.getAdminDashboard(),
           adminService.getAllUsers(),
           adminService.getPendingInstructors(),
-          courseService.getCourses(),
+          courseService.getAdminModerationCourses({
+            status: "pending",
+            limit: 100,
+          }),
           blogService.getAdminPosts({ limit: 100 }),
         ]);
 
       const usersList = asArray(usersRows);
       const pendingList = asArray(pendingRows);
-      const courseList = Array.isArray(courseResult?.data)
-        ? courseResult.data
-        : asArray(courseResult);
+      const courseList = asArray(pendingCourseRows);
+      const pendingCourseList = courseList.filter(isPendingStatus);
       const postList = asArray(postRows);
       const publishedPostCount = postList.filter(isApprovedStatus).length;
       const pendingPostCount = postList.filter(
@@ -176,7 +200,7 @@ const AdminDashboard = () => {
         totalUsers: statsResult?.totalUsers ?? usersList.length,
         pendingInstructorAccounts:
           statsResult?.pendingInstructorAccounts ?? pendingList.length,
-        pendingCourses: statsResult?.pendingCourses ?? 0,
+        pendingCourses: pendingCourseList.length,
         pendingPosts: statsResult?.pendingPosts ?? pendingPostCount,
         publishedPosts: publishedPostCount,
         totalPosts: postList.length,
@@ -206,17 +230,7 @@ const AdminDashboard = () => {
   }, [loadDashboard]);
 
   const moderationModel = useMemo(() => {
-    const pendingCourses = courses.filter(
-      (course) =>
-        normalizeText(course.admin_approval_status) === "pending" &&
-        Boolean(
-          course.instructor_id ||
-          course.instructorId ||
-          course.created_by ||
-          course.user_id ||
-          course.instructor,
-        ),
-    );
+    const pendingCourses = courses.filter(isPendingStatus);
     const pendingPosts = posts.filter(
       (post) =>
         isPendingStatus(post) ||
@@ -274,12 +288,14 @@ const AdminDashboard = () => {
     await refreshAfterAction(`instructor-approve:${userId}`, () =>
       adminService.approveInstructor(userId),
     );
+    notifySuccess("Instructor approved");
   };
 
   const rejectInstructor = async (userId) => {
     await refreshAfterAction(`instructor-reject:${userId}`, () =>
       adminService.rejectInstructor(userId),
     );
+    notifySuccess("Instructor rejected");
   };
 
   const toggleUserStatus = async (user) => {
@@ -368,7 +384,10 @@ const AdminDashboard = () => {
               }
             >
               <div className="grid gap-3 sm:grid-cols-3">
-                <MiniStat label="Total Posts" value={dashboardStats.totalPosts} />
+                <MiniStat
+                  label="Total Posts"
+                  value={dashboardStats.totalPosts}
+                />
                 <MiniStat
                   label="Published"
                   value={dashboardStats.publishedPosts}
@@ -391,7 +410,12 @@ const AdminDashboard = () => {
                     <ModerationRow
                       key={pendingUser.id}
                       title={displayName(pendingUser)}
-                      subtitle={detailValue(pendingUser)}
+                      subtitle={detailsLine([
+                        { label: "Email", value: pendingUser.email },
+                        { label: "Phone", value: pendingUser.phone },
+                        { label: "Role", value: pendingUser.role },
+                        { label: "Status", value: pendingUser.status },
+                      ])}
                       actions={
                         <>
                           <button

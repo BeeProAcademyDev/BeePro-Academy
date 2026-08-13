@@ -58,12 +58,16 @@ const AuthTabs = ({
     confirmPassword: "",
     terms: false,
   });
-  const [accountType, setAccountType] = useState(() =>
-    normalizeSignupAccountType(searchParams.get("role")),
-  );
+  const [accountType, setAccountType] = useState(() => {
+    const roleParam = searchParams.get("role");
+    if (!roleParam) return "student";
+    const normalized = normalizeSignupAccountType(roleParam);
+    return normalized === "instructor" ? "teacher" : "student";
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const rules = useMemo(
@@ -129,16 +133,26 @@ const AuthTabs = ({
     }
 
     try {
+      const normalizedAccountType = normalizeSignupAccountType(accountType);
       const result = await register({
         email: registerData.email,
         password: registerData.password,
         fullName: registerData.name,
         phone: registerData.phone,
-        role: accountType,
+        role: normalizedAccountType,
       });
       if (!result.success) {
         setError(
           formatErrorMessage(result.error) || t("register.registrationFailed"),
+        );
+        return;
+      }
+      // If the signup resulted in a pending instructor application, show a clear message
+      if (result.pendingApproval) {
+        setSuccess(
+          result.message ||
+            t("register.instructorApplicationSubmitted") ||
+            "Your instructor application has been submitted and is waiting for admin approval.",
         );
         return;
       }
@@ -182,6 +196,12 @@ const AuthTabs = ({
         <div className="flex items-center gap-3 p-4 mb-5 rounded-lg border border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
           <FiAlertCircle className="w-5 h-5 shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+      {success && (
+        <div className="flex items-center gap-3 p-4 mb-5 rounded-lg border border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
+          <FiCheck className="w-5 h-5 shrink-0" />
+          <span>{success}</span>
         </div>
       )}
 

@@ -1,5 +1,9 @@
 import axios from "axios";
-import { formatErrorMessage } from "../lib/supabaseErrors";
+import {
+  formatErrorMessage,
+  mapSignupProfileError,
+} from "../lib/supabaseErrors";
+import { normalizeSignupAccountType, resolveSignupRole } from "../lib/roles";
 
 const rawBaseUrl =
   import.meta.env.VITE_API_BASE_URL ||
@@ -91,6 +95,8 @@ export function toList(value) {
   if (Array.isArray(value?.items)) return value.items;
   if (Array.isArray(value?.data)) return value.data;
   if (Array.isArray(value?.results)) return value.results;
+  if (Array.isArray(value?.users)) return value.users;
+  if (Array.isArray(value?.categories)) return value.categories;
   if (Array.isArray(value?.courses)) return value.courses;
   if (Array.isArray(value?.sections)) return value.sections;
   if (Array.isArray(value?.lessons)) return value.lessons;
@@ -105,6 +111,8 @@ export function listResponse(response) {
   const value = unwrapResponse(response);
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.courses)) return value.courses;
+  if (Array.isArray(value?.users)) return value.users;
+  if (Array.isArray(value?.categories)) return value.categories;
   if (Array.isArray(value?.sections)) return value.sections;
   if (Array.isArray(value?.lessons)) return value.lessons;
   if (Array.isArray(value?.posts)) return value.posts;
@@ -197,6 +205,25 @@ function blogPayload(data = {}) {
     imageUrl: optionalUrl(
       data.imageUrl || data.image_url || data.cover_image_url,
     ),
+  });
+}
+
+function coursePayload(data = {}) {
+  const categoryId =
+    data.categoryId ||
+    data.CategoryId ||
+    data.category_id ||
+    (typeof data.category === "string" ? data.category : data.category?.id);
+
+  return omitEmpty({
+    title: data.title?.trim(),
+    description: data.description?.trim(),
+    price:
+      data.price === undefined || data.price === null
+        ? undefined
+        : Number(data.price),
+    categoryId,
+    thumbnailUrl: optionalUrl(data.thumbnailUrl || data.thumbnail_url),
   });
 }
 
@@ -321,7 +348,8 @@ export async function safeRequest(
   try {
     return unwrapResponse(await request);
   } catch (error) {
-    if (import.meta.env.DEV) console.warn(label, buildApiError(error, label).message);
+    if (import.meta.env.DEV)
+      console.warn(label, buildApiError(error, label).message);
     return fallback;
   }
 }
@@ -330,7 +358,8 @@ export async function safeList(request, label = "Failed to load list") {
   try {
     return listResponse(await request);
   } catch (error) {
-    if (import.meta.env.DEV) console.warn(label, buildApiError(error, label).message);
+    if (import.meta.env.DEV)
+      console.warn(label, buildApiError(error, label).message);
     return [];
   }
 }
@@ -477,25 +506,34 @@ apiClient.interceptors.response.use(
 
 export const authService = {
   async register(data) {
-    const response = await apiClient.post(
-      "/auth/register",
-      {
-        fullName: data.fullName,
-        email: data.email?.trim().toLowerCase(),
-        phone: data.phone || "",
-        password: data.password,
-        role: data.role || "student",
-      },
-      { skipAuth: true },
-    );
-    const auth = normalizeAuthResponse(response.data);
-    persistSession(auth.session);
-    notifyAuth("SIGNED_IN", auth.session);
-    return {
-      ...unwrapResponse(response),
-      ...auth,
-      resolvedRole: data.role || "student",
-    };
+    const payloadRole = normalizeSignupAccountType(data.role);
+    try {
+      const response = await apiClient.post(
+        "/auth/register",
+        {
+          fullName: data.fullName,
+          email: data.email?.trim().toLowerCase(),
+          phone: data.phone || "",
+          password: data.password,
+          role: payloadRole,
+        },
+        { skipAuth: true },
+      );
+      const auth = normalizeAuthResponse(response.data);
+      persistSession(auth.session);
+      notifyAuth("SIGNED_IN", auth.session);
+      return {
+        ...unwrapResponse(response),
+        ...auth,
+        resolvedRole: resolveSignupRole(payloadRole),
+      };
+    } catch (error) {
+      // Surface backend validation details (e.g. 422) as friendly signup/profile errors
+      throw mapSignupProfileError(
+        buildApiError(error, "Registration failed"),
+        resolveSignupRole(payloadRole),
+      );
+    }
   },
 
   async login({ email, password }) {
@@ -611,7 +649,7 @@ export const courseService = {
   },
   async createCourse(data) {
     return safeRequest(
-      apiClient.post("/courses", data),
+      apiClient.post("/courses", coursePayload(data)),
       null,
       "Failed to create course",
     );
@@ -654,8 +692,27 @@ export const courseService = {
         course.instructorId,
         course.created_by,
         course.user_id,
+        course.instructor?.id,
       ].includes(instructorId),
     );
+  },
+  async getAdminModerationCourses(params = {}) {
+    const response = await apiClient.get("/courses", { params });
+    const result = unwrapResponse(response);
+    const list = Array.isArray(result?.courses)
+      ? result.courses
+      : Array.isArray(result?.data)
+        ? result.data
+        : toList(result);
+    return list.filter((course) => {
+      if (!params?.status) return true;
+      const status = String(
+        course?.status || course?.admin_approval_status || "",
+      )
+        .trim()
+        .toLowerCase();
+      return status === String(params.status).trim().toLowerCase();
+    });
   },
 };
 
@@ -782,33 +839,23 @@ export const progressService = {
 
 export const adminService = {
   async getAllUsers(params = {}) {
-    return safeList(
-      apiClient.get("/admin/users", { params }),
-      "Failed to fetch users",
-    );
+    return listResponse(await apiClient.get("/admin/users", { params }));
   },
   async getAllUsersAdmin(params) {
     return this.getAllUsers(params);
   },
   async getPendingInstructors() {
-    return safeList(
-      apiClient.get("/admin/users/pending"),
-      "Failed to fetch pending instructors",
-    );
+    return listResponse(await apiClient.get("/admin/users/pending"));
   },
   async approveInstructor(userId) {
-    return safeRequest(
-      apiClient.patch(`/admin/users/${userId}/approve`),
-      null,
-      "Failed to approve instructor",
+    return unwrapResponse(
+      await apiClient.patch(`/admin/users/${userId}/approve`),
     );
   },
   async rejectInstructor(userId) {
     if (!userId) return comingSoon("Coming Soon");
-    return safeRequest(
-      apiClient.patch(`/admin/users/${userId}/reject`),
-      null,
-      "Failed to reject instructor",
+    return unwrapResponse(
+      await apiClient.patch(`/admin/users/${userId}/reject`),
     );
   },
   async setUserSuspended(userId, isSuspended) {
@@ -827,10 +874,10 @@ export const adminService = {
     return comingSoon("Role updates are not supported by the backend API.");
   },
   async updateCourseStatus(courseId, status) {
-    return safeRequest(
-      apiClient.patch(`/admin/courses/${courseId}/update-status`, { status }),
-      null,
-      "Failed to update course status",
+    return unwrapResponse(
+      await apiClient.patch(`/admin/courses/${courseId}/update-status`, {
+        status,
+      }),
     );
   },
   async getUserDetailsAdmin(userId) {

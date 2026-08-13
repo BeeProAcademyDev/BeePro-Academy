@@ -74,7 +74,7 @@ export function isPendingInstructor(role) {
 
 export function isApprovedInstructor(role) {
   const normalized = normalizeRole(role);
-  return normalized === ROLES.INSTRUCTOR || normalized === ROLES.TEACHER;
+  return normalized === ROLES.INSTRUCTOR;
 }
 
 export function isAdmin(role) {
@@ -88,11 +88,7 @@ export function isSuperAdmin(role) {
 
 export function canAccessTeacherFeatures(role) {
   const normalized = normalizeRole(role);
-  return (
-    normalized === ROLES.INSTRUCTOR ||
-    normalized === ROLES.TEACHER ||
-    isAdmin(normalized)
-  );
+  return normalized === ROLES.INSTRUCTOR || isAdmin(normalized);
 }
 
 /** Any logged-in user who is not staff/instructor - defaults missing role to student */

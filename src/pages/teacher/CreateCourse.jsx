@@ -426,12 +426,8 @@ const CreateCourse = () => {
     try {
       const { google_meet_link: _meetLinkField, ...coursePayload } = courseData;
 
-      // Instructor content must go through moderation first.
       const course = await courseService.createCourse({
         ...coursePayload,
-        instructor_id: user?.id,
-        status: "pending",
-        is_published: false,
       });
 
       // Existing lesson fields are not saved here; course builder will manage lessons by section.
@@ -442,10 +438,11 @@ const CreateCourse = () => {
         const lessonId = meeting.lessonId || meeting.lesson_id;
         if (!lessonId) {
           if (import.meta.env.DEV)
-            if (import.meta.env.DEV) console.warn(
-              "Skipping meeting creation because no lesson association is available.",
-              meeting,
-            );
+            if (import.meta.env.DEV)
+              console.warn(
+                "Skipping meeting creation because no lesson association is available.",
+                meeting,
+              );
           continue;
         }
 
@@ -466,9 +463,10 @@ const CreateCourse = () => {
 
       if (courseMeetLink) {
         if (import.meta.env.DEV)
-          if (import.meta.env.DEV) console.warn(
-            "Skipping course-level Google Meet creation because backend meetings are lesson-scoped.",
-          );
+          if (import.meta.env.DEV)
+            console.warn(
+              "Skipping course-level Google Meet creation because backend meetings are lesson-scoped.",
+            );
       }
 
       // Send notification to all enrolled students only if meetings were actually created.
@@ -482,7 +480,8 @@ const CreateCourse = () => {
           });
         } catch (err) {
           if (import.meta.env.DEV)
-            if (import.meta.env.DEV) console.warn("Notification API unavailable:", err);
+            if (import.meta.env.DEV)
+              console.warn("Notification API unavailable:", err);
         }
       }
 

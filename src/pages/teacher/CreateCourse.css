@@ -127,6 +127,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -190,20 +191,41 @@
   border-radius: 10px;
   font-size: 1rem;
   transition: all 0.3s ease;
-  background: #f9f9f9;
+  background: #ffffff !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827;
   font-family: inherit;
+}
+
+.form-control::placeholder,
+.form-control::-webkit-input-placeholder,
+.form-control::-moz-placeholder,
+.form-control:-ms-input-placeholder {
+  color: #6b7280;
+  opacity: 1;
 }
 
 .form-control:focus {
   outline: none;
   border-color: #009FFD;
-  background: white;
+  background: #ffffff !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827;
   box-shadow: 0 0 0 4px rgba(0, 159, 253, 0.1);
 }
 
 textarea.form-control {
   resize: vertical;
   min-height: 100px;
+}
+
+.create-course-page .form-control,
+.create-course-page textarea.form-control,
+.create-course-page select.form-control,
+.create-course-page input.form-control {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+  -webkit-text-fill-color: #111827;
 }
 
 select.form-control {
@@ -787,24 +809,28 @@ select.form-control {
   color: #333;
 }
 
-.review-lessons, .review-meetings {
+.review-lessons,
+.review-meetings {
   background: #f8f9fa;
   border-radius: 15px;
   padding: 20px;
 }
 
-.review-lessons h4, .review-meetings h4 {
+.review-lessons h4,
+.review-meetings h4 {
   margin: 0 0 15px;
   color: #333;
 }
 
-.review-lessons ul, .review-meetings ul {
+.review-lessons ul,
+.review-meetings ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.review-lessons li, .review-meetings li {
+.review-lessons li,
+.review-meetings li {
   padding: 10px 0;
   border-bottom: 1px solid #e0e0e0;
   display: flex;
@@ -812,7 +838,8 @@ select.form-control {
   gap: 10px;
 }
 
-.review-lessons li:last-child, .review-meetings li:last-child {
+.review-lessons li:last-child,
+.review-meetings li:last-child {
   border-bottom: none;
 }
 
@@ -886,6 +913,7 @@ select.form-control {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
